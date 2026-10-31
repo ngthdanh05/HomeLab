@@ -3,9 +3,9 @@ pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ProductType, IPaymentSplitter} from "./interfaces/IMarketPlaceDeps.sol";
 
 /// @notice Giao diện tối thiểu của CommunityTreasury mà PaymentSplitter cần.
-/// @dev Nếu repo đã có `ICommunityTreasury`, hãy xoá bản này và import bản có sẵn.
 interface ICommunityTreasury {
     function deposit() external payable;
 }
@@ -19,13 +19,7 @@ interface IEcoToken {
 /// @title PaymentSplitter
 /// @notice Tự động phân tách doanh thu D2C giữa nghệ nhân, quỹ cộng đồng và nền tảng,
 ///         đồng thời thưởng EcoToken cho du khách.
-/// @dev
-///  - Tỷ lệ lưu dạng Basis Points: artisanBPS + treasuryBPS + platformBPS == 10_000.
-///  - Phần nghệ nhân và treasury được chuyển ngay (push) trong `splitPayment`.
-///  - Phần platform được ghi sổ (pull): owner tự rút qua `withdrawPlatformFees`,
-///    nên giao dịch của khách không phụ thuộc vào ví nhận phí của platform.
-///  - Phần dư do làm tròn xuống được cộng vào platform => tổng luôn bằng msg.value.
-contract PaymentSplitter is Ownable, ReentrancyGuard {
+contract PaymentSplitter is Ownable, ReentrancyGuard, IPaymentSplitter {
     // ------------------------------------------------------------------
     // Errors
     // ------------------------------------------------------------------
@@ -87,9 +81,17 @@ contract PaymentSplitter is Ownable, ReentrancyGuard {
     // Core
     // ------------------------------------------------------------------
 
-    /// @notice Phân tách `msg.value` cho `artisan`, treasury và platform; thưởng EcoToken cho người gọi.
-    /// @param artisan Ví nhận phần doanh thu của nghệ nhân.
+    /// @notice Phân tách thanh toán khi được gọi bởi Marketplace (theo IPaymentSplitter).
+    function splitPayment(address seller, ProductType /* pType */) external payable override nonReentrant {
+        _splitPayment(seller);
+    }
+
+    /// @notice Phân tách thanh toán với 1 tham số artisan.
     function splitPayment(address artisan) external payable nonReentrant {
+        _splitPayment(artisan);
+    }
+
+    function _splitPayment(address artisan) internal {
         if (artisan == address(0)) revert ZeroAddress();
         if (msg.value == 0) revert ZeroPayment();
 
@@ -153,7 +155,6 @@ contract PaymentSplitter is Ownable, ReentrancyGuard {
     // Internal
     // ------------------------------------------------------------------
     function _setShares(uint16 a, uint16 t, uint16 p) internal {
-        // Cộng bằng uint256 để tránh overflow uint16 khi fuzz/giá trị lớn.
         if (uint256(a) + uint256(t) + uint256(p) != BPS_DENOMINATOR) revert InvalidBPS();
         artisanBPS = a;
         treasuryBPS = t;

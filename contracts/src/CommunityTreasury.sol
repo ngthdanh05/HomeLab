@@ -46,6 +46,11 @@ contract CommunityTreasury is Ownable, ReentrancyGuard {
         emit FundsReceived(msg.sender, msg.value);
     }
 
+    /// @notice Nhận ETH qua hàm deposit (tương thích trực tiếp với PaymentSplitter).
+    function deposit() external payable {
+        emit FundsReceived(msg.sender, msg.value);
+    }
+
     /// @notice Giải ngân ETH cho recipient. Chỉ Governance được gọi.
     function disburse(uint256 proposalId, address payable recipient, uint256 amount) external nonReentrant {
         if (msg.sender != governance) revert NotGovernance();

@@ -4,12 +4,13 @@ pragma solidity ^0.8.20;
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ProductType, IImpactBadge} from "./interfaces/IMarketPlaceDeps.sol";
 
 /// @title ImpactBadge
 /// @notice ERC-721 NFT "Proof of Action": chứng nhận các hành động tạo tác động tích cực.
 /// @dev Chỉ địa chỉ có MINTER_ROLE mới được mint. Metadata nằm trên IPFS (ipfs://...).
 ///      tokenId bắt đầu từ 1 và tăng dần.
-contract ImpactBadge is ERC721, ERC721URIStorage, AccessControl {
+contract ImpactBadge is ERC721, ERC721URIStorage, AccessControl, IImpactBadge {
     enum BadgeType {
         ECO_CHECKIN,
         ZERO_CARBON,
@@ -24,6 +25,9 @@ contract ImpactBadge is ERC721, ERC721URIStorage, AccessControl {
     }
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+    string public constant DEFAULT_METADATA_URI =
+        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/badge.json";
 
     /// @dev tokenId kế tiếp sẽ được mint (bắt đầu từ 1).
     uint256 private _nextTokenId = 1;
@@ -42,7 +46,20 @@ contract ImpactBadge is ERC721, ERC721URIStorage, AccessControl {
         _grantRole(MINTER_ROLE, admin);
     }
 
-    /// @notice Mint một badge mới cho `to`.
+    /// @notice Mint một badge theo ProductType (chuẩn IImpactBadge cho Marketplace).
+    function mint(address to, ProductType pType) external override onlyRole(MINTER_ROLE) returns (uint256 tokenId) {
+        BadgeType bType;
+        if (pType == ProductType.Handicraft) {
+            bType = BadgeType.ECO_CHECKIN;
+        } else if (pType == ProductType.Food) {
+            bType = BadgeType.ZERO_CARBON;
+        } else {
+            bType = BadgeType.CULTURE_GUARDIAN;
+        }
+        return _mintBadgeInternal(to, bType, DEFAULT_METADATA_URI);
+    }
+
+    /// @notice Mint một badge mới cho `to` kèm URI tùy chỉnh.
     /// @param to Người nhận badge.
     /// @param badgeType Loại badge.
     /// @param metadataURI IPFS URI của metadata (vd: ipfs://Qm...).
@@ -50,6 +67,13 @@ contract ImpactBadge is ERC721, ERC721URIStorage, AccessControl {
     function mintBadge(address to, BadgeType badgeType, string calldata metadataURI)
         external
         onlyRole(MINTER_ROLE)
+        returns (uint256 tokenId)
+    {
+        return _mintBadgeInternal(to, badgeType, metadataURI);
+    }
+
+    function _mintBadgeInternal(address to, BadgeType badgeType, string memory metadataURI)
+        internal
         returns (uint256 tokenId)
     {
         if (bytes(metadataURI).length == 0) revert EmptyMetadataURI();
@@ -63,7 +87,6 @@ contract ImpactBadge is ERC721, ERC721URIStorage, AccessControl {
 
         emit BadgeMinted(to, tokenId, badgeType);
     }
-
 
     /// @notice Lấy thông tin on-chain của một badge.
     function getBadge(uint256 tokenId) external view returns (Badge memory) {
