@@ -404,16 +404,16 @@ function getActiveProposals() external view returns (uint256[] memory)
     - `execute()` gọi `CommunityTreasury.disburse()`.
   - Emit events: `ProposalCreated`, `VoteCast`, `ProposalExecuted`, `ProposalRejected`.
 - **Definition of Done (DoD)**:
-  - [ ] Contract compile không warning.
-  - [ ] Unit test: Treasury nhận ETH từ PaymentSplitter, balance cập nhật đúng.
-  - [ ] Unit test: Treasury revert khi `disburse()` gọi từ non-Governance address.
-  - [ ] Unit test: tạo proposal thành công, revert khi ECO balance < threshold.
-  - [ ] Unit test: vote thành công, revert double-vote.
-  - [ ] Unit test: execute proposal khi điều kiện đạt (majority + quorum + deadline).
-  - [ ] Unit test: execute revert khi deadline chưa qua.
-  - [ ] Unit test: execute revert khi quorum không đạt.
-  - [ ] Tiền được giải ngân đúng địa chỉ recipient sau execute.
-  - [ ] Test coverage ≥ 90% cho cả 2 contracts.
+  - [x] Contract compile không warning.
+  - [x] Unit test: Treasury nhận ETH từ PaymentSplitter, balance cập nhật đúng.
+  - [x] Unit test: Treasury revert khi `disburse()` gọi từ non-Governance address.
+  - [x] Unit test: tạo proposal thành công, revert khi ECO balance < threshold.
+  - [x] Unit test: vote thành công, revert double-vote.
+  - [x] Unit test: execute proposal khi điều kiện đạt (majority + quorum + deadline).
+  - [x] Unit test: execute revert khi deadline chưa qua.
+  - [x] Unit test: execute revert khi quorum không đạt.
+  - [x] Tiền được giải ngân đúng địa chỉ recipient sau execute.
+  - [x] Test coverage ≥ 90% cho cả 2 contracts.
 
 ---
 
@@ -438,11 +438,11 @@ function getActiveProposals() external view returns (uint256[] memory)
   - Lưu contract addresses vào `deployments/{network}.json`.
   - `Makefile` target: `make deploy-local` và `make deploy-sepolia`.
 - **Definition of Done (DoD)**:
-  - [ ] `make deploy-local` chạy thành công trên Anvil node (port 8545).
-  - [ ] `deployments/local.json` được tạo với đầy đủ addresses.
-  - [ ] MINTER_ROLE được grant đúng cho PaymentSplitter và Marketplace.
-  - [ ] Governance được set là authorized caller của Treasury.
-  - [ ] Tất cả contracts verify trên Anvil bằng `cast call`.
+  - [x] `make deploy-local` chạy thành công trên Anvil node (port 8545).
+  - [x] `deployments/local.json` được tạo với đầy đủ addresses.
+  - [x] MINTER_ROLE được grant đúng cho PaymentSplitter và Marketplace.
+  - [x] Governance được set là authorized caller của Treasury.
+  - [x] Tất cả contracts verify trên Anvil bằng `cast call`.
 
 ---
 
@@ -464,12 +464,12 @@ function getActiveProposals() external view returns (uint256[] memory)
   - Script 05: 3 accounts vote `true`, chờ deadline (cheatcode `cast rpc evm_increaseTime`), execute proposal.
   - `make simulate-e2e` chạy tất cả scripts theo thứ tự.
 - **Definition of Done (DoD)**:
-  - [ ] `make simulate-e2e` chạy hoàn chỉnh không có lỗi.
-  - [ ] Các balance thay đổi đúng như logic nghiệp vụ.
-  - [ ] ImpactBadge được mint đúng cho buyer.
-  - [ ] EcoToken được mint đúng cho buyer.
-  - [ ] Treasury nhận đúng Y%.
-  - [ ] Proposal được execute thành công, ETH chuyển đến recipient.
+  - [x] `make simulate-e2e` chạy hoàn chỉnh không có lỗi.
+  - [x] Các balance thay đổi đúng như logic nghiệp vụ.
+  - [x] ImpactBadge được mint đúng cho buyer.
+  - [x] EcoToken được mint đúng cho buyer.
+  - [x] Treasury nhận đúng Y%.
+  - [x] Proposal được execute thành công, ETH chuyển đến recipient.
 
 ---
 
@@ -487,11 +487,11 @@ function getActiveProposals() external view returns (uint256[] memory)
   - Cập nhật `docs/DEPLOYMENTS.md` với contract addresses và Etherscan links.
   - Test thực tế: tương tác với contracts trên Sepolia bằng `cast send` với real wallet.
 - **Definition of Done (DoD)**:
-  - [ ] Tất cả 6 contracts được deploy thành công lên Sepolia.
-  - [ ] Tất cả contracts có verified source code trên Sepolia Etherscan.
-  - [ ] `docs/DEPLOYMENTS.md` đã cập nhật đầy đủ links.
-  - [ ] Ít nhất 1 giao dịch `purchaseListing` thành công trên Sepolia (dùng SepoliaETH).
-  - [ ] Treasury balance > 0 trên Sepolia sau giao dịch test.
+  - [x] Tất cả 6 contracts được deploy thành công lên Sepolia.
+  - [x] Tất cả contracts có verified source code trên Sepolia Etherscan.
+  - [x] `docs/DEPLOYMENTS.md` đã cập nhật đầy đủ links.
+  - [x] Ít nhất 1 giao dịch `purchaseListing` thành công trên Sepolia (dùng SepoliaETH).
+  - [x] Treasury balance > 0 trên Sepolia sau giao dịch test.
 
 ---
 
