@@ -523,11 +523,11 @@ function getActiveProposals() external view returns (uint256[] memory)
   - `Web3Provider.tsx`: wrap `WagmiProvider` + `ConnectKitProvider`.
   - `.env.local.example`: `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`, `GEMINI_API_KEY`, `NEXT_PUBLIC_CHAIN_ID`.
 - **Definition of Done (DoD)**:
-  - [ ] `npm run dev` chạy thành công, không lỗi compile.
-  - [ ] `npm run build` thành công.
-  - [ ] ConnectKit modal mở được, kết nối MetaMask thành công.
-  - [ ] Đọc được `useChainId()` hook trả về đúng chain (Sepolia/Anvil).
-  - [ ] `contracts.ts` export đúng ABI của tất cả 6 contracts.
+  - [x] `npm run dev` chạy thành công, không lỗi compile.
+  - [x] `npm run build` thành công.
+  - [x] ConnectKit modal mở được, kết nối MetaMask thành công.
+  - [x] Đọc được `useChainId()` hook trả về đúng chain (Sepolia/Anvil).
+  - [x] `contracts.ts` export đúng ABI của tất cả 6 contracts.
 
 ---
 
@@ -554,12 +554,12 @@ function getActiveProposals() external view returns (uint256[] memory)
   - `TravelAssistant.tsx`: chat UI với streaming text display, loading states.
   - `useAIChat.ts`: custom hook quản lý chat history và streaming.
 - **Definition of Done (DoD)**:
-  - [ ] Gọi API `/api/ai/chat` trả về streaming response.
-  - [ ] Gọi API `/api/ai/itinerary` trả về structured JSON itinerary.
-  - [ ] Chat UI hiển thị streaming text đúng (không flash/jump).
-  - [ ] System prompt giữ đúng vai trò AI eco-tourism assistant.
-  - [ ] Error handling: API key không hợp lệ → hiển thị lỗi thân thiện.
-  - [ ] Mobile responsive layout.
+  - [x] Gọi API `/api/ai/chat` trả về streaming response.
+  - [x] Gọi API `/api/ai/itinerary` trả về structured JSON itinerary.
+  - [x] Chat UI hiển thị streaming text đúng (không flash/jump).
+  - [x] System prompt giữ đúng vai trò AI eco-tourism assistant.
+  - [x] Error handling: API key không hợp lệ → hiển thị lỗi thân thiện.
+  - [x] Mobile responsive layout.
 
 ---
 
@@ -579,10 +579,10 @@ function getActiveProposals() external view returns (uint256[] memory)
   - `LanguageLearning`: flash card component với audio (nếu available), học 10 câu bản địa phổ biến.
   - `culturalData.ts`: seed data cho các điểm đến demo (Hội An, Sa Pa, Phú Quốc).
 - **Definition of Done (DoD)**:
-  - [ ] AI tạo được culture guide cho ít nhất 3 điểm đến.
-  - [ ] DosDonts hiển thị rõ ràng, dễ đọc.
-  - [ ] Language Learning flash card hoạt động (flip animation).
-  - [ ] Responsive trên mobile.
+  - [x] AI tạo được culture guide cho ít nhất 3 điểm đến.
+  - [x] DosDonts hiển thị rõ ràng, dễ đọc.
+  - [x] Language Learning flash card hoạt động (flip animation).
+  - [x] Responsive trên mobile.
 
 ---
 
@@ -604,12 +604,12 @@ function getActiveProposals() external view returns (uint256[] memory)
   - `ArchiveGallery.tsx`: danh sách di sản với thumbnail, click để vào xem 360°.
   - Sample assets: ít nhất 2 ảnh 360° demo (có thể dùng public domain).
 - **Definition of Done (DoD)**:
-  - [ ] Sphere 360° render đúng, không artifact.
-  - [ ] Drag rotation mượt trên desktop (mouse).
-  - [ ] Touch rotation hoạt động trên mobile.
-  - [ ] Hotspot hiển thị và click được, popup thông tin.
-  - [ ] Performance: FPS > 30 trên thiết bị trung bình.
-  - [ ] Lazy load Three.js (dynamic import) để không ảnh hưởng First Load.
+  - [x] Sphere 360° render đúng, không artifact.
+  - [x] Drag rotation mượt trên desktop (mouse).
+  - [x] Touch rotation hoạt động trên mobile.
+  - [x] Hotspot hiển thị và click được, popup thông tin.
+  - [x] Performance: FPS > 30 trên thiết bị trung bình.
+  - [x] Lazy load Three.js (dynamic import) để không ảnh hưởng First Load.
 
 ---
 

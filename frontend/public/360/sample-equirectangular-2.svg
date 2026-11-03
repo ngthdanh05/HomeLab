@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 1024" width="2048" height="1024">
+  <defs>
+    <linearGradient id="mistSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1b2a47"/>
+      <stop offset="40%" stop-color="#3d5a80"/>
+      <stop offset="60%" stop-color="#98c1d9"/>
+      <stop offset="80%" stop-color="#e0fbfc"/>
+      <stop offset="100%" stop-color="#cad2c5"/>
+    </linearGradient>
+    <linearGradient id="terraceGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#52796f"/>
+      <stop offset="35%" stop-color="#354f52"/>
+      <stop offset="70%" stop-color="#2f3e46"/>
+      <stop offset="100%" stop-color="#1b2426"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky & Morning Mist -->
+  <rect x="0" y="0" width="2048" height="520" fill="url(#mistSky)"/>
+
+  <!-- Morning Sun behind Fog -->
+  <circle cx="500" cy="180" r="60" fill="#fff" opacity="0.6" filter="drop-shadow(0 0 40px #e0fbfc)"/>
+
+  <!-- Hoang Lien Son High Peaks -->
+  <polygon points="0,480 320,280 640,500" fill="#293241" opacity="0.85"/>
+  <polygon points="450,510 820,230 1150,510" fill="#222b38" opacity="0.95"/>
+  <polygon points="1000,500 1350,290 1700,510" fill="#293241" opacity="0.85"/>
+  <polygon points="1500,510 1850,260 2048,460 2048,520 1500,520" fill="#1f2733"/>
+
+  <!-- Layers of Rice Terraces (Curved contour lines) -->
+  <rect x="0" y="520" width="2048" height="504" fill="url(#terraceGrad)"/>
+
+  <path d="M0,540 Q512,500 1024,550 T2048,540 L2048,1024 L0,1024 Z" fill="#84a98c"/>
+  <path d="M0,590 Q512,560 1024,610 T2048,590 L2048,1024 L0,1024 Z" fill="#6b9080"/>
+  <path d="M0,650 Q400,610 900,670 T2048,650 L2048,1024 L0,1024 Z" fill="#52796f"/>
+  <path d="M0,720 Q600,680 1200,740 T2048,720 L2048,1024 L0,1024 Z" fill="#3e5c54"/>
+  <path d="M0,800 Q500,760 1100,820 T2048,800 L2048,1024 L0,1024 Z" fill="#2f4858"/>
+  <path d="M0,890 Q450,850 1050,910 T2048,890 L2048,1024 L0,1024 Z" fill="#1e323d"/>
+
+  <!-- Water reflection in terraces (Water mirror season) -->
+  <ellipse cx="600" cy="570" rx="140" ry="8" fill="#e0fbfc" opacity="0.4"/>
+  <ellipse cx="1400" cy="630" rx="180" ry="10" fill="#e0fbfc" opacity="0.35"/>
+  <ellipse cx="900" cy="700" rx="200" ry="12" fill="#e0fbfc" opacity="0.3"/>
+
+  <!-- Small H'Mong Traditional Stilt House -->
+  <polygon points="1200,610 1240,580 1280,610" fill="#5c4033"/>
+  <rect x="1210" y="610" width="60" height="25" fill="#8b5a2b"/>
+  <line x1="1220" y1="635" x2="1220" y2="650" stroke="#5c4033" stroke-width="3"/>
+  <line x1="1260" y1="635" x2="1260" y2="650" stroke="#5c4033" stroke-width="3"/>
+
+  <!-- Mountain footpath / Bamboo grove markers -->
+  <path d="M400,800 Q450,750 520,700 T600,620" fill="none" stroke="#a3b18a" stroke-width="3" stroke-dasharray="6,4"/>
+
+  <text x="1024" y="970" fill="#a4b0be" font-family="sans-serif" font-size="28" text-anchor="middle" letter-spacing="4">
+    MYHOMELAB — DI SẢN SỐ HÓA 360° RUỘNG BẬC THANG SA PA
+  </text>
+</svg>
