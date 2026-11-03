@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { createSSEParser } from "@/lib/sse";
+import type { ChatContext } from "@/types/ai";
+
+export type { ChatContext };
 
 export interface ChatMessage {
   id: string;
@@ -9,10 +13,14 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
-export interface ChatContext {
-  destination?: string;
-  interests?: string[];
-  carbonPreference?: "low" | "medium" | "high";
+async function readErrorMessage(response: Response): Promise<string> {
+  try {
+    const data = await response.json();
+    if (typeof data?.error === "string") return data.error;
+  } catch {
+    // Non-JSON error body (e.g. proxy HTML page).
+  }
+  return "Không thể kết nối tới AI. Vui lòng thử lại.";
 }
 
 export function useAIChat() {
@@ -21,112 +29,100 @@ export function useAIChat() {
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Abort any in-flight stream when the component using the hook unmounts.
+  useEffect(() => () => abortControllerRef.current?.abort(), []);
+
+  const updateMessage = useCallback(
+    (id: string, update: (content: string) => string) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === id ? { ...msg, content: update(msg.content) } : msg,
+        ),
+      );
+    },
+    [],
+  );
+
   const sendMessage = useCallback(
     async (message: string, context?: ChatContext) => {
-      if (!message.trim() || isLoading) return;
+      if (!message.trim() || abortControllerRef.current) return;
 
-      const userMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content: message,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, userMessage]);
+      const now = new Date();
+      const assistantMessageId = crypto.randomUUID();
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "user", content: message, timestamp: now },
+        { id: assistantMessageId, role: "assistant", content: "", timestamp: now },
+      ]);
       setIsLoading(true);
       setError(null);
 
-      const assistantMessageId = crypto.randomUUID();
-      const assistantMessage: ChatMessage = {
-        id: assistantMessageId,
-        role: "assistant",
-        content: "",
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
       try {
-        abortControllerRef.current = new AbortController();
-
         const response = await fetch("/api/ai/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message, context }),
-          signal: abortControllerRef.current.signal,
+          signal: controller.signal,
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to get response");
-        }
+        if (!response.ok) throw new Error(await readErrorMessage(response));
+        if (!response.body) throw new Error("Không nhận được phản hồi từ AI.");
 
-        const reader = response.body?.getReader();
+        const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        const parse = createSSEParser();
 
-        if (!reader) throw new Error("No response body");
-
-        while (true) {
+        streamLoop: while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          // `stream: true` keeps multi-byte characters split across chunks intact.
+          const events = parse(decoder.decode(value, { stream: !done }));
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-              if (data === "[DONE]") break;
-
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.text) {
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: msg.content + parsed.text }
-                        : msg
-                    )
-                  );
-                }
-              } catch {
-                // Skip invalid JSON
-              }
+          for (const event of events) {
+            if (event.type === "text") {
+              updateMessage(assistantMessageId, (c) => c + event.text);
+            } else if (event.type === "error") {
+              throw new Error(event.error);
+            } else {
+              break streamLoop;
             }
           }
+
+          if (done) break;
         }
       } catch (err) {
-        if ((err as Error).name === "AbortError") return;
+        if (err instanceof DOMException && err.name === "AbortError") return;
 
-        const errorMsg =
-          err instanceof Error ? err.message : "Đã xảy ra lỗi";
+        const errorMsg = err instanceof Error ? err.message : "Đã xảy ra lỗi";
         setError(errorMsg);
-
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageId
-              ? {
-                  ...msg,
-                  content: `Xin lỗi, đã xảy ra lỗi: ${errorMsg}. Vui lòng thử lại.`,
-                }
-              : msg
-          )
+        updateMessage(
+          assistantMessageId,
+          (c) => `${c ? `${c}\n\n` : ""}⚠️ Xin lỗi, đã xảy ra lỗi: ${errorMsg}`,
         );
       } finally {
-        setIsLoading(false);
-        abortControllerRef.current = null;
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+          setIsLoading(false);
+        }
       }
     },
-    [isLoading]
+    [updateMessage],
   );
 
   const clearChat = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsLoading(false);
     setMessages([]);
     setError(null);
   }, []);
 
   const stopGenerating = useCallback(() => {
     abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsLoading(false);
   }, []);
 
   return {

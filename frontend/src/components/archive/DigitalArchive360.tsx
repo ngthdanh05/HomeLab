@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { useThreeScene } from "@/hooks/useThreeScene";
-import { HotspotData } from "@/lib/three-utils";
+import type { HotspotData } from "@/lib/three-utils";
 import { HotspotOverlay } from "./HotspotOverlay";
 
 export interface DigitalArchive360Props {
@@ -13,26 +13,25 @@ export interface DigitalArchive360Props {
   onBack?: () => void;
 }
 
+// Stable default so the Three.js scene isn't rebuilt on every render.
+const NO_HOTSPOTS: HotspotData[] = [];
+
 export function DigitalArchive360({
   imageUrl,
   title,
   location,
-  hotspots = [],
+  hotspots = NO_HOTSPOTS,
   onBack,
 }: DigitalArchive360Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedHotspot, setSelectedHotspot] = useState<HotspotData | null>(
     null
   );
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Hook khởi tạo ThreeJS scene
-  useThreeScene(containerRef, {
+  const { isLoading } = useThreeScene(containerRef, {
     imageUrl,
     hotspots,
-    onHotspotClick: (hotspot) => {
-      setSelectedHotspot(hotspot);
-    },
+    onHotspotClick: setSelectedHotspot,
   });
 
   return (
@@ -41,8 +40,16 @@ export function DigitalArchive360({
       <div
         ref={containerRef}
         className="w-full h-full cursor-grab active:cursor-grabbing"
-        onMouseEnter={() => setIsLoading(false)}
+        aria-label={`Không gian 360° của ${title}`}
+        role="img"
       />
+
+      {isLoading && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-950/80 text-slate-400">
+          <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+          <p className="text-sm">Đang tải ảnh 360°...</p>
+        </div>
+      )}
 
       {/* Top Overlay Header */}
       <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">

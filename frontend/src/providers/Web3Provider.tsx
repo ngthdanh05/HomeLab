@@ -5,6 +5,7 @@ import { WagmiProvider } from "wagmi";
 import { ConnectKitProvider } from "connectkit";
 import { config } from "../config/wagmi";
 import { QueryProvider } from "./QueryProvider";
+import { ToastProvider } from "../components/ui/Toast";
 
 export function Web3Provider({ children }: { children: ReactNode }) {
   return (
@@ -19,7 +20,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           }}
           mode="dark"
         >
-          {children}
+          <ToastProvider>{children}</ToastProvider>
         </ConnectKitProvider>
       </QueryProvider>
     </WagmiProvider>

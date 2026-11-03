@@ -5,6 +5,7 @@ import { culturalDestinations } from "@/data/culturalData";
 import { CultureGuideCard } from "./CultureGuideCard";
 import { LanguageLearning } from "./LanguageLearning";
 import { DosDonts } from "./DosDonts";
+import type { CultureGuide } from "@/types/ai";
 
 type Tab = "guide" | "language" | "ai";
 
@@ -12,30 +13,33 @@ export function CultureGuideSection() {
   const [selectedId, setSelectedId] = useState(culturalDestinations[0].id);
   const [activeTab, setActiveTab] = useState<Tab>("guide");
   const [aiDestination, setAiDestination] = useState("");
-  const [aiGuide, setAiGuide] = useState<{
-    dos: string[];
-    donts: string[];
-    phrases: { phrase: string; meaning: string; pronunciation: string }[];
-    customs: string[];
-    localFood: string[];
-  } | null>(null);
+  const [aiGuide, setAiGuide] = useState<CultureGuide | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
-  const selectedDest = culturalDestinations.find((d) => d.id === selectedId)!;
+  const selectedDest =
+    culturalDestinations.find((d) => d.id === selectedId) ?? culturalDestinations[0];
 
   const handleAIGuide = async () => {
-    if (!aiDestination.trim()) return;
+    if (!aiDestination.trim() || aiLoading) return;
     setAiLoading(true);
+    setAiError(null);
     try {
       const response = await fetch("/api/ai/culture-guide", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ destination: aiDestination }),
       });
-      const data = await response.json();
-      setAiGuide(data);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || "Không thể tạo hướng dẫn văn hóa.");
+      }
+      setAiGuide(data as CultureGuide);
     } catch (err) {
-      console.error(err);
+      setAiGuide(null);
+      setAiError(
+        err instanceof Error ? err.message : "Không thể tạo hướng dẫn văn hóa.",
+      );
     } finally {
       setAiLoading(false);
     }
@@ -85,7 +89,8 @@ export function CultureGuideSection() {
       )}
 
       {activeTab === "language" && (
-        <LanguageLearning destination={selectedDest} />
+        // key resets flash-card progress when switching destination
+        <LanguageLearning key={selectedDest.id} destination={selectedDest} />
       )}
 
       {activeTab === "ai" && (
@@ -94,9 +99,11 @@ export function CultureGuideSection() {
           <p className="text-slate-400 text-sm">
             Nhập bất kỳ điểm đến nào ở Việt Nam để nhận hướng dẫn văn hóa từ AI
           </p>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
+              aria-label="Điểm đến cho AI Culture Guide"
+              maxLength={100}
               value={aiDestination}
               onChange={(e) => setAiDestination(e.target.value)}
               placeholder="VD: Huế, Đà Lạt, Hà Nội..."
@@ -112,6 +119,15 @@ export function CultureGuideSection() {
             </button>
           </div>
 
+          {aiError && (
+            <div
+              role="alert"
+              className="bg-red-900/30 border border-red-700/50 rounded-xl p-3 text-red-400 text-sm"
+            >
+              ⚠️ {aiError}
+            </div>
+          )}
+
           {aiGuide && (
             <div className="space-y-4 animate-fade-in">
               <DosDonts dos={aiGuide.dos} donts={aiGuide.donts} />
@@ -121,12 +137,26 @@ export function CultureGuideSection() {
                   <h4 className="text-white font-semibold mb-2">💬 Câu giao tiếp cơ bản</h4>
                   <div className="space-y-2">
                     {aiGuide.phrases.map((p, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-slate-700 rounded-lg px-4 py-2">
+                      <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 bg-slate-700 rounded-lg px-4 py-2">
                         <span className="text-white font-medium">{p.phrase}</span>
                         <span className="text-slate-400 text-sm">{p.meaning}</span>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {aiGuide.customs.length > 0 && (
+                <div>
+                  <h4 className="text-white font-semibold mb-2">🎭 Phong tục & Truyền thống</h4>
+                  <ul className="space-y-1">
+                    {aiGuide.customs.map((custom, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-slate-300 text-sm">
+                        <span className="text-teal-500 mt-0.5 flex-shrink-0">✦</span>
+                        {custom}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 

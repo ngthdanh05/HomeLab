@@ -1,63 +1,25 @@
 "use client";
 
 import React, { useState } from "react";
-import { ConnectKitButton } from "connectkit";
-import { useAccount, useChainId } from "wagmi";
+import { useAccount } from "wagmi";
 import { TravelAssistant } from "@/components/ai/TravelAssistant";
 import { CultureGuideSection } from "@/components/culture/CultureGuideSection";
 import { ArchiveGallery } from "@/components/archive/ArchiveGallery";
-import { CONTRACT_ADDRESSES } from "@/config/contracts";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { getChainName } from "@/config/contracts";
+import { useActiveChain } from "@/hooks/useActiveChain";
 
 type MainTab = "ai" | "culture" | "archive";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<MainTab>("ai");
   const { isConnected, address } = useAccount();
-  const chainId = useChainId();
+  const { chainId, addresses: contractAddresses, isWrongNetwork } = useActiveChain();
+  const chainName = getChainName(chainId);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
-      {/* Navigation Header */}
-      <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white text-xl shadow-lg shadow-emerald-950">
-              🌿
-            </div>
-            <div>
-              <h1 className="text-base md:text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                MyHomeLab
-                <span className="text-[10px] font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full">
-                  Phase 3: AI & 360° Archive
-                </span>
-              </h1>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                Hệ sinh thái Du lịch số Tuần hoàn & Tái tạo
-              </p>
-            </div>
-          </div>
-
-          {/* Web3 Status & Connect Wallet */}
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/60 text-xs">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
-                }`}
-              />
-              <span className="text-slate-300">
-                {chainId === 11155111
-                  ? "Sepolia Testnet"
-                  : chainId === 31337
-                    ? "Anvil Localnet"
-                    : `Chain ID: ${chainId || "Chưa kết nối"}`}
-              </span>
-            </div>
-
-            <ConnectKitButton />
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -127,7 +89,7 @@ export default function Home() {
                   sang tab <strong>&ldquo;🗺️ Lịch trình&rdquo;</strong> trong khung chat để AI tự
                   động lên kế hoạch theo số ngày.
                 </span>
-                <span className="text-emerald-400">Model: Gemini 1.5 Flash</span>
+                <span className="text-emerald-400">Powered by Google Gemini</span>
               </div>
               <TravelAssistant />
             </div>
@@ -153,12 +115,13 @@ export default function Home() {
               <span>⛓️</span> On-chain Ecosystem Contracts
             </h3>
             <span className="text-xs text-emerald-400 font-mono">
-              Network: {chainId === 11155111 ? "Sepolia" : "Anvil (Local)"}
+              Network: {chainName}
+              {isWrongNetwork && " (ví đang ở mạng chưa hỗ trợ)"}
             </span>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {Object.entries(CONTRACT_ADDRESSES).map(([name, addr]) => (
+            {Object.entries(contractAddresses).map(([name, addr]) => (
               <div
                 key={name}
                 className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-left space-y-1"

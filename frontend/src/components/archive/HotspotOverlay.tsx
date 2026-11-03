@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { HotspotData } from "@/lib/three-utils";
+import type { HotspotData } from "@/lib/three-utils";
 
 interface HotspotOverlayProps {
   hotspot: HotspotData | null;

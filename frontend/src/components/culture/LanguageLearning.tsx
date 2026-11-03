@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { CulturalDestination } from "@/data/culturalData";
 
 interface LanguageLearningProps {
@@ -11,28 +11,33 @@ export function LanguageLearning({ destination }: LanguageLearningProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [completed, setCompleted] = useState<Set<number>>(new Set());
+  const flipTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => clearTimeout(flipTimerRef.current), []);
 
   const phrases = destination.phrases;
-  const currentPhrase = phrases[currentIndex];
+  if (phrases.length === 0) return null;
+  const currentPhrase = phrases[Math.min(currentIndex, phrases.length - 1)];
 
-  const handleFlip = () => setFlipped(!flipped);
+  const handleFlip = () => setFlipped((prev) => !prev);
+
+  // Wait for the card to flip back before swapping content, so the next
+  // card's meaning is never briefly visible.
+  const goTo = (getIndex: (prev: number) => number) => {
+    setFlipped(false);
+    clearTimeout(flipTimerRef.current);
+    flipTimerRef.current = setTimeout(() => setCurrentIndex(getIndex), 200);
+  };
 
   const handleNext = () => {
-    setCompleted((prev) => new Set([...prev, currentIndex]));
-    setFlipped(false);
-    setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % phrases.length);
-    }, 200);
+    setCompleted((prev) => new Set(prev).add(currentIndex));
+    goTo((prev) => (prev + 1) % phrases.length);
   };
 
-  const handlePrev = () => {
-    setFlipped(false);
-    setTimeout(() => {
-      setCurrentIndex((prev) => (prev - 1 + phrases.length) % phrases.length);
-    }, 200);
-  };
+  const handlePrev = () => goTo((prev) => (prev - 1 + phrases.length) % phrases.length);
 
   const handleReset = () => {
+    clearTimeout(flipTimerRef.current);
     setCurrentIndex(0);
     setFlipped(false);
     setCompleted(new Set());
@@ -69,8 +74,18 @@ export function LanguageLearning({ destination }: LanguageLearningProps) {
 
       {/* Flash card */}
       <div
-        className="relative h-48 cursor-pointer perspective-1000"
+        role="button"
+        tabIndex={0}
+        className="relative h-48 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-2xl"
         onClick={handleFlip}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleFlip();
+          }
+        }}
+        aria-label={flipped ? "Xem lại cụm từ" : "Lật thẻ để xem nghĩa"}
+        aria-pressed={flipped}
         style={{ perspective: "1000px" }}
       >
         <div
@@ -86,7 +101,7 @@ export function LanguageLearning({ destination }: LanguageLearningProps) {
             className="absolute inset-0 bg-gradient-to-br from-emerald-900 to-teal-900 rounded-2xl flex flex-col items-center justify-center border border-emerald-700/50"
             style={{ backfaceVisibility: "hidden" }}
           >
-            <p className="text-3xl font-bold text-white mb-2">
+            <p className="text-2xl sm:text-3xl font-bold text-white mb-2 px-4 text-center">
               {currentPhrase.phrase}
             </p>
             <p className="text-emerald-300 text-sm">Phát âm: {currentPhrase.pronunciation}</p>
@@ -103,7 +118,7 @@ export function LanguageLearning({ destination }: LanguageLearningProps) {
               transform: "rotateY(180deg)",
             }}
           >
-            <p className="text-2xl font-bold text-white mb-2">
+            <p className="text-xl sm:text-2xl font-bold text-white mb-2 px-4 text-center">
               {currentPhrase.meaning}
             </p>
             <p className="text-slate-300 text-sm italic">
@@ -158,6 +173,7 @@ export function LanguageLearning({ destination }: LanguageLearningProps) {
             <button
               key={idx}
               onClick={() => {
+                clearTimeout(flipTimerRef.current);
                 setCurrentIndex(idx);
                 setFlipped(false);
               }}

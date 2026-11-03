@@ -1,13 +1,13 @@
 "use client";
 
 import React from "react";
-import { Itinerary } from "@/app/api/ai/itinerary/route";
+import type { ActivityType, Itinerary } from "@/types/ai";
 
 interface ItineraryCardProps {
   itinerary: Itinerary;
 }
 
-const activityTypeIcons: Record<string, string> = {
+const activityTypeIcons: Record<ActivityType, string> = {
   transport: "🚌",
   accommodation: "🏨",
   food: "🍜",
@@ -25,7 +25,7 @@ export function ItineraryCard({ itinerary }: ItineraryCardProps) {
   return (
     <div className="bg-slate-800 rounded-2xl p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-start gap-4">
         <div>
           <h2 className="text-xl font-bold text-white">
             🗺️ Lịch trình {itinerary.days} ngày tại {itinerary.destination}
@@ -41,14 +41,14 @@ export function ItineraryCard({ itinerary }: ItineraryCardProps) {
       </div>
 
       {/* Carbon Summary */}
-      <div className="bg-slate-700 rounded-xl p-4 flex justify-between items-center">
+      <div className="bg-slate-700 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <div>
           <p className="text-slate-300 text-sm">Tổng phát thải ước tính</p>
           <p className="text-white font-bold text-lg">
             🌿 {itinerary.totalCarbonKg.toFixed(1)} kg CO₂
           </p>
         </div>
-        <div className="text-right text-sm text-slate-400">
+        <div className="sm:text-right text-sm text-slate-400">
           <p>💡 {itinerary.carbonOffsetSuggestion}</p>
         </div>
       </div>
