@@ -40,12 +40,18 @@ Tài liệu lưu trữ thông tin triển khai, địa chỉ hợp đồng và h
 
 | Contract | Địa chỉ trên Sepolia | Etherscan Link |
 | :--- | :--- | :--- |
-| **EcoToken** | `[SEPOLIA_ECO_TOKEN_ADDRESS]` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/[SEPOLIA_ECO_TOKEN_ADDRESS]) |
-| **ImpactBadge** | `[SEPOLIA_IMPACT_BADGE_ADDRESS]` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/[SEPOLIA_IMPACT_BADGE_ADDRESS]) |
-| **CommunityTreasury** | `[SEPOLIA_TREASURY_ADDRESS]` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/[SEPOLIA_TREASURY_ADDRESS]) |
-| **Governance** | `[SEPOLIA_GOVERNANCE_ADDRESS]` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/[SEPOLIA_GOVERNANCE_ADDRESS]) |
-| **PaymentSplitter** | `[SEPOLIA_PAYMENT_SPLITTER_ADDRESS]` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/[SEPOLIA_PAYMENT_SPLITTER_ADDRESS]) |
-| **Marketplace** | `[SEPOLIA_MARKETPLACE_ADDRESS]` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/[SEPOLIA_MARKETPLACE_ADDRESS]) |
+| **EcoToken** | `0xacB3267dBBeA4924cEE9e5631618DB8342f39a24` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0xacB3267dBBeA4924cEE9e5631618DB8342f39a24) |
+| **ImpactBadge** | `0xba5404682DB9feb35fBB1cbC18b97f1A59b7a9C9` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0xba5404682DB9feb35fBB1cbC18b97f1A59b7a9C9) |
+| **CommunityTreasury** | `0x10E83c02C8667485EDd78ce57E0f6553D33296e6` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x10E83c02C8667485EDd78ce57E0f6553D33296e6) |
+| **Governance** | `0x1e0404A2EDC3BB2139A82d2e8372631A11697998` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x1e0404A2EDC3BB2139A82d2e8372631A11697998) |
+| **PaymentSplitter** | `0x703B08397D144cCA8208E5dAf29ec8CfFFb49A6a` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x703B08397D144cCA8208E5dAf29ec8CfFFb49A6a) |
+| **Marketplace** | `0x43085F8015bDc47b1Ca334A502eF3a4F07878894` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x43085F8015bDc47b1Ca334A502eF3a4F07878894) |
+
+---
+
+> **Lưu ý (2026-11-03):** Marketplace cũ `0x20b00321Fe96B07817F6C8b0CD197F719d856983` bị deploy sai tham số constructor
+> (`paymentSplitter` trỏ vào EcoToken, `owner` là contract PaymentSplitter) nên không thể sửa được. Đã deploy lại Marketplace mới ở trên,
+> cấp `MINTER_ROLE` trên ImpactBadge cho Marketplace mới và thu hồi `MINTER_ROLE` của Marketplace cũ trên cả ImpactBadge và EcoToken.
 
 ---
 

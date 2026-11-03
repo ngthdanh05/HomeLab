@@ -48,25 +48,28 @@ contract Deploy is Script {
     uint256 internal constant VOTING_PERIOD_LOCAL      = 1 hours;
 
     function run() external {
+        // ─── Network config (inline — không khởi tạo contract helper) ─────────
+        bool isLocal       = block.chainid == 31337;
+
         // ─── Resolve deployer ─────────────────────────────────────────────────
-        uint256 deployerPrivateKey = vm.envOr("PRIVATE_KEY", uint256(0));
+        // Forge tự load .env (chứa PRIVATE_KEY và địa chỉ Sepolia). Trên Anvil
+        // phải bỏ qua chúng, nếu không script sẽ "resume" bằng địa chỉ Sepolia
+        // không tồn tại trên local và ký bằng ví không có ETH.
+        uint256 deployerPrivateKey = isLocal ? 0 : vm.envOr("PRIVATE_KEY", uint256(0));
         address deployer = deployerPrivateKey != 0
             ? vm.addr(deployerPrivateKey)
             : msg.sender;
-
-        // ─── Network config (inline — không khởi tạo contract helper) ─────────
-        bool isLocal       = block.chainid == 31337;
         uint256 threshold_ = isLocal ? PROPOSAL_THRESHOLD_LOCAL : PROPOSAL_THRESHOLD;
         uint256 quorum_    = isLocal ? QUORUM_BPS_LOCAL         : QUORUM_BPS;
         uint256 period_    = isLocal ? VOTING_PERIOD_LOCAL      : VOTING_PERIOD;
 
         // ─── Đọc địa chỉ resume từ env ────────────────────────────────────────
-        address existingEcoToken = vm.envOr("ECO_TOKEN_ADDRESS",    address(0));
-        address existingBadge    = vm.envOr("IMPACT_BADGE_ADDRESS", address(0));
-        address existingTreasury = vm.envOr("TREASURY_ADDRESS",     address(0));
-        address existingGovernance = vm.envOr("GOVERNANCE_ADDRESS",   address(0));
-        address existingSplitter = vm.envOr("PAYMENT_SPLITTER_ADDRESS",   address(0));
-        address existingMarketPlace = vm.envOr("MARKETPLACE_ADDRESS",   address(0));
+        address existingEcoToken = _resumeAddress("ECO_TOKEN_ADDRESS");
+        address existingBadge    = _resumeAddress("IMPACT_BADGE_ADDRESS");
+        address existingTreasury = _resumeAddress("TREASURY_ADDRESS");
+        address existingGovernance = _resumeAddress("GOVERNANCE_ADDRESS");
+        address existingSplitter = _resumeAddress("PAYMENT_SPLITTER_ADDRESS");
+        address existingMarketPlace = _resumeAddress("MARKETPLACE_ADDRESS");
 
         console2.log("=== Starting Deployment ===");
         console2.log("Chain ID       :", block.chainid);
@@ -195,6 +198,12 @@ contract Deploy is Script {
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    /// @dev Địa chỉ contract đã deploy để resume; luôn deploy mới trên Anvil.
+    function _resumeAddress(string memory envKey) internal view returns (address) {
+        if (block.chainid == 31337) return address(0);
+        return vm.envOr(envKey, address(0));
+    }
 
     function _saveDeployments() internal {
         string memory net  = _networkName();
