@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 1024" width="2048" height="1024">
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0a192f"/>
+      <stop offset="35%" stop-color="#1e3a5f"/>
+      <stop offset="55%" stop-color="#844330"/>
+      <stop offset="70%" stop-color="#d97736"/>
+      <stop offset="85%" stop-color="#f6ad55"/>
+      <stop offset="100%" stop-color="#2d3748"/>
+    </linearGradient>
+    <linearGradient id="waterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2d3748"/>
+      <stop offset="30%" stop-color="#1a365d"/>
+      <stop offset="70%" stop-color="#0f2027"/>
+      <stop offset="100%" stop-color="#050d1a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect x="0" y="0" width="2048" height="600" fill="url(#skyGrad)"/>
+
+  <!-- Stars & Moon in equirectangular coordinates -->
+  <circle cx="1024" cy="220" r="48" fill="#fffbe6" opacity="0.95" filter="drop-shadow(0 0 25px #ecc94b)"/>
+  <circle cx="1040" cy="210" r="44" fill="#1e3a5f" opacity="0.7"/>
+
+  <!-- Distant mountains / rooftops -->
+  <path d="M0,520 Q250,480 500,530 T1000,510 T1500,530 T2048,520 L2048,600 L0,600 Z" fill="#1a202c" opacity="0.8"/>
+
+  <!-- Ancient Town Rooftops & Bridge Silhouette -->
+  <polygon points="100,530 180,480 260,530" fill="#2d3748"/>
+  <polygon points="300,540 420,470 540,540" fill="#2d3748"/>
+  <polygon points="700,535 850,460 1000,535" fill="#2d3748"/>
+  <polygon points="1150,530 1300,475 1450,530" fill="#2d3748"/>
+  <polygon points="1600,540 1750,480 1900,540" fill="#2d3748"/>
+
+  <!-- Japanese Bridge Shape at center -->
+  <rect x="920" y="500" width="220" height="40" fill="#742a2a" rx="10"/>
+  <path d="M900,500 Q1030,460 1160,500 L1150,530 Q1030,490 910,530 Z" fill="#9b2c2c"/>
+
+  <!-- Lanterns Glow on Ancient Street (Equirectangular spread) -->
+  <circle cx="200" cy="510" r="14" fill="#ed8936" opacity="0.9"/>
+  <circle cx="360" cy="520" r="16" fill="#ecc94b" opacity="0.95"/>
+  <circle cx="480" cy="515" r="12" fill="#e53e3e" opacity="0.9"/>
+  <circle cx="800" cy="510" r="15" fill="#ed8936" opacity="0.9"/>
+  <circle cx="980" cy="490" r="14" fill="#e53e3e" opacity="0.9"/>
+  <circle cx="1080" cy="490" r="14" fill="#ecc94b" opacity="0.9"/>
+  <circle cx="1250" cy="515" r="15" fill="#ed8936" opacity="0.9"/>
+  <circle cx="1400" cy="520" r="16" fill="#e53e3e" opacity="0.95"/>
+  <circle cx="1700" cy="510" r="14" fill="#ecc94b" opacity="0.9"/>
+  <circle cx="1850" cy="515" r="15" fill="#ed8936" opacity="0.9"/>
+
+  <!-- River Hoai (Ground half) -->
+  <rect x="0" y="600" width="2048" height="424" fill="url(#waterGrad)"/>
+
+  <!-- Water Reflections -->
+  <ellipse cx="1024" cy="650" rx="300" ry="15" fill="#ecc94b" opacity="0.25"/>
+  <ellipse cx="1024" cy="720" rx="200" ry="10" fill="#ed8936" opacity="0.18"/>
+  <ellipse cx="360" cy="640" rx="80" ry="8" fill="#ecc94b" opacity="0.3"/>
+  <ellipse cx="1400" cy="640" rx="90" ry="8" fill="#e53e3e" opacity="0.3"/>
+
+  <!-- Floating Flower Lanterns on water -->
+  <circle cx="850" cy="670" r="8" fill="#f56565"/>
+  <circle cx="950" cy="710" r="10" fill="#ed8936"/>
+  <circle cx="1060" cy="680" r="9" fill="#ecc94b"/>
+  <circle cx="1180" cy="730" r="8" fill="#48bb78"/>
+  <circle cx="1300" cy="700" r="9" fill="#ed8936"/>
+
+  <!-- Ground Grid for 360 Spatial Depth -->
+  <line x1="0" y1="600" x2="2048" y2="600" stroke="#4a5568" stroke-width="2"/>
+  <text x="1024" y="960" fill="#718096" font-family="sans-serif" font-size="28" text-anchor="middle" letter-spacing="4">
+    MYHOMELAB — DI SẢN SỐ HÓA 360° PHỐ CỔ HỘI AN
+  </text>
+</svg>
