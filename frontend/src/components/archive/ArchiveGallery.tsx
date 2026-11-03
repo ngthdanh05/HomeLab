@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
-import { HotspotData } from "@/lib/three-utils";
+import type { HotspotData } from "@/lib/three-utils";
 
 // Lazy load Three.js component để không làm nặng First Contentful Paint
 const DigitalArchive360 = dynamic(
@@ -24,7 +24,6 @@ export interface HeritageItem {
   location: string;
   category: "Kiến trúc" | "Thiên nhiên" | "Làng nghề";
   description: string;
-  thumbnail: string;
   panoramaUrl: string;
   hotspots: HotspotData[];
 }
@@ -37,7 +36,6 @@ export const sampleHeritageItems: HeritageItem[] = [
     category: "Kiến trúc",
     description:
       "Biểu tượng giao thoa kiến trúc Việt - Nhật - Hoa thế kỷ 17 được bảo tồn nguyên trạng qua công nghệ số hóa 360°.",
-    thumbnail: "/360/hoian_thumb.svg",
     panoramaUrl: "/360/sample-equirectangular-1.svg",
     hotspots: [
       {
@@ -70,7 +68,6 @@ export const sampleHeritageItems: HeritageItem[] = [
     category: "Thiên nhiên",
     description:
       "Tuyệt tác nông nghiệp canh tác bền vững trên triền núi dốc của đồng bào dân tộc H'Mông và Giáy.",
-    thumbnail: "/360/sapa_thumb.svg",
     panoramaUrl: "/360/sample-equirectangular-2.svg",
     hotspots: [
       {
@@ -96,7 +93,6 @@ export const sampleHeritageItems: HeritageItem[] = [
     category: "Làng nghề",
     description:
       "Làng nghề hơn 500 năm tuổi ven sông Thu Bồn, giữ trọn kỹ thuật làm gốm bằng đất sét tự nhiên thủ công bằng chân xoay.",
-    thumbnail: "/360/thanhha_thumb.svg",
     panoramaUrl: "/360/sample-equirectangular-1.svg",
     hotspots: [
       {
@@ -117,14 +113,16 @@ export const sampleHeritageItems: HeritageItem[] = [
   },
 ];
 
+const ALL_CATEGORIES = "Tất cả";
+type CategoryFilter = HeritageItem["category"] | typeof ALL_CATEGORIES;
+const categories: CategoryFilter[] = [ALL_CATEGORIES, "Kiến trúc", "Thiên nhiên", "Làng nghề"];
+
 export function ArchiveGallery() {
   const [activeItem, setActiveItem] = useState<HeritageItem | null>(null);
-  const [filter, setFilter] = useState<string>("Tất cả");
-
-  const categories = ["Tất cả", "Kiến trúc", "Thiên nhiên", "Làng nghề"];
+  const [filter, setFilter] = useState<CategoryFilter>(ALL_CATEGORIES);
 
   const filteredItems =
-    filter === "Tất cả"
+    filter === ALL_CATEGORIES
       ? sampleHeritageItems
       : sampleHeritageItems.filter((item) => item.category === filter);
 
@@ -145,7 +143,7 @@ export function ArchiveGallery() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800">
             <div>
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                🏛️ Bảo Tồn Di Sản Số Hóa 360° (Mol* & Three.js)
+                🏛️ Bảo Tồn Di Sản Số Hóa 360°
               </h2>
               <p className="text-slate-400 text-sm mt-1">
                 Khám phá không gian thực tế ảo tương tác, lưu trữ vĩnh viễn trên
@@ -174,10 +172,12 @@ export function ArchiveGallery() {
           {/* Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredItems.map((item) => (
-              <div
+              <button
+                type="button"
                 key={item.id}
                 onClick={() => setActiveItem(item)}
-                className="group bg-slate-900 border border-slate-800 hover:border-emerald-500/60 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-950/40 flex flex-col"
+                aria-label={`Mở không gian 360° của ${item.title}`}
+                className="group text-left bg-slate-900 border border-slate-800 hover:border-emerald-500/60 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-950/40 flex flex-col"
               >
                 {/* Visual Preview */}
                 <div className="h-48 w-full bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 relative overflow-hidden flex items-center justify-center p-4">
@@ -230,7 +230,7 @@ export function ArchiveGallery() {
                     </span>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </>

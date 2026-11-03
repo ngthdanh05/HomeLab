@@ -1,6 +1,17 @@
 /** @type {import('next').NextConfig} */
+const securityHeaders = [
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+];
+
 const nextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
   webpack: (config, { isServer, webpack }) => {
     config.externals.push("pino-pretty", "lokijs", "encoding");
 
@@ -23,6 +34,8 @@ const nextConfig = {
       "@x402/svm": false,
       "@base-org/account": false,
       "@coinbase/cdp-sdk": false,
+      // React Native-only optional dependency of @metamask/sdk
+      "@react-native-async-storage/async-storage": false,
     };
 
     // NormalModuleReplacementPlugin hỗ trợ cả Unix và Windows path

@@ -62,6 +62,31 @@ export const culturalDestinations: CulturalDestination[] = [
         meaning: "Show me the menu",
         pronunciation: "Cho toy sem thuhk don",
       },
+      {
+        phrase: "Xin chào",
+        meaning: "Hello",
+        pronunciation: "Sin chow",
+      },
+      {
+        phrase: "Xin lỗi",
+        meaning: "Sorry / Excuse me",
+        pronunciation: "Sin loy",
+      },
+      {
+        phrase: "Ngon quá!",
+        meaning: "So delicious!",
+        pronunciation: "Ngon kwa",
+      },
+      {
+        phrase: "Không cần túi nhựa",
+        meaning: "No plastic bag, please",
+        pronunciation: "Khom kun twee nyuh-a",
+      },
+      {
+        phrase: "Hẹn gặp lại",
+        meaning: "See you again",
+        pronunciation: "Hen gap lai",
+      },
     ],
     customs: [
       "Lễ hội đèn lồng rằm hàng tháng vào ngày 14 âm lịch",
@@ -118,6 +143,31 @@ export const culturalDestinations: CulturalDestination[] = [
         phrase: "Ua tsaug",
         meaning: "Thank you",
         pronunciation: "Oo ah tsao",
+      },
+      {
+        phrase: "Koj nyob li cas? (H'Mông)",
+        meaning: "How are you?",
+        pronunciation: "Kaw nyaw lee cha",
+      },
+      {
+        phrase: "Kuv lub npe hu ua... (H'Mông)",
+        meaning: "My name is...",
+        pronunciation: "Koo loo beh hoo ua",
+      },
+      {
+        phrase: "Pes tsawg nyiaj? (H'Mông)",
+        meaning: "How much money?",
+        pronunciation: "Peh chao nyia",
+      },
+      {
+        phrase: "Zoo nkauj heev (H'Mông)",
+        meaning: "Very beautiful",
+        pronunciation: "Zhong gao heng",
+      },
+      {
+        phrase: "Sib ntsib dua (H'Mông)",
+        meaning: "See you again",
+        pronunciation: "Shee jee doo-a",
       },
     ],
     customs: [
@@ -186,6 +236,31 @@ export const culturalDestinations: CulturalDestination[] = [
         phrase: "Hoàng hôn đẹp",
         meaning: "Beautiful sunset",
         pronunciation: "Hwahng hon dep",
+      },
+      {
+        phrase: "Xin chào",
+        meaning: "Hello",
+        pronunciation: "Sin chow",
+      },
+      {
+        phrase: "Cảm ơn nhiều",
+        meaning: "Thank you very much",
+        pronunciation: "Cahm uhn nyew",
+      },
+      {
+        phrase: "Bao nhiêu tiền?",
+        meaning: "How much?",
+        pronunciation: "Bow nyeu tyen",
+      },
+      {
+        phrase: "Không dùng ống hút nhựa",
+        meaning: "No plastic straw, please",
+        pronunciation: "Khom zoong ohm hoot nyuh-a",
+      },
+      {
+        phrase: "Nhà vệ sinh ở đâu?",
+        meaning: "Where is the restroom?",
+        pronunciation: "Nya vay sin uh doh",
       },
     ],
     customs: [

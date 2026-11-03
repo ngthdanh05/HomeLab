@@ -19,7 +19,16 @@ export const config = createConfig({
       : []),
   ],
   transports: {
-    [sepolia.id]: http(),
+    [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || undefined),
     [anvil.id]: http("http://127.0.0.1:8545"),
   },
+  // App Router pre-renders client components on the server; this keeps the
+  // first client render in sync with it and avoids hydration mismatches.
+  ssr: true,
 });
+
+declare module "wagmi" {
+  interface Register {
+    config: typeof config;
+  }
+}
