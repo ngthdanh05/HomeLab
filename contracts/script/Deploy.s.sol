@@ -9,6 +9,8 @@ import {Governance} from "../src/Governance.sol";
 import {PaymentSplitter} from "../src/PaymentSplitter.sol";
 import {Marketplace} from "../src/Marketplace.sol";
 import {CarbonOffset} from "../src/CarbonOffset.sol";
+import {QuestRewards} from "../src/QuestRewards.sol";
+import {QuestSetup} from "./QuestSetup.sol";
 
 // =============================================================================
 // DEPLOY CONFIG — Inline (không dùng `new DeployConfig()` để tránh tạo thêm
@@ -23,7 +25,7 @@ import {CarbonOffset} from "../src/CarbonOffset.sol";
 ///   RESUME DEPLOY: set ECO_TOKEN_ADDRESS=<addr> → bỏ qua EcoToken, deploy 5 contracts còn lại
 ///                  (tùy chọn: set IMPACT_BADGE_ADDRESS, TREASURY_ADDRESS để resume thêm)
 ///
-/// Thứ tự deploy: EcoToken → ImpactBadge → CommunityTreasury → Governance → PaymentSplitter → Marketplace → CarbonOffset
+/// Thứ tự deploy: EcoToken → ImpactBadge → CommunityTreasury → Governance → PaymentSplitter → Marketplace → CarbonOffset → QuestRewards
 /// Post-deploy : grantRole + setGovernance trong broadcast block 2 riêng biệt
 contract Deploy is Script {
     // ─── Deployed contract references ───────────────────────────────────────
@@ -34,6 +36,7 @@ contract Deploy is Script {
     PaymentSplitter   public paymentSplitter;
     Marketplace       public marketplace;
     CarbonOffset      public carbonOffset;
+    QuestRewards      public questRewards;
 
     // ─── Sepolia default config (inline constants) ───────────────────────────
     uint16  internal constant ARTISAN_BPS            = 7000;     // 70%
@@ -74,6 +77,7 @@ contract Deploy is Script {
         address existingSplitter = _resumeAddress("PAYMENT_SPLITTER_ADDRESS");
         address existingMarketPlace = _resumeAddress("MARKETPLACE_ADDRESS");
         address existingCarbonOffset = _resumeAddress("CARBON_OFFSET_ADDRESS");
+        address existingQuestRewards = _resumeAddress("QUEST_REWARDS_ADDRESS");
 
         console2.log("=== Starting Deployment ===");
         console2.log("Chain ID       :", block.chainid);
@@ -176,6 +180,20 @@ contract Deploy is Script {
             );
             console2.log("7. CarbonOffset deployed:      ", address(carbonOffset));
         }
+        // 8. QuestRewards (Task 4.4)
+        if (existingQuestRewards != address(0)) {
+            questRewards = QuestRewards(existingQuestRewards);
+            console2.log("8. QuestRewards (reused):      ", address(questRewards));
+        } else {
+            questRewards = new QuestRewards(
+                address(ecoToken),
+                address(impactBadge),
+                address(carbonOffset),
+                address(governance),
+                deployer
+            );
+            console2.log("8. QuestRewards deployed:      ", address(questRewards));
+        }
         // Flush Broadcast 1 — đẩy tất cả CREATE transactions lên node
         vm.stopBroadcast();
 
@@ -203,6 +221,12 @@ contract Deploy is Script {
         impactBadge.grantRole(minterRole, address(paymentSplitter));
         impactBadge.grantRole(minterRole, address(carbonOffset));
         console2.log("ImpactBadge: MINTER_ROLE granted to Marketplace, PaymentSplitter & CarbonOffset");
+
+        // QuestRewards: thưởng ECO + badge, và nạp bộ quest mặc định
+        ecoToken.grantRole(minterRole, address(questRewards));
+        impactBadge.grantRole(minterRole, address(questRewards));
+        if (existingQuestRewards == address(0)) QuestSetup.addDefaultQuests(questRewards);
+        console2.log("QuestRewards: MINTER_ROLE on EcoToken & ImpactBadge, quests:", questRewards.questCount());
 
         // Set Governance trên CommunityTreasury
         treasury.setGovernance(address(governance));
@@ -238,7 +262,8 @@ contract Deploy is Script {
         j = string.concat(j, '    "Governance": "',         vm.toString(address(governance)),      '",\n');
         j = string.concat(j, '    "PaymentSplitter": "',    vm.toString(address(paymentSplitter)), '",\n');
         j = string.concat(j, '    "Marketplace": "',        vm.toString(address(marketplace)),     '",\n');
-        j = string.concat(j, '    "CarbonOffset": "',       vm.toString(address(carbonOffset)),    '"\n');
+        j = string.concat(j, '    "CarbonOffset": "',       vm.toString(address(carbonOffset)),    '",\n');
+        j = string.concat(j, '    "QuestRewards": "',       vm.toString(address(questRewards)),    '"\n');
         j = string.concat(j, '  }\n');
         j = string.concat(j, '}\n');
 
