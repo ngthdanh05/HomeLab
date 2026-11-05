@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 import { MarketplaceABI } from "@/config/contracts";
@@ -49,6 +50,7 @@ export function PurchaseButton({ listing }: { listing: Listing }) {
               : "Kết nối ví để mua"));
 
   return (
+    <>
     <button
       type="button"
       disabled={disabled}
@@ -67,6 +69,15 @@ export function PurchaseButton({ listing }: { listing: Listing }) {
       {isBusy && <Spinner />}
       {label}
     </button>
+    {isSent && (
+      <Link
+        href="/dashboard"
+        className="mt-2 block text-center text-sm font-medium text-emerald-400 hover:underline"
+      >
+        🌱 Xem ECO thưởng & ImpactBadge trong Dashboard →
+      </Link>
+    )}
+    </>
   );
 }
 

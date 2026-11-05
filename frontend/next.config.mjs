@@ -8,6 +8,8 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  // Lets a production build run beside a `next dev` that is using .next.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

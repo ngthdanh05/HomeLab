@@ -1,6 +1,6 @@
 "use client";
 
-import { useAccount } from "wagmi";
+import { useAccount, useConfig } from "wagmi";
 import {
   DEFAULT_CHAIN_ID,
   getContractAddresses,
@@ -14,6 +14,7 @@ import {
  * back to the first configured chain while no wallet is connected).
  */
 export function useActiveChain() {
+  const config = useConfig();
   const { chainId: walletChainId, isConnected } = useAccount();
   const chainId: SupportedChainId =
     isConnected && isSupportedChain(walletChainId) ? walletChainId : DEFAULT_CHAIN_ID;
@@ -21,6 +22,8 @@ export function useActiveChain() {
   return {
     chainId,
     addresses: getContractAddresses(chainId),
+    /** Block explorer base URL, e.g. https://sepolia.etherscan.io (none on Anvil). */
+    explorerUrl: config.chains.find((c) => c.id === chainId)?.blockExplorers?.default.url,
     walletChainId: isConnected ? walletChainId : undefined,
     isWrongNetwork: isConnected && !isSupportedChain(walletChainId),
   };

@@ -40,6 +40,23 @@ export const DEPLOYMENTS = {
 
 export type SupportedChainId = keyof typeof DEPLOYMENTS;
 
+/**
+ * First block worth scanning for each contract's events (a little before its
+ * deployment), so activity history doesn't query the whole chain. Update this
+ * when a contract is redeployed.
+ */
+export const LOGS_FROM_BLOCK: Record<
+  SupportedChainId,
+  Readonly<Record<"impactBadge" | "paymentSplitter" | "marketplace", bigint>>
+> = {
+  [sepolia.id]: {
+    impactBadge: 12_032_000n,
+    paymentSplitter: 12_067_900n,
+    marketplace: 12_067_900n,
+  },
+  [anvil.id]: { impactBadge: 0n, paymentSplitter: 0n, marketplace: 0n },
+};
+
 export function isSupportedChain(chainId: number | undefined): chainId is SupportedChainId {
   return chainId !== undefined && chainId in DEPLOYMENTS;
 }
