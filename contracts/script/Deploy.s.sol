@@ -8,6 +8,7 @@ import {CommunityTreasury} from "../src/CommunityTreasury.sol";
 import {Governance} from "../src/Governance.sol";
 import {PaymentSplitter} from "../src/PaymentSplitter.sol";
 import {Marketplace} from "../src/Marketplace.sol";
+import {CarbonOffset} from "../src/CarbonOffset.sol";
 
 // =============================================================================
 // DEPLOY CONFIG — Inline (không dùng `new DeployConfig()` để tránh tạo thêm
@@ -22,7 +23,7 @@ import {Marketplace} from "../src/Marketplace.sol";
 ///   RESUME DEPLOY: set ECO_TOKEN_ADDRESS=<addr> → bỏ qua EcoToken, deploy 5 contracts còn lại
 ///                  (tùy chọn: set IMPACT_BADGE_ADDRESS, TREASURY_ADDRESS để resume thêm)
 ///
-/// Thứ tự deploy: EcoToken → ImpactBadge → CommunityTreasury → Governance → PaymentSplitter → Marketplace
+/// Thứ tự deploy: EcoToken → ImpactBadge → CommunityTreasury → Governance → PaymentSplitter → Marketplace → CarbonOffset
 /// Post-deploy : grantRole + setGovernance trong broadcast block 2 riêng biệt
 contract Deploy is Script {
     // ─── Deployed contract references ───────────────────────────────────────
@@ -32,6 +33,7 @@ contract Deploy is Script {
     Governance        public governance;
     PaymentSplitter   public paymentSplitter;
     Marketplace       public marketplace;
+    CarbonOffset      public carbonOffset;
 
     // ─── Sepolia default config (inline constants) ───────────────────────────
     uint16  internal constant ARTISAN_BPS            = 7000;     // 70%
@@ -41,6 +43,7 @@ contract Deploy is Script {
     uint256 internal constant PROPOSAL_THRESHOLD     = 100 ether;
     uint256 internal constant QUORUM_BPS             = 500;      // 5%
     uint256 internal constant VOTING_PERIOD          = 3 days;
+    uint256 internal constant CARBON_PRICE_PER_KG    = 0.00001 ether; // 100 kg CO2 = 0.001 ETH
 
     // ─── Anvil local overrides ────────────────────────────────────────────────
     uint256 internal constant PROPOSAL_THRESHOLD_LOCAL = 1 ether;
@@ -70,6 +73,7 @@ contract Deploy is Script {
         address existingGovernance = _resumeAddress("GOVERNANCE_ADDRESS");
         address existingSplitter = _resumeAddress("PAYMENT_SPLITTER_ADDRESS");
         address existingMarketPlace = _resumeAddress("MARKETPLACE_ADDRESS");
+        address existingCarbonOffset = _resumeAddress("CARBON_OFFSET_ADDRESS");
 
         console2.log("=== Starting Deployment ===");
         console2.log("Chain ID       :", block.chainid);
@@ -159,6 +163,19 @@ contract Deploy is Script {
             );
             console2.log("6. Marketplace deployed:       ", address(marketplace));
         }
+        // 7. CarbonOffset
+        if (existingCarbonOffset != address(0)) {
+            carbonOffset = CarbonOffset(existingCarbonOffset);
+            console2.log("7. CarbonOffset (reused):      ", address(carbonOffset));
+        } else {
+            carbonOffset = new CarbonOffset(
+                address(impactBadge),
+                address(treasury),
+                CARBON_PRICE_PER_KG,
+                deployer
+            );
+            console2.log("7. CarbonOffset deployed:      ", address(carbonOffset));
+        }
         // Flush Broadcast 1 — đẩy tất cả CREATE transactions lên node
         vm.stopBroadcast();
 
@@ -184,7 +201,8 @@ contract Deploy is Script {
         // Grant MINTER_ROLE trên ImpactBadge
         impactBadge.grantRole(minterRole, address(marketplace));
         impactBadge.grantRole(minterRole, address(paymentSplitter));
-        console2.log("ImpactBadge: MINTER_ROLE granted to Marketplace & PaymentSplitter");
+        impactBadge.grantRole(minterRole, address(carbonOffset));
+        console2.log("ImpactBadge: MINTER_ROLE granted to Marketplace, PaymentSplitter & CarbonOffset");
 
         // Set Governance trên CommunityTreasury
         treasury.setGovernance(address(governance));
@@ -219,7 +237,8 @@ contract Deploy is Script {
         j = string.concat(j, '    "CommunityTreasury": "',  vm.toString(address(treasury)),        '",\n');
         j = string.concat(j, '    "Governance": "',         vm.toString(address(governance)),      '",\n');
         j = string.concat(j, '    "PaymentSplitter": "',    vm.toString(address(paymentSplitter)), '",\n');
-        j = string.concat(j, '    "Marketplace": "',        vm.toString(address(marketplace)),     '"\n');
+        j = string.concat(j, '    "Marketplace": "',        vm.toString(address(marketplace)),     '",\n');
+        j = string.concat(j, '    "CarbonOffset": "',       vm.toString(address(carbonOffset)),    '"\n');
         j = string.concat(j, '  }\n');
         j = string.concat(j, '}\n');
 
