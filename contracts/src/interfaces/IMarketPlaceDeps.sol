@@ -11,8 +11,9 @@ enum ProductType {
 
 /// @notice Giao diện tối thiểu của PaymentSplitter mà Marketplace cần.
 interface IPaymentSplitter {
-    /// @dev Nhận ETH (msg.value) và chia cho seller / treasury / quỹ cộng đồng...
-    function splitPayment(address seller, ProductType pType) external payable;
+    /// @dev Nhận ETH (msg.value), chia cho seller / treasury / platform và thưởng
+    ///      EcoToken cho `buyer` (người mua thật, không phải Marketplace gọi hàm).
+    function splitPayment(address seller, address buyer, ProductType pType) external payable;
 }
 
 /// @notice Giao diện tối thiểu của ImpactBadge mà Marketplace cần.

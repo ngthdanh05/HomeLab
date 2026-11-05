@@ -17,7 +17,10 @@ contract MockPaymentSplitter is IPaymentSplitter {
         treasury = _treasury;
     }
 
-    function splitPayment(address seller, ProductType) external payable {
+    address public lastBuyer;
+
+    function splitPayment(address seller, address buyer, ProductType) external payable {
+        lastBuyer = buyer;
         uint256 sellerShare = (msg.value * SELLER_BPS) / 10_000;
         (bool ok1,) = seller.call{value: sellerShare}("");
         (bool ok2,) = treasury.call{value: msg.value - sellerShare}("");
@@ -152,6 +155,13 @@ contract MarketplaceTest is Test {
         assertEq(address(market).balance, 0, "market must not hold funds");
         assertEq(address(splitter).balance, 0, "splitter must not hold funds");
         assertFalse(market.getListing(id).isActive);
+    }
+
+    function test_purchase_passesBuyerToSplitter() public {
+        uint256 id = _create();
+        vm.prank(buyer);
+        market.purchaseListing{value: PRICE}(id);
+        assertEq(splitter.lastBuyer(), buyer, "ECO reward must target the buyer, not the market");
     }
 
     function test_purchase_mintsBadgeToBuyer() public {
