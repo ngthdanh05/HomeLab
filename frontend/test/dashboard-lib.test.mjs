@@ -158,3 +158,18 @@ describe("buildActivityFeed", () => {
     assert.deepEqual(items, []);
   });
 });
+
+test("buildActivityFeed: a carbon offset tx becomes an 'offset' item with its badge", () => {
+  const tx = "0xccc";
+  const [item] = buildActivityFeed(
+    [
+      ev("CarbonOffsetted", { user: USER, tokenId: 7n, carbonGrams: 12_500n, paid: 125n }, tx, 70, 2),
+      ev("BadgeMinted", { to: USER, tokenId: 7n, badgeType: 1 }, tx, 70, 1),
+    ],
+    USER,
+  );
+  assert.equal(item.kind, "offset");
+  assert.equal(item.amountWei, 125n);
+  assert.equal(item.carbonGrams, 12_500n);
+  assert.deepEqual(item.badges, [{ tokenId: 7n, badgeType: 1 }]);
+});
