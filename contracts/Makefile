@@ -3,7 +3,7 @@
 .PHONY: all build test clean \
         deploy-local deploy-sepolia deploy-sepolia-resume \
         deploy-step-by-step \
-        verify-sepolia simulate-e2e
+        verify-sepolia simulate-e2e deploy-carbon-sepolia
 
 # ── Build & Test ───────────────────────────────────────────────────────────────
 build:
@@ -61,6 +61,24 @@ deploy-sepolia-resume:
 		--private-key $(PRIVATE_KEY) \
 		--broadcast \
 		--slow \
+		--gas-estimate-multiplier 130 \
+		--verify \
+		--etherscan-api-key $(ETHERSCAN_API_KEY) \
+		-vvvv
+
+# ── CarbonOffset trên Sepolia (Task 4.3) ─────────────────────────────────────
+# Deploy riêng CarbonOffset rồi cấp MINTER_ROLE trên ImpactBadge. Cần trong .env:
+#   PRIVATE_KEY (admin ImpactBadge), IMPACT_BADGE_ADDRESS, TREASURY_ADDRESS
+#   CARBON_PRICE_PER_KG_WEI (tuỳ chọn, mặc định 10000000000000 = 0.00001 ETH/kg)
+# --skip-simulation: lấy gas từ eth_estimateGas của RPC. Bộ giả lập cục bộ của
+# forge 1.7.1 ước tính thấp hơn nhiều so với giá gas tạo contract hiện tại của
+# Sepolia (~828k so với ~4,2M) nên giao dịch CREATE bị hết gas (out of gas).
+deploy-carbon-sepolia:
+	forge script script/DeployCarbonOffset.s.sol \
+		--rpc-url $(SEPOLIA_RPC_URL) \
+		--broadcast \
+		--slow \
+		--skip-simulation \
 		--gas-estimate-multiplier 130 \
 		--verify \
 		--etherscan-api-key $(ETHERSCAN_API_KEY) \
