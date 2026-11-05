@@ -7,6 +7,7 @@ import GovernanceJson from "../abis/Governance.json";
 import PaymentSplitterJson from "../abis/PaymentSplitter.json";
 import MarketplaceJson from "../abis/Marketplace.json";
 import CarbonOffsetJson from "../abis/CarbonOffset.json";
+import QuestRewardsJson from "../abis/QuestRewards.json";
 
 export type ContractName =
   | "ecoToken"
@@ -51,6 +52,9 @@ export const LOGS_FROM_BLOCK: Record<
   Readonly<Record<"impactBadge" | "paymentSplitter" | "marketplace", bigint>> & {
     /** Defaults to the ImpactBadge block when unset (CarbonOffset is newer). */
     carbonOffset?: bigint;
+    /** Governance (VoteCast) and QuestRewards; default to the ImpactBadge block. */
+    governance?: bigint;
+    questRewards?: bigint;
   }
 > = {
   [sepolia.id]: {
@@ -58,8 +62,16 @@ export const LOGS_FROM_BLOCK: Record<
     paymentSplitter: 12_067_900n,
     marketplace: 12_067_900n,
     carbonOffset: 12_068_939n,
+    questRewards: 12_069_700n,
   },
-  [anvil.id]: { impactBadge: 0n, paymentSplitter: 0n, marketplace: 0n, carbonOffset: 0n },
+  [anvil.id]: {
+    impactBadge: 0n,
+    paymentSplitter: 0n,
+    marketplace: 0n,
+    carbonOffset: 0n,
+    governance: 0n,
+    questRewards: 0n,
+  },
 };
 
 export function isSupportedChain(chainId: number | undefined): chainId is SupportedChainId {
@@ -94,6 +106,23 @@ export function getCarbonOffsetAddress(chainId?: number): Address | undefined {
   return isSupportedChain(chainId) ? CARBON_OFFSET_ADDRESSES[chainId] : undefined;
 }
 
+/**
+ * QuestRewards (Task 4.4), deployed separately (`make deploy-quests-sepolia`).
+ * NEXT_PUBLIC_SEPOLIA_QUEST_REWARDS_ADDRESS overrides the Sepolia default.
+ */
+const SEPOLIA_QUEST_REWARDS: Address = "0x562845c0bd4F75e1d90207357A57f8aFA8f06F05";
+const sepoliaQuestRewards = process.env.NEXT_PUBLIC_SEPOLIA_QUEST_REWARDS_ADDRESS?.trim();
+export const QUEST_REWARDS_ADDRESSES: Readonly<Partial<Record<SupportedChainId, Address>>> = {
+  [sepolia.id]:
+    sepoliaQuestRewards && isAddress(sepoliaQuestRewards) ? sepoliaQuestRewards : SEPOLIA_QUEST_REWARDS,
+  // Nonce 7 of Anvil account #0 in `make deploy-local`.
+  [anvil.id]: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+};
+
+export function getQuestRewardsAddress(chainId?: number): Address | undefined {
+  return isSupportedChain(chainId) ? QUEST_REWARDS_ADDRESSES[chainId] : undefined;
+}
+
 export function getChainName(chainId: number): string {
   return CHAIN_NAMES[chainId] ?? `Chain ID: ${chainId}`;
 }
@@ -113,6 +142,7 @@ export const GovernanceABI = GovernanceJson.abi as Abi;
 export const PaymentSplitterABI = PaymentSplitterJson.abi as Abi;
 export const MarketplaceABI = MarketplaceJson.abi as Abi;
 export const CarbonOffsetABI = CarbonOffsetJson.abi as Abi;
+export const QuestRewardsABI = QuestRewardsJson.abi as Abi;
 
 export const CONTRACT_ABIS: Readonly<Record<ContractName, Abi>> = {
   ecoToken: EcoTokenABI,

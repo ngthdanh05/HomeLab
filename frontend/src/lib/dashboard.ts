@@ -143,6 +143,7 @@ export type ActivityKind =
   | "income"
   | "reward"
   | "offset"
+  | "quest"
   | "badge";
 
 export interface ActivityItem {
@@ -157,6 +158,8 @@ export interface ActivityItem {
   split?: { artisan: bigint; treasury: bigint; platform: bigint };
   /** Grams of CO₂ offset (kind "offset"). */
   carbonGrams?: bigint;
+  /** QuestRewards questId (kind "quest"). */
+  questId?: number;
   timestamp?: number;
 }
 
@@ -188,6 +191,7 @@ export function buildActivityFeed(events: ChainEvent[], user: string): ActivityI
     const splitEvent = find("PaymentSplit");
     const reward = find("EcoRewarded", (e) => sameAddress(e.args.visitor, user));
     const offset = find("CarbonOffsetted", (e) => sameAddress(e.args.user, user));
+    const quest = find("QuestCompleted", (e) => sameAddress(e.args.user, user));
     const badges = group
       .filter((e) => e.eventName === "BadgeMinted" && sameAddress(e.args.to, user))
       .map((e) => ({ tokenId: e.args.tokenId as bigint, badgeType: Number(e.args.badgeType) }));
@@ -238,6 +242,14 @@ export function buildActivityFeed(events: ChainEvent[], user: string): ActivityI
         kind: "offset",
         amountWei: offset.args.paid as bigint,
         carbonGrams: offset.args.carbonGrams as bigint,
+      });
+    } else if (quest) {
+      const ecoReward = quest.args.ecoReward as bigint;
+      items.push({
+        ...base,
+        kind: "quest",
+        questId: Number(quest.args.questId),
+        ecoReward: ecoReward > 0n ? ecoReward : undefined,
       });
     } else if (splitEvent && sameAddress(splitEvent.args.artisan, user)) {
       items.push({ ...base, kind: "income", amountWei: split?.artisan, split });

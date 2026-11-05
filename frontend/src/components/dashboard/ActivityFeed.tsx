@@ -15,6 +15,7 @@ import {
   type ActivityKind,
 } from "@/lib/dashboard";
 import { shortenAddress } from "@/lib/marketplace";
+import { getQuest } from "@/data/quests";
 
 const KIND_INFO: Record<ActivityKind, { icon: string; title: string; tone: string }> = {
   purchase: { icon: "🛍️", title: "Mua sản phẩm", tone: "bg-emerald-500/15 text-emerald-300" },
@@ -24,6 +25,7 @@ const KIND_INFO: Record<ActivityKind, { icon: string; title: string; tone: strin
   income: { icon: "💸", title: "Nhận thanh toán D2C", tone: "bg-amber-500/15 text-amber-300" },
   reward: { icon: "🌱", title: "Nhận thưởng ECO", tone: "bg-emerald-500/15 text-emerald-300" },
   offset: { icon: "🌍", title: "Bù đắp carbon", tone: "bg-sky-500/15 text-sky-300" },
+  quest: { icon: "🎯", title: "Hoàn thành quest", tone: "bg-amber-500/15 text-amber-300" },
   badge: { icon: "🏅", title: "Nhận ImpactBadge", tone: "bg-violet-500/15 text-violet-300" },
 };
 
@@ -56,6 +58,14 @@ function ActivityRow({ item, explorerUrl }: { item: ActivityItem; explorerUrl?: 
                 {" "}
                 {(Number(item.carbonGrams) / 1000).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} kg CO₂
               </span>
+            )}
+            {item.questId !== undefined && (
+              <>
+                {": "}
+                <Link href="/quests" className="font-medium text-white hover:text-emerald-400">
+                  {getQuest(item.questId)?.title ?? `Quest #${item.questId}`}
+                </Link>
+              </>
             )}
             {item.listingId !== undefined && (
               <>
