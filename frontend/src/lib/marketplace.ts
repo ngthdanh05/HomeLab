@@ -165,6 +165,11 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   RefundFailed: "Không hoàn lại được tiền thừa cho ví của bạn.",
 };
 
+/** viem throws this when a receipt doesn't arrive within the `timeout` option. */
+export function isReceiptTimeoutError(error: unknown): boolean {
+  return (error as { name?: string } | null)?.name === "WaitForTransactionReceiptTimeoutError";
+}
+
 export function getTxErrorMessage(error: unknown): string {
   // viem errors expose a cause chain; walk it looking for something recognisable.
   let current: unknown = error;

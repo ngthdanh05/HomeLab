@@ -19,7 +19,7 @@ export function Spinner() {
 
 const BUSY_LABELS: Partial<Record<TxStatus, string>> = {
   "awaiting-wallet": "Xác nhận trong ví…",
-  pending: "Đang xử lý giao dịch…",
+  pending: "Đang chờ xác nhận on-chain…",
 };
 
 export function PurchaseButton({ listing }: { listing: Listing }) {
@@ -31,7 +31,9 @@ export function PurchaseButton({ listing }: { listing: Listing }) {
   });
 
   const isOwnListing = address?.toLowerCase() === listing.seller.toLowerCase();
-  const disabled = isBusy || !listing.isActive || isOwnListing || status === "success";
+  // "unconfirmed" stays disabled: the purchase was sent and a retry would just revert.
+  const isSent = status === "success" || status === "unconfirmed";
+  const disabled = isBusy || !listing.isActive || isOwnListing || isSent;
 
   const label = !listing.isActive
     ? "Sản phẩm đã được bán"
@@ -39,10 +41,12 @@ export function PurchaseButton({ listing }: { listing: Listing }) {
       ? "Đây là sản phẩm của bạn"
       : status === "success"
         ? "Đã mua ✓"
-        : (BUSY_LABELS[status] ??
-          (isConnected
-            ? `Mua ngay · ${formatEther(listing.price)} ETH`
-            : "Kết nối ví để mua"));
+        : status === "unconfirmed"
+          ? "Đã gửi, đang chờ xác nhận…"
+          : (BUSY_LABELS[status] ??
+            (isConnected
+              ? `Mua ngay · ${formatEther(listing.price)} ETH`
+              : "Kết nối ví để mua"));
 
   return (
     <button

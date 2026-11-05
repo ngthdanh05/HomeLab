@@ -61,7 +61,7 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
   const { addresses } = useActiveChain();
   const { isConnected } = useAccount();
   const { setOpen: setConnectModalOpen } = useModal();
-  const { send, isBusy } = useContractTx({
+  const { send, status, isBusy } = useContractTx({
     pending: "Đang đăng bán sản phẩm",
     success: "Đăng bán thành công! 🎉",
   });
@@ -115,13 +115,14 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
       setUploading(false);
     }
 
-    const receipt = await send({
+    const result = await send({
       address: addresses.marketplace,
       abi: MarketplaceABI,
       functionName: "createListing",
       args: [price, form.pType, metadataURI],
     });
-    if (receipt) {
+    // Close on "unconfirmed" too: the tx is already sent, resubmitting would duplicate it.
+    if (result) {
       setForm(EMPTY_FORM);
       setImage(null);
       onClose();
@@ -262,7 +263,13 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400"
           >
             {busy && <Spinner />}
-            {uploading ? "Đang tải lên IPFS…" : isBusy ? "Đang chờ giao dịch…" : "Đăng bán"}
+            {uploading
+              ? "Đang tải lên IPFS…"
+              : status === "awaiting-wallet"
+                ? "Xác nhận trong ví…"
+                : status === "pending"
+                  ? "Đang chờ xác nhận on-chain…"
+                  : "Đăng bán"}
           </button>
         </form>
       </div>

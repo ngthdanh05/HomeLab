@@ -25,8 +25,8 @@ export const DEPLOYMENTS = {
     impactBadge: "0xba5404682DB9feb35fBB1cbC18b97f1A59b7a9C9",
     communityTreasury: "0x10E83c02C8667485EDd78ce57E0f6553D33296e6",
     governance: "0x1e0404A2EDC3BB2139A82d2e8372631A11697998",
-    paymentSplitter: "0x703B08397D144cCA8208E5dAf29ec8CfFFb49A6a",
-    marketplace: "0x43085F8015bDc47b1Ca334A502eF3a4F07878894",
+    paymentSplitter: "0x5d574343A7e162Be9f3eA9Da676169d7Df874a66",
+    marketplace: "0x92e554039D39014A5Fc55b31B1308f9DFe1098D5",
   },
   [anvil.id]: {
     ecoToken: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
