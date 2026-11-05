@@ -180,6 +180,11 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   // CarbonOffset
   InvalidCarbonAmount: "Lượng CO₂ bù đắp không hợp lệ (tối đa 100 tấn mỗi lần).",
   MetadataTooLong: "Thông tin badge quá dài.",
+  AlreadyCompleted: "Bạn đã nhận thưởng quest này rồi.",
+  RequirementNotMet: "Chưa đạt điều kiện của quest (dữ liệu on-chain có thể chưa cập nhật, hãy thử lại sau ít giây).",
+  QuestInactive: "Quest này đang tạm dừng.",
+  QuestNotFound: "Không tìm thấy quest.",
+  TooManyProofIds: "Quá nhiều badge bằng chứng trong một lần claim.",
 };
 
 /** viem throws this when a receipt doesn't arrive within the `timeout` option. */

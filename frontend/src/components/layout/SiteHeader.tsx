@@ -12,6 +12,7 @@ const NAV_LINKS = [
   { href: "/", label: "🌿 Khám phá" },
   { href: "/marketplace", label: "🧺 Marketplace" },
   { href: "/carbon-tracker", label: "🌍 Carbon" },
+  { href: "/quests", label: "🎯 Quests" },
   { href: "/dashboard", label: "🏅 Dashboard" },
 ] as const;
 
@@ -40,13 +41,13 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav aria-label="Điều hướng chính" className="order-last grid w-full grid-cols-2 gap-1 sm:flex md:order-none md:w-auto">
+        <nav aria-label="Điều hướng chính" className="order-last grid w-full grid-cols-3 gap-1 sm:flex md:order-none md:w-auto">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               aria-current={isActive(link.href) ? "page" : undefined}
-              className={`rounded-xl px-3 py-2 text-center text-sm font-medium transition-colors sm:flex-1 sm:px-4 md:flex-none ${
+              className={`whitespace-nowrap rounded-xl px-1.5 py-2 text-center text-xs font-medium transition-colors sm:flex-1 sm:px-3 sm:text-sm md:flex-none ${
                 isActive(link.href)
                   ? "bg-emerald-600 text-white"
                   : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"

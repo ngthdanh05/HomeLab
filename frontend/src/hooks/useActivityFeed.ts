@@ -6,10 +6,12 @@ import { usePublicClient } from "wagmi";
 import {
   CarbonOffsetABI,
   getCarbonOffsetAddress,
+  getQuestRewardsAddress,
   ImpactBadgeABI,
   LOGS_FROM_BLOCK,
   MarketplaceABI,
   PaymentSplitterABI,
+  QuestRewardsABI,
 } from "@/config/contracts";
 import { buildActivityFeed, getBlockRanges, type ActivityItem, type ChainEvent } from "@/lib/dashboard";
 import { useActiveChain } from "./useActiveChain";
@@ -25,7 +27,7 @@ const MIN_CHUNK = 1_000n;
 const MAX_SCAN_BLOCKS = 500_000n;
 export const ACTIVITY_LIMIT = 20;
 
-interface EventQuery {
+export interface EventQuery {
   address: Address;
   abi: Abi;
   eventName: string;
@@ -34,7 +36,7 @@ interface EventQuery {
 }
 
 /** getContractEvents over [from, to] in chunks, halving the window when the RPC rejects it. */
-async function getEventsChunked(
+export async function getEventsChunked(
   client: PublicClient,
   query: EventQuery,
   toBlock: bigint,
@@ -75,8 +77,15 @@ async function loadActivity(
     paymentSplitter: Address;
     impactBadge: Address;
     carbonOffset?: Address;
+    questRewards?: Address;
   },
-  fromBlocks: { marketplace: bigint; paymentSplitter: bigint; impactBadge: bigint; carbonOffset?: bigint },
+  fromBlocks: {
+    marketplace: bigint;
+    paymentSplitter: bigint;
+    impactBadge: bigint;
+    carbonOffset?: bigint;
+    questRewards?: bigint;
+  },
 ): Promise<ActivityItem[]> {
   const latest = await client.getBlockNumber();
   const get = (q: EventQuery) => getEventsChunked(client, q, latest);
@@ -88,7 +97,7 @@ async function loadActivity(
     fromBlock: fromBlocks.paymentSplitter,
   };
 
-  const [bought, sold, created, cancelled, rewards, badges, offsets] = await Promise.all([
+  const [bought, sold, created, cancelled, rewards, badges, offsets, quests] = await Promise.all([
     get({ ...market, eventName: "ListingPurchased", args: { buyer: user } }),
     get({ ...market, eventName: "ListingPurchased", args: { seller: user } }),
     get({ ...market, eventName: "ListingCreated", args: { seller: user } }),
@@ -110,6 +119,15 @@ async function loadActivity(
           fromBlock: fromBlocks.carbonOffset ?? fromBlocks.impactBadge,
         })
       : Promise.resolve([] as ChainEvent[]),
+    addresses.questRewards
+      ? get({
+          address: addresses.questRewards,
+          abi: QuestRewardsABI,
+          eventName: "QuestCompleted",
+          args: { user },
+          fromBlock: fromBlocks.questRewards ?? fromBlocks.impactBadge,
+        })
+      : Promise.resolve([] as ChainEvent[]),
   ]);
 
   // PaymentSplit is indexed by artisan only: fetch splits paid to the sellers
@@ -128,7 +146,7 @@ async function loadActivity(
   );
 
   const items = buildActivityFeed(
-    [...bought, ...sold, ...created, ...cancelled, ...rewards, ...badges, ...offsets, ...relevantSplits],
+    [...bought, ...sold, ...created, ...cancelled, ...rewards, ...badges, ...offsets, ...quests, ...relevantSplits],
     user,
   ).slice(0, ACTIVITY_LIMIT);
 
@@ -162,7 +180,11 @@ export function useActivityFeed(user: Address | undefined) {
       loadActivity(
         client as PublicClient,
         user as Address,
-        { ...addresses, carbonOffset: getCarbonOffsetAddress(chainId) },
+        {
+          ...addresses,
+          carbonOffset: getCarbonOffsetAddress(chainId),
+          questRewards: getQuestRewardsAddress(chainId),
+        },
         LOGS_FROM_BLOCK[chainId],
       ),
     enabled: Boolean(user && client),

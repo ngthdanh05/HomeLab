@@ -3,9 +3,9 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useModal } from "connectkit";
-import type { Abi, Address, Hash } from "viem";
+import { encodeFunctionData, type Abi, type Address, type Hash } from "viem";
 import { useAccount, useConfig, useSwitchChain, useWriteContract } from "wagmi";
-import { waitForTransactionReceipt } from "wagmi/actions";
+import { estimateGas, waitForTransactionReceipt } from "wagmi/actions";
 import { useToast } from "@/components/ui/Toast";
 import { getTxErrorMessage, isReceiptTimeoutError } from "@/lib/marketplace";
 import { useActiveChain } from "./useActiveChain";
@@ -23,6 +23,14 @@ export type TxStatus =
 /** Stop waiting for a receipt after this long so the UI never hangs on a slow RPC. */
 export const RECEIPT_TIMEOUT_MS = 90_000;
 const RECEIPT_POLLING_MS = 3_000;
+/**
+ * Extra gas on top of the node's estimate (in percent). eth_estimateGas runs in
+ * the context of the latest block, but the tx lands in a later one: e.g. an
+ * ERC20Votes checkpoint updated in place during estimation becomes a new
+ * checkpoint (~20k gas more each) when mined, which made ECO-minting txs run
+ * out of gas. Unused gas is not charged.
+ */
+export const GAS_BUFFER_PERCENT = 25n;
 
 export interface ContractTxRequest {
   address: Address;
@@ -48,7 +56,7 @@ interface TxMessages {
 export function useContractTx({ pending, success }: TxMessages) {
   const config = useConfig();
   const queryClient = useQueryClient();
-  const { isConnected, chainId: walletChainId } = useAccount();
+  const { isConnected, chainId: walletChainId, address: account } = useAccount();
   const { chainId } = useActiveChain();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
@@ -85,7 +93,22 @@ export function useContractTx({ pending, success }: TxMessages) {
         setStatus("awaiting-wallet");
         if (walletChainId !== chainId) await switchChainAsync({ chainId });
 
-        txHash = await writeContractAsync({ ...request, chainId });
+        // Own estimate + buffer; if estimation reverts, let the wallet surface the error.
+        let gas: bigint | undefined;
+        try {
+          const estimate = await estimateGas(config, {
+            chainId,
+            account,
+            to: request.address,
+            data: encodeFunctionData({ abi: request.abi, functionName: request.functionName, args: request.args }),
+            value: request.value,
+          });
+          gas = (estimate * (100n + GAS_BUFFER_PERCENT)) / 100n;
+        } catch {
+          gas = undefined;
+        }
+
+        txHash = await writeContractAsync({ ...request, chainId, gas });
         setHash(txHash);
         setStatus("pending");
         pendingToastId = toast({
@@ -137,6 +160,7 @@ export function useContractTx({ pending, success }: TxMessages) {
     },
     [
       isConnected,
+      account,
       walletChainId,
       chainId,
       config,

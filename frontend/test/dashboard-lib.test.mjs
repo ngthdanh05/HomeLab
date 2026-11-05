@@ -173,3 +173,23 @@ test("buildActivityFeed: a carbon offset tx becomes an 'offset' item with its ba
   assert.equal(item.carbonGrams, 12_500n);
   assert.deepEqual(item.badges, [{ tokenId: 7n, badgeType: 1 }]);
 });
+
+test("buildActivityFeed: QuestCompleted becomes a 'quest' item with ECO and badge", () => {
+  const [item] = buildActivityFeed(
+    [
+      ev("QuestCompleted", { user: USER, questId: 1n, ecoReward: 30n * ETH, badgeTokenId: 12n }, "0xddd", 80, 2),
+      ev("BadgeMinted", { to: USER, tokenId: 12n, badgeType: 2 }, "0xddd", 80, 1),
+    ],
+    USER,
+  );
+  assert.equal(item.kind, "quest");
+  assert.equal(item.questId, 1);
+  assert.equal(item.ecoReward, 30n * ETH);
+  assert.deepEqual(item.badges, [{ tokenId: 12n, badgeType: 2 }]);
+
+  const [noEco] = buildActivityFeed(
+    [ev("QuestCompleted", { user: USER, questId: 5n, ecoReward: 0n, badgeTokenId: 13n }, "0xeee", 81)],
+    USER,
+  );
+  assert.equal(noEco.ecoReward, undefined);
+});
