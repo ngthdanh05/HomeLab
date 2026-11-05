@@ -177,6 +177,9 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   ZeroPrice: "Giá phải lớn hơn 0.",
   EmptyMetadataURI: "Thiếu thông tin sản phẩm (metadata).",
   RefundFailed: "Không hoàn lại được tiền thừa cho ví của bạn.",
+  // CarbonOffset
+  InvalidCarbonAmount: "Lượng CO₂ bù đắp không hợp lệ (tối đa 100 tấn mỗi lần).",
+  MetadataTooLong: "Thông tin badge quá dài.",
 };
 
 /** viem throws this when a receipt doesn't arrive within the `timeout` option. */

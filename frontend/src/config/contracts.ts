@@ -1,4 +1,4 @@
-import type { Abi, Address } from "viem";
+import { isAddress, type Abi, type Address } from "viem";
 import { anvil, sepolia } from "wagmi/chains";
 import EcoTokenJson from "../abis/EcoToken.json";
 import ImpactBadgeJson from "../abis/ImpactBadge.json";
@@ -6,6 +6,7 @@ import CommunityTreasuryJson from "../abis/CommunityTreasury.json";
 import GovernanceJson from "../abis/Governance.json";
 import PaymentSplitterJson from "../abis/PaymentSplitter.json";
 import MarketplaceJson from "../abis/Marketplace.json";
+import CarbonOffsetJson from "../abis/CarbonOffset.json";
 
 export type ContractName =
   | "ecoToken"
@@ -47,14 +48,18 @@ export type SupportedChainId = keyof typeof DEPLOYMENTS;
  */
 export const LOGS_FROM_BLOCK: Record<
   SupportedChainId,
-  Readonly<Record<"impactBadge" | "paymentSplitter" | "marketplace", bigint>>
+  Readonly<Record<"impactBadge" | "paymentSplitter" | "marketplace", bigint>> & {
+    /** Defaults to the ImpactBadge block when unset (CarbonOffset is newer). */
+    carbonOffset?: bigint;
+  }
 > = {
   [sepolia.id]: {
     impactBadge: 12_032_000n,
     paymentSplitter: 12_067_900n,
     marketplace: 12_067_900n,
+    carbonOffset: 12_068_939n,
   },
-  [anvil.id]: { impactBadge: 0n, paymentSplitter: 0n, marketplace: 0n },
+  [anvil.id]: { impactBadge: 0n, paymentSplitter: 0n, marketplace: 0n, carbonOffset: 0n },
 };
 
 export function isSupportedChain(chainId: number | undefined): chainId is SupportedChainId {
@@ -70,6 +75,24 @@ const CHAIN_NAMES: Record<number, string> = {
   [sepolia.id]: "Sepolia Testnet",
   [anvil.id]: "Anvil Localnet",
 };
+
+/**
+ * CarbonOffset (Task 4.3) is deployed separately from the six core contracts
+ * (`make deploy-carbon-sepolia`), so it is optional per chain.
+ * NEXT_PUBLIC_SEPOLIA_CARBON_OFFSET_ADDRESS overrides the Sepolia default.
+ */
+const SEPOLIA_CARBON_OFFSET: Address = "0x4d51Ea6E0ACeBeBa0b96a72655B10457d769DFF5";
+const sepoliaCarbonOffset = process.env.NEXT_PUBLIC_SEPOLIA_CARBON_OFFSET_ADDRESS?.trim();
+export const CARBON_OFFSET_ADDRESSES: Readonly<Partial<Record<SupportedChainId, Address>>> = {
+  [sepolia.id]:
+    sepoliaCarbonOffset && isAddress(sepoliaCarbonOffset) ? sepoliaCarbonOffset : SEPOLIA_CARBON_OFFSET,
+  // Nonce 6 of Anvil account #0 in `make deploy-local`.
+  [anvil.id]: "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+};
+
+export function getCarbonOffsetAddress(chainId?: number): Address | undefined {
+  return isSupportedChain(chainId) ? CARBON_OFFSET_ADDRESSES[chainId] : undefined;
+}
 
 export function getChainName(chainId: number): string {
   return CHAIN_NAMES[chainId] ?? `Chain ID: ${chainId}`;
@@ -89,6 +112,7 @@ export const CommunityTreasuryABI = CommunityTreasuryJson.abi as Abi;
 export const GovernanceABI = GovernanceJson.abi as Abi;
 export const PaymentSplitterABI = PaymentSplitterJson.abi as Abi;
 export const MarketplaceABI = MarketplaceJson.abi as Abi;
+export const CarbonOffsetABI = CarbonOffsetJson.abi as Abi;
 
 export const CONTRACT_ABIS: Readonly<Record<ContractName, Abi>> = {
   ecoToken: EcoTokenABI,

@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { Abi, Address, PublicClient } from "viem";
 import { usePublicClient } from "wagmi";
 import {
+  CarbonOffsetABI,
+  getCarbonOffsetAddress,
   ImpactBadgeABI,
   LOGS_FROM_BLOCK,
   MarketplaceABI,
@@ -68,8 +70,13 @@ async function getEventsChunked(
 async function loadActivity(
   client: PublicClient,
   user: Address,
-  addresses: { marketplace: Address; paymentSplitter: Address; impactBadge: Address },
-  fromBlocks: { marketplace: bigint; paymentSplitter: bigint; impactBadge: bigint },
+  addresses: {
+    marketplace: Address;
+    paymentSplitter: Address;
+    impactBadge: Address;
+    carbonOffset?: Address;
+  },
+  fromBlocks: { marketplace: bigint; paymentSplitter: bigint; impactBadge: bigint; carbonOffset?: bigint },
 ): Promise<ActivityItem[]> {
   const latest = await client.getBlockNumber();
   const get = (q: EventQuery) => getEventsChunked(client, q, latest);
@@ -81,7 +88,7 @@ async function loadActivity(
     fromBlock: fromBlocks.paymentSplitter,
   };
 
-  const [bought, sold, created, cancelled, rewards, badges] = await Promise.all([
+  const [bought, sold, created, cancelled, rewards, badges, offsets] = await Promise.all([
     get({ ...market, eventName: "ListingPurchased", args: { buyer: user } }),
     get({ ...market, eventName: "ListingPurchased", args: { seller: user } }),
     get({ ...market, eventName: "ListingCreated", args: { seller: user } }),
@@ -94,6 +101,15 @@ async function loadActivity(
       args: { to: user },
       fromBlock: fromBlocks.impactBadge,
     }),
+    addresses.carbonOffset
+      ? get({
+          address: addresses.carbonOffset,
+          abi: CarbonOffsetABI,
+          eventName: "CarbonOffsetted",
+          args: { user },
+          fromBlock: fromBlocks.carbonOffset ?? fromBlocks.impactBadge,
+        })
+      : Promise.resolve([] as ChainEvent[]),
   ]);
 
   // PaymentSplit is indexed by artisan only: fetch splits paid to the sellers
@@ -112,7 +128,7 @@ async function loadActivity(
   );
 
   const items = buildActivityFeed(
-    [...bought, ...sold, ...created, ...cancelled, ...rewards, ...badges, ...relevantSplits],
+    [...bought, ...sold, ...created, ...cancelled, ...rewards, ...badges, ...offsets, ...relevantSplits],
     user,
   ).slice(0, ACTIVITY_LIMIT);
 
@@ -142,7 +158,13 @@ export function useActivityFeed(user: Address | undefined) {
 
   return useQuery({
     queryKey: [ACTIVITY_QUERY_KEY, chainId, user],
-    queryFn: () => loadActivity(client as PublicClient, user as Address, addresses, LOGS_FROM_BLOCK[chainId]),
+    queryFn: () =>
+      loadActivity(
+        client as PublicClient,
+        user as Address,
+        { ...addresses, carbonOffset: getCarbonOffsetAddress(chainId) },
+        LOGS_FROM_BLOCK[chainId],
+      ),
     enabled: Boolean(user && client),
     refetchInterval: 60_000,
     staleTime: 15_000,

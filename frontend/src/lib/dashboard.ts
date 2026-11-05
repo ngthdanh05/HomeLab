@@ -142,6 +142,7 @@ export type ActivityKind =
   | "cancel"
   | "income"
   | "reward"
+  | "offset"
   | "badge";
 
 export interface ActivityItem {
@@ -154,6 +155,8 @@ export interface ActivityItem {
   ecoReward?: bigint;
   badges: { tokenId: bigint; badgeType: number }[];
   split?: { artisan: bigint; treasury: bigint; platform: bigint };
+  /** Grams of CO₂ offset (kind "offset"). */
+  carbonGrams?: bigint;
   timestamp?: number;
 }
 
@@ -184,6 +187,7 @@ export function buildActivityFeed(events: ChainEvent[], user: string): ActivityI
     const cancelled = find("ListingCancelled");
     const splitEvent = find("PaymentSplit");
     const reward = find("EcoRewarded", (e) => sameAddress(e.args.visitor, user));
+    const offset = find("CarbonOffsetted", (e) => sameAddress(e.args.user, user));
     const badges = group
       .filter((e) => e.eventName === "BadgeMinted" && sameAddress(e.args.to, user))
       .map((e) => ({ tokenId: e.args.tokenId as bigint, badgeType: Number(e.args.badgeType) }));
@@ -228,6 +232,13 @@ export function buildActivityFeed(events: ChainEvent[], user: string): ActivityI
       });
     } else if (cancelled) {
       items.push({ ...base, kind: "cancel", listingId: cancelled.args.listingId as bigint });
+    } else if (offset) {
+      items.push({
+        ...base,
+        kind: "offset",
+        amountWei: offset.args.paid as bigint,
+        carbonGrams: offset.args.carbonGrams as bigint,
+      });
     } else if (splitEvent && sameAddress(splitEvent.args.artisan, user)) {
       items.push({ ...base, kind: "income", amountWei: split?.artisan, split });
     } else if (reward) {

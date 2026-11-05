@@ -94,6 +94,30 @@ export const getStructuredModel = (systemInstruction: string) =>
     },
   });
 
+/** Upstream statuses worth retrying: overloaded / rate-limited / transient errors. */
+const RETRYABLE_STATUS = new Set([429, 500, 503]);
+
+/**
+ * Runs a Gemini call, retrying transient upstream failures ("model is currently
+ * experiencing high demand" 503s are frequent and usually clear within seconds).
+ */
+export async function withGeminiRetry<T>(
+  call: () => Promise<T>,
+  delaysMs: readonly number[] = [800, 2000],
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await call();
+    } catch (error) {
+      const status = (error as { status?: number }).status;
+      if (attempt >= delaysMs.length || status === undefined || !RETRYABLE_STATUS.has(status)) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delaysMs[attempt]));
+    }
+  }
+}
+
 export function isGeminiConfigured(): boolean {
   return Boolean(process.env.GEMINI_API_KEY);
 }
