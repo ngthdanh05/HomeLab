@@ -14,6 +14,12 @@ import {
 } from "@/lib/marketplace";
 import { useActiveChain } from "./useActiveChain";
 
+/**
+ * Background refresh so listings created/sold elsewhere (or a tx that confirmed
+ * after the UI stopped waiting) show up without a manual reload.
+ */
+const LISTINGS_REFRESH_MS = 30_000;
+
 /** Newest listings first. `nextListingId` drives which IDs are fetched. */
 export function useListings() {
   const { chainId, addresses } = useActiveChain();
@@ -23,6 +29,7 @@ export function useListings() {
     abi: MarketplaceABI,
     functionName: "nextListingId",
     chainId,
+    query: { refetchInterval: LISTINGS_REFRESH_MS },
   });
 
   const ids = useMemo(
@@ -38,7 +45,7 @@ export function useListings() {
       args: [id],
       chainId,
     })),
-    query: { enabled: ids.length > 0 },
+    query: { enabled: ids.length > 0, refetchInterval: LISTINGS_REFRESH_MS },
   });
 
   const listings = useMemo(
@@ -69,7 +76,7 @@ export function useListing(listingId: bigint | null) {
     functionName: "getListing",
     args: listingId !== null ? [listingId] : undefined,
     chainId,
-    query: { enabled: listingId !== null },
+    query: { enabled: listingId !== null, refetchInterval: LISTINGS_REFRESH_MS },
   });
 
   const listing = query.data as Listing | undefined;
