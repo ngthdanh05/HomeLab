@@ -3,7 +3,7 @@
 .PHONY: all build test clean \
         deploy-local deploy-sepolia deploy-sepolia-resume \
         deploy-step-by-step \
-        verify-sepolia simulate-e2e deploy-carbon-sepolia
+        verify-sepolia simulate-e2e deploy-carbon-sepolia deploy-quests-sepolia
 
 # ── Build & Test ───────────────────────────────────────────────────────────────
 build:
@@ -83,6 +83,12 @@ deploy-carbon-sepolia:
 		--verify \
 		--etherscan-api-key $(ETHERSCAN_API_KEY) \
 		-vvvv
+
+# Deploy riêng QuestRewards (Task 4.4), nạp 6 quest mặc định, cấp MINTER_ROLE trên
+# EcoToken + ImpactBadge. Cần trong .env: PRIVATE_KEY (admin EcoToken & ImpactBadge),
+#   ECO_TOKEN_ADDRESS, IMPACT_BADGE_ADDRESS, CARBON_OFFSET_ADDRESS, GOVERNANCE_ADDRESS
+deploy-quests-sepolia:
+	forge script script/DeployQuestRewards.s.sol 		--rpc-url $(SEPOLIA_RPC_URL) 		--broadcast 		--slow 		--skip-simulation 		--gas-estimate-multiplier 130 		--verify 		--etherscan-api-key $(ETHERSCAN_API_KEY) 		-vvvv
 
 # ── Sepolia Simulate (không broadcast, kiểm tra local trước) ─────────────────
 simulate-sepolia:
