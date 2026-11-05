@@ -116,6 +116,20 @@ export function decodeDataJsonUri(uri: string): unknown {
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 
+/** Fetches JSON metadata from an inline data: URI, ipfs:// or https:// URI. */
+export async function fetchJsonUri(
+  uri: string,
+  gateway = IPFS_GATEWAY,
+  timeoutMs = 10_000,
+): Promise<unknown> {
+  if (uri.startsWith("data:")) return decodeDataJsonUri(uri);
+  const url = resolveUri(uri, gateway);
+  if (!url) return null;
+  const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+  if (!response.ok) throw new Error(`Metadata request failed: ${response.status}`);
+  return response.json();
+}
+
 export function encodeDataJsonUri(value: unknown): string {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
   let binary = "";

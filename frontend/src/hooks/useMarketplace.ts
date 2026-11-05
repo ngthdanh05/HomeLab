@@ -5,10 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useReadContract, useReadContracts } from "wagmi";
 import { MarketplaceABI } from "@/config/contracts";
 import {
-  decodeDataJsonUri,
+  fetchJsonUri,
   getRecentListingIds,
   normalizeMetadata,
-  resolveUri,
   type Listing,
   type ListingMetadata,
 } from "@/lib/marketplace";
@@ -91,13 +90,7 @@ export function useListing(listingId: bigint | null) {
 }
 
 async function fetchMetadata(uri: string): Promise<ListingMetadata | null> {
-  if (uri.startsWith("data:")) return normalizeMetadata(decodeDataJsonUri(uri));
-
-  const url = resolveUri(uri);
-  if (!url) return null;
-  const response = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-  if (!response.ok) throw new Error(`Metadata request failed: ${response.status}`);
-  return normalizeMetadata(await response.json());
+  return normalizeMetadata(await fetchJsonUri(uri));
 }
 
 /** IPFS metadata is immutable for a given URI, so it is cached indefinitely. */

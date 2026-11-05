@@ -9,6 +9,7 @@ import { waitForTransactionReceipt } from "wagmi/actions";
 import { useToast } from "@/components/ui/Toast";
 import { getTxErrorMessage, isReceiptTimeoutError } from "@/lib/marketplace";
 import { useActiveChain } from "./useActiveChain";
+import { ACTIVITY_QUERY_KEY } from "./useActivityFeed";
 
 export type TxStatus =
   | "idle"
@@ -68,10 +69,14 @@ export function useContractTx({ pending, success }: TxMessages) {
       const txLink = (txHash: Hash) =>
         explorer ? { href: `${explorer}/tx/${txHash}`, label: "Xem trên Etherscan" } : undefined;
 
-      // Refresh wagmi reads so listings, balances and badges update without F5.
+      // Refresh wagmi reads and the dashboard activity feed so listings,
+      // balances, badges and history update without F5.
       const refreshReads = () =>
         queryClient.invalidateQueries({
-          predicate: (q) => q.queryKey[0] === "readContract" || q.queryKey[0] === "readContracts",
+          predicate: (q) =>
+            q.queryKey[0] === "readContract" ||
+            q.queryKey[0] === "readContracts" ||
+            q.queryKey[0] === ACTIVITY_QUERY_KEY,
         });
 
       let pendingToastId: number | undefined;

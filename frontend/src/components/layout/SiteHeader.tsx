@@ -11,6 +11,7 @@ import { useActiveChain } from "@/hooks/useActiveChain";
 const NAV_LINKS = [
   { href: "/", label: "🌿 Khám phá" },
   { href: "/marketplace", label: "🧺 Marketplace" },
+  { href: "/dashboard", label: "🏅 Dashboard" },
 ] as const;
 
 export function SiteHeader() {
