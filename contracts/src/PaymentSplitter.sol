@@ -82,17 +82,25 @@ contract PaymentSplitter is Ownable, ReentrancyGuard, IPaymentSplitter {
     // ------------------------------------------------------------------
 
     /// @notice Phân tách thanh toán khi được gọi bởi Marketplace (theo IPaymentSplitter).
-    function splitPayment(address seller, ProductType /* pType */) external payable override nonReentrant {
-        _splitPayment(seller);
+    /// @dev msg.sender lúc này là Marketplace, nên người nhận thưởng ECO phải được
+    ///      truyền vào qua `buyer`. Người gọi tự trả ETH nên chỉ chọn được nơi nhận
+    ///      phần thưởng tương ứng với khoản thanh toán của chính mình.
+    function splitPayment(address seller, address buyer, ProductType /* pType */)
+        external
+        payable
+        override
+        nonReentrant
+    {
+        _splitPayment(seller, buyer);
     }
 
-    /// @notice Phân tách thanh toán với 1 tham số artisan.
+    /// @notice Du khách thanh toán trực tiếp cho nghệ nhân; thưởng ECO cho chính người trả.
     function splitPayment(address artisan) external payable nonReentrant {
-        _splitPayment(artisan);
+        _splitPayment(artisan, msg.sender);
     }
 
-    function _splitPayment(address artisan) internal {
-        if (artisan == address(0)) revert ZeroAddress();
+    function _splitPayment(address artisan, address rewardRecipient) internal {
+        if (artisan == address(0) || rewardRecipient == address(0)) revert ZeroAddress();
         if (msg.value == 0) revert ZeroPayment();
 
         // --- Checks / Effects: tính toán và ghi sổ trước mọi external call ---
@@ -114,8 +122,8 @@ contract PaymentSplitter is Ownable, ReentrancyGuard, IPaymentSplitter {
 
         uint256 reward = (msg.value * ecoRewardRate) / 1 ether;
         if (reward > 0) {
-            ecoToken.mint(msg.sender, reward);
-            emit EcoRewarded(msg.sender, reward);
+            ecoToken.mint(rewardRecipient, reward);
+            emit EcoRewarded(rewardRecipient, reward);
         }
 
         emit PaymentSplit(artisan, artisanAmt, treasuryAmt, platformAmt);

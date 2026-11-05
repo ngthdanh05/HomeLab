@@ -106,7 +106,7 @@ contract Marketplace is Ownable, ReentrancyGuard {
         ProductType pType = listing.pType;
 
         // Interactions
-        paymentSplitter.splitPayment{value: price}(seller, pType);
+        paymentSplitter.splitPayment{value: price}(seller, msg.sender, pType);
         impactBadge.mint(msg.sender, pType);
 
         emit ListingPurchased(listingId, msg.sender, seller, price);

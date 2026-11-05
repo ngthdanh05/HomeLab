@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {PaymentSplitter} from "../src/PaymentSplitter.sol";
+import {ProductType} from "../src/interfaces/IMarketPlaceDeps.sol";
 
 // ----------------------------------------------------------------------
 // Mocks
@@ -251,6 +252,28 @@ contract PaymentSplitterTest is Test {
         assertEq(artisan.balance, 0);
         assertEq(treasury.totalDeposited(), 0);
         assertEq(splitter.pendingPlatformFees(), 1 ether);
+    }
+
+    function test_SplitPaymentForBuyer_RewardsBuyerNotCaller() public {
+        // Marketplace-style call: the caller pays, the buyer earns the ECO reward.
+        address marketplace = makeAddr("marketplace");
+        vm.deal(marketplace, 1 ether);
+
+        vm.expectEmit(true, false, false, true);
+        emit EcoRewarded(visitor, REWARD_RATE);
+        vm.prank(marketplace);
+        splitter.splitPayment{value: 1 ether}(artisan, visitor, ProductType.Handicraft);
+
+        assertEq(eco.balanceOf(visitor), REWARD_RATE);
+        assertEq(eco.balanceOf(marketplace), 0);
+        assertEq(artisan.balance, 0.7 ether);
+        assertEq(treasury.totalDeposited(), 0.2 ether);
+    }
+
+    function test_SplitPaymentForBuyer_RevertsOnZeroBuyer() public {
+        vm.prank(visitor);
+        vm.expectRevert(PaymentSplitter.ZeroAddress.selector);
+        splitter.splitPayment{value: 1 ether}(artisan, address(0), ProductType.Food);
     }
 
     function test_SplitPayment_NoMintWhenRewardRateZero() public {
