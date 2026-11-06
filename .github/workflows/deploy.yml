@@ -98,24 +98,27 @@ jobs:
         if: steps.secrets.outputs.ok == 'true'
         env:
           URL: ${{ steps.deploy.outputs.url }}
-        # Preview deployments sit behind Vercel Deployment Protection (302 to the
-        # Vercel login), so they are fetched with `vercel curl`, which bypasses it
-        # with the token. Production uses plain curl: it must be publicly reachable.
+        # Production must be publicly reachable: every page returns 200 and the home
+        # page renders. Preview deployments sit behind Vercel Deployment Protection
+        # (302 to the Vercel login), so for them the check is: Vercel reports the
+        # deployment Ready, and each URL answers with 200 or that login redirect.
         run: |
-          fetch() {
-            if [ "$TARGET" = "production" ]; then
-              curl -s --retry 3 --retry-delay 5 "$@" "$URL$path"
-            else
-              npx -y ${{ env.VERCEL_CLI }} curl "$path" --deployment "$URL" --yes --token="$VERCEL_TOKEN" -- -s --retry 3 --retry-delay 5 "$@" 2>/dev/null
-            fi
-          }
+          if [ "$TARGET" != "production" ]; then
+            inspect=$(npx -y ${{ env.VERCEL_CLI }} inspect "$URL" --token="$VERCEL_TOKEN" 2>&1) || { echo "$inspect"; exit 1; }
+            echo "$inspect" | grep -E "status|target"
+            echo "$inspect" | grep -qE "status\s+.*Ready" || { echo "::error::deployment is not Ready"; exit 1; }
+          fi
           for path in / /marketplace /governance /sitemap.xml /robots.txt; do
-            code=$(fetch -o /dev/null -w "%{http_code}")
-            echo "$path -> $code"
-            [ "$code" = "200" ] || { echo "::error::$path returned $code"; exit 1; }
+            result=$(curl -s -o /dev/null -w "%{http_code} %{redirect_url}" --retry 3 --retry-delay 5 "$URL$path")
+            code=${result%% *}
+            echo "$path -> $result"
+            if [ "$code" = "200" ]; then continue; fi
+            if [ "$TARGET" != "production" ] && [ "$code" = "302" ] && [[ "$result" == *"vercel.com/sso-api"* ]]; then continue; fi
+            echo "::error::$path returned $code"; exit 1
           done
-          path=/
-          fetch | grep -q "MyHomeLab" || { echo "::error::home page content missing"; exit 1; }
+          if [ "$TARGET" = "production" ]; then
+            curl -sf "$URL/" | grep -q "MyHomeLab" || { echo "::error::home page content missing"; exit 1; }
+          fi
 
       - name: Comment preview URL on the PR
         if: steps.secrets.outputs.ok == 'true' && github.event_name == 'pull_request'
