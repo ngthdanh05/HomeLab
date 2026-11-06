@@ -4,8 +4,8 @@ import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useModal } from "connectkit";
 import { encodeFunctionData, type Abi, type Address, type Hash } from "viem";
-import { useAccount, useConfig, useSwitchChain, useWriteContract } from "wagmi";
-import { estimateGas, waitForTransactionReceipt } from "wagmi/actions";
+import { useConfig, useSwitchChain, useWriteContract, type Config } from "wagmi";
+import { estimateGas, getAccount, waitForTransactionReceipt, watchAccount } from "wagmi/actions";
 import { useToast } from "@/components/ui/Toast";
 import { getTxErrorMessage, isReceiptTimeoutError } from "@/lib/marketplace";
 import { useActiveChain } from "./useActiveChain";
@@ -36,6 +36,33 @@ const RECEIPT_POLLING_MS = 3_000;
  */
 export const GAS_BUFFER_PERCENT = 25n;
 
+/** Max wait for wagmi's silent reconnect after a page load before asking to connect. */
+const RECONNECT_WAIT_MS = 10_000;
+
+/**
+ * Right after a page load wagmi is still (re)connecting the wallet: the address is
+ * known but the connection isn't ready. Wait for it instead of opening the connect
+ * modal for a user who is in fact connected.
+ */
+function waitForWallet(config: Config) {
+  const busy = (s: string) => s === "connecting" || s === "reconnecting";
+  const current = getAccount(config);
+  if (!busy(current.status)) return Promise.resolve(current);
+  return new Promise<ReturnType<typeof getAccount>>((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      unwatch();
+      resolve(getAccount(config));
+    };
+    const timer = setTimeout(done, RECONNECT_WAIT_MS);
+    const unwatch = watchAccount(config, {
+      onChange: (account) => {
+        if (!busy(account.status)) done();
+      },
+    });
+  });
+}
+
 export interface ContractTxRequest {
   address: Address;
   abi: Abi;
@@ -60,7 +87,6 @@ interface TxMessages {
 export function useContractTx({ pending, success }: TxMessages) {
   const config = useConfig();
   const queryClient = useQueryClient();
-  const { isConnected, chainId: walletChainId, address: account } = useAccount();
   const { chainId } = useActiveChain();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
@@ -72,6 +98,7 @@ export function useContractTx({ pending, success }: TxMessages) {
 
   const send = useCallback(
     async (request: ContractTxRequest): Promise<TxResult> => {
+      const { isConnected, chainId: walletChainId, address: account } = await waitForWallet(config);
       if (!isConnected) {
         setConnectModalOpen(true);
         return null;
@@ -163,9 +190,6 @@ export function useContractTx({ pending, success }: TxMessages) {
       }
     },
     [
-      isConnected,
-      account,
-      walletChainId,
       chainId,
       config,
       pending,
