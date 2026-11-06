@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: "/marketplace", label: "🧺 Marketplace" },
   { href: "/carbon-tracker", label: "🌍 Carbon" },
   { href: "/quests", label: "🎯 Quests" },
+  { href: "/governance", label: "🗳️ DAO" },
   { href: "/dashboard", label: "🏅 Dashboard" },
 ] as const;
 

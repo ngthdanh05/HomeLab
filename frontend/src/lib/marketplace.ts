@@ -185,6 +185,21 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   QuestInactive: "Quest này đang tạm dừng.",
   QuestNotFound: "Không tìm thấy quest.",
   TooManyProofIds: "Quá nhiều badge bằng chứng trong một lần claim.",
+  // Governance / CommunityTreasury
+  AlreadyVoted: "Bạn đã vote rồi. Mỗi ví chỉ được bỏ phiếu một lần cho mỗi đề xuất.",
+  NoVotingPower:
+    "Ví không có quyền biểu quyết tại thời điểm tạo đề xuất (cần nắm ECO và kích hoạt quyền vote trước khi đề xuất được tạo).",
+  VotingClosed: "Đề xuất đã hết hạn bỏ phiếu.",
+  VotingNotEnded: "Chưa hết thời gian bỏ phiếu, chưa thể thực thi đề xuất.",
+  QuorumNotReached: "Đề xuất không đạt quorum (không đủ số phiếu tối thiểu) nên không thể thực thi.",
+  AlreadyFinalized: "Đề xuất đã được thực thi hoặc chốt kết quả rồi.",
+  BelowProposalThreshold: "Số dư ECO chưa đạt ngưỡng tối thiểu để tạo đề xuất.",
+  ProposalNotFound: "Không tìm thấy đề xuất.",
+  InsufficientBalance: "Quỹ Cộng đồng không đủ ETH để giải ngân đề xuất này.",
+  TransferFailed: "Không chuyển được ETH tới ví nhận.",
+  NotGovernance: "Chỉ hợp đồng Governance mới được giải ngân từ Quỹ.",
+  ZeroAmount: "Số tiền phải lớn hơn 0.",
+  ZeroAddress: "Địa chỉ không hợp lệ (địa chỉ 0).",
 };
 
 /** viem throws this when a receipt doesn't arrive within the `timeout` option. */
