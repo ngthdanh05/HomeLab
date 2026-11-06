@@ -82,6 +82,8 @@ export default function ListingDetailPage() {
           icon={type.icon}
           isLoading={metadata.isLoading}
           className="aspect-square w-full rounded-2xl border border-slate-800"
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          priority
         />
 
         <div className="space-y-6">
@@ -104,19 +106,19 @@ export default function ListingDetailPage() {
 
           <dl className="grid grid-cols-2 gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 text-sm">
             <div>
-              <dt className="text-xs text-slate-500">Giá</dt>
+              <dt className="text-xs text-slate-400">Giá</dt>
               <dd className="font-mono text-lg font-bold text-emerald-300">
                 {formatEther(listing.price)} ETH
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-500">Trạng thái</dt>
+              <dt className="text-xs text-slate-400">Trạng thái</dt>
               <dd className={listing.isActive ? "text-emerald-400" : "text-slate-400"}>
                 {listing.isActive ? "● Đang bán" : "Đã bán / Đã huỷ"}
               </dd>
             </div>
             <div className="col-span-2">
-              <dt className="text-xs text-slate-500">Người bán (nghệ nhân)</dt>
+              <dt className="text-xs text-slate-400">Người bán (nghệ nhân)</dt>
               <dd className="break-all font-mono text-xs text-slate-300">
                 {explorer ? (
                   <a
@@ -144,7 +146,7 @@ export default function ListingDetailPage() {
           <div className="space-y-3">
             <PurchaseButton listing={listing} />
             <CancelListingButton listing={listing} />
-            <p className="text-center text-xs text-slate-500">
+            <p className="text-center text-xs text-slate-400">
               🏅 Người mua nhận NFT ImpactBadge (Proof of Action) sau khi giao dịch thành công.
             </p>
           </div>

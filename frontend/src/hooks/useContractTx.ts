@@ -2,11 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useModal } from "connectkit";
 import { encodeFunctionData, type Abi, type Address, type Hash } from "viem";
 import { useConfig, useSwitchChain, useWriteContract, type Config } from "wagmi";
 import { estimateGas, getAccount, waitForTransactionReceipt, watchAccount } from "wagmi/actions";
 import { useToast } from "@/components/ui/Toast";
+import { useWalletModal } from "@/providers/WalletModal";
 import { getTxErrorMessage, isReceiptTimeoutError } from "@/lib/marketplace";
 import { useActiveChain } from "./useActiveChain";
 import { ACTIVITY_QUERY_KEY } from "./useActivityFeed";
@@ -90,7 +90,7 @@ export function useContractTx({ pending, success }: TxMessages) {
   const { chainId } = useActiveChain();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
-  const { setOpen: setConnectModalOpen } = useModal();
+  const { open: openWalletModal } = useWalletModal();
   const { toast, dismiss } = useToast();
 
   const [status, setStatus] = useState<TxStatus>("idle");
@@ -100,7 +100,7 @@ export function useContractTx({ pending, success }: TxMessages) {
     async (request: ContractTxRequest): Promise<TxResult> => {
       const { isConnected, chainId: walletChainId, address: account } = await waitForWallet(config);
       if (!isConnected) {
-        setConnectModalOpen(true);
+        openWalletModal();
         return null;
       }
 
@@ -197,7 +197,7 @@ export function useContractTx({ pending, success }: TxMessages) {
       queryClient,
       switchChainAsync,
       writeContractAsync,
-      setConnectModalOpen,
+      openWalletModal,
       toast,
       dismiss,
     ],

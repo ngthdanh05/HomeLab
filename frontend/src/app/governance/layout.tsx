@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Community DAO — MyHomeLab",
+export const metadata: Metadata = pageMetadata({
+  title: "Community DAO",
   description:
     "Cộng đồng đề xuất và bỏ phiếu bằng EcoToken để giải ngân Quỹ Cộng đồng cho các dự án bảo tồn, minh bạch on-chain.",
-};
+  path: "/governance",
+});
 
 export default function GovernanceLayout({ children }: { children: React.ReactNode }) {
   return (

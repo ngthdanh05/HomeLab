@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useSyncExternalStore } from "react";
-import { useModal } from "connectkit";
+import { useWalletModal } from "@/providers/WalletModal";
 import { useAccount } from "wagmi";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { BadgeGallery } from "@/components/dashboard/BadgeGallery";
@@ -15,7 +15,7 @@ const noopSubscribe = () => () => {};
 export default function DashboardPage() {
   const { address, isConnected, isConnecting, isReconnecting } = useAccount();
   const { chainId, explorerUrl, isWrongNetwork } = useActiveChain();
-  const { setOpen } = useModal();
+  const { open: openWalletModal, prefetch } = useWalletModal();
   // Wallet state only exists in the browser; render the connect prompt only on the
   // client so the server HTML matches the first client render.
   const mounted = useSyncExternalStore(
@@ -40,8 +40,10 @@ export default function DashboardPage() {
         </p>
         <button
           type="button"
-          onClick={() => setOpen(true)}
-          className="mt-5 rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white hover:bg-emerald-500"
+          onClick={openWalletModal}
+          onPointerEnter={prefetch}
+          onFocus={prefetch}
+          className="mt-5 rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-600"
         >
           {isConnecting ? "Đang chờ xác nhận trong ví…" : "Kết nối ví"}
         </button>

@@ -51,7 +51,7 @@ export default function MarketplacePage() {
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
-            className="shrink-0 rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white shadow-lg shadow-emerald-950/50 transition-colors hover:bg-emerald-500"
+            className="shrink-0 rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white shadow-lg shadow-emerald-950/50 transition-colors hover:bg-emerald-600"
           >
             + Đăng bán sản phẩm
           </button>
@@ -72,7 +72,7 @@ export default function MarketplacePage() {
             onClick={() => setFilter(f.value)}
             className={`shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-medium transition-colors ${
               filter === f.value
-                ? "bg-emerald-600 text-white"
+                ? "bg-emerald-700 text-white"
                 : "bg-slate-800 text-slate-300 hover:bg-slate-700"
             }`}
           >
@@ -104,7 +104,7 @@ export default function MarketplacePage() {
         <div className="rounded-2xl border border-dashed border-slate-700 p-10 text-center">
           <p className="text-4xl">🧺</p>
           <p className="mt-3 font-medium text-slate-300">Chưa có sản phẩm nào ở mục này</p>
-          <p className="mt-1 text-sm text-slate-500">Hãy là nghệ nhân đầu tiên đăng bán!</p>
+          <p className="mt-1 text-sm text-slate-400">Hãy là nghệ nhân đầu tiên đăng bán!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
