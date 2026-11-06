@@ -844,8 +844,8 @@ function getActiveProposals() external view returns (uint256[] memory)
   - [x] Tất cả env vars được set đúng trên Vercel. _(9 biến, Production + Preview; `GEMINI_API_KEY`, `PINATA_JWT` dạng sensitive)_
   - [x] GitHub Actions CI/CD pipeline pass. _(PR #3: test 3/3 + deploy preview pass; production deploy chạy khi merge vào `main`)_
   - [x] Preview deploy hoạt động cho PR mới. _(PR #3: bot comment URL preview; preview được Vercel Deployment Protection bảo vệ, smoke test đọc `readyState` qua Vercel API)_
-  - [ ] Kết nối MetaMask trên Sepolia thành công từ production URL.
-  - [ ] Ít nhất 1 giao dịch on-chain thành công từ production app.
+  - [x] Kết nối MetaMask trên Sepolia thành công từ production URL. _(ví owner `0x37a0…9242` và ví người mua `0x2377…bA20`)_
+  - [x] Ít nhất 1 giao dịch on-chain thành công từ production app. _(2026-11-06, Marketplace Sepolia: `createListing` tx `0xd1693cde…16e10a` (block 12077263); mua 0.01 ETH tx `0x4cd69cd8…2f86853` (block 12077275) → chia 0.007 / 0.002 / 0.001 ETH, +1 ECO, ImpactBadge #5)_
 
 ---
 
