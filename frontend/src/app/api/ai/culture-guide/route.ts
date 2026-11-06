@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getStructuredModel, SYSTEM_PROMPTS } from "@/lib/gemini";
+import { getStructuredModel, SYSTEM_PROMPTS, withGeminiTimeout } from "@/lib/gemini";
 import {
   extractJsonObject,
   normalizeCultureGuide,
@@ -8,6 +8,8 @@ import {
 import { errorResponse, jsonResponse, readAIRequest } from "@/lib/api";
 
 export const runtime = "edge";
+// Gemini API is not available from every edge location (e.g. Hong Kong); run in Singapore.
+export const preferredRegion = "sin1";
 
 const ROUTE = "api/ai/culture-guide";
 
@@ -23,8 +25,8 @@ ${context ? `Ngữ cảnh bổ sung: """${context}"""` : ""}
 
 Chỉ trả về JSON. "meaning" là nghĩa tiếng Anh, có ít nhất 5 phần tử trong mỗi danh sách.`;
 
-    const result = await getStructuredModel(SYSTEM_PROMPTS.cultureGuide).generateContent(
-      prompt,
+    const result = await withGeminiTimeout(
+      getStructuredModel(SYSTEM_PROMPTS.cultureGuide).generateContent(prompt),
     );
     const guide = normalizeCultureGuide(extractJsonObject(result.response.text()));
 

@@ -838,13 +838,14 @@ function getActiveProposals() external view returns (uint256[] memory)
   - GitHub Actions workflow: `on: push main` → run Foundry tests → run E2E tests → deploy Vercel.
   - Preview deployments cho mọi PR.
   - Cập nhật `docs/DEPLOYMENTS.md` với production URL.
+  - _Cập nhật 2026-11-06:_ `frontend/vercel.json` (region `sin1`, redirect `/dao` `/carbon` `/market` `/quest`, cache `/360/*`, `installCommand` ghim npm 11 cho khớp lockfile, tắt auto-deploy theo Git). `.github/workflows/deploy.yml` gọi `ci.yml` (giờ là reusable workflow) rồi `vercel pull/build/deploy --prebuilt`: production khi push `main`, preview + comment URL cho PR, smoke test sau deploy. Thêm rate limit Upstash Redis (bật khi có `UPSTASH_REDIS_REST_*`/`KV_REST_API_*`), timeout Gemini 20 s (7 s/lần khi thử lại) và `preferredRegion = "sin1"` cho route AI (từ edge `hkg1` Gemini bị treo tới khi Vercel cắt ở 25 s).
 - **Definition of Done (DoD)**:
-  - [ ] App live trên Vercel URL (https://\*.vercel.app).
-  - [ ] Tất cả env vars được set đúng trên Vercel.
-  - [ ] GitHub Actions CI/CD pipeline pass.
-  - [ ] Preview deploy hoạt động cho PR mới.
-  - [ ] Kết nối MetaMask trên Sepolia thành công từ production URL.
-  - [ ] Ít nhất 1 giao dịch on-chain thành công từ production app.
+  - [x] App live trên Vercel URL (https://\*.vercel.app). _(https://myhomelab.vercel.app)_
+  - [x] Tất cả env vars được set đúng trên Vercel. _(9 biến, Production + Preview; `GEMINI_API_KEY`, `PINATA_JWT` dạng sensitive)_
+  - [x] GitHub Actions CI/CD pipeline pass. _(PR #3: test 3/3 + deploy preview pass; production deploy chạy khi merge vào `main`)_
+  - [x] Preview deploy hoạt động cho PR mới. _(PR #3: bot comment URL preview; preview được Vercel Deployment Protection bảo vệ, smoke test đọc `readyState` qua Vercel API)_
+  - [x] Kết nối MetaMask trên Sepolia thành công từ production URL. _(ví owner `0x37a0…9242` và ví người mua `0x2377…bA20`)_
+  - [x] Ít nhất 1 giao dịch on-chain thành công từ production app. _(2026-11-06, Marketplace Sepolia: `createListing` tx `0xd1693cde…16e10a` (block 12077263); mua 0.01 ETH tx `0x4cd69cd8…2f86853` (block 12077275) → chia 0.007 / 0.002 / 0.001 ETH, +1 ECO, ImpactBadge #5)_
 
 ---
 

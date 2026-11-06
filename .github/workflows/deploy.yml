@@ -1,0 +1,142 @@
+name: CI / Deploy
+
+# push to main  → tests (contracts, frontend, E2E) → Vercel production deploy
+# pull request  → tests → Vercel preview deploy, URL commented on the PR
+#
+# Needs repository secrets VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID
+# (see docs/DEPLOYMENTS.md). Without them (e.g. PRs from forks) the tests still
+# run and the deploy job is skipped with a notice.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  NPM_VERSION: "11.6.1"
+  VERCEL_CLI: vercel@65.12.1
+
+jobs:
+  ci:
+    name: Tests
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Deploy to Vercel (${{ github.event_name == 'pull_request' && 'preview' || 'production' }})
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      deployments: write
+    environment:
+      name: ${{ github.event_name == 'pull_request' && 'preview' || 'production' }}
+      url: ${{ steps.deploy.outputs.url }}
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      TARGET: ${{ github.event_name == 'pull_request' && 'preview' || 'production' }}
+    steps:
+      - name: Check Vercel secrets
+        id: secrets
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::notice::Vercel secrets are not set; skipping deployment."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+        working-directory: .
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ok == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ok == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install npm ${{ env.NPM_VERSION }}
+        if: steps.secrets.outputs.ok == 'true'
+        run: npm install -g npm@${{ env.NPM_VERSION }}
+
+      # Pulls the project settings and the environment variables set on Vercel
+      # (GEMINI_API_KEY, PINATA_JWT, NEXT_PUBLIC_*), so the build uses them.
+      - name: Pull Vercel environment
+        if: steps.secrets.outputs.ok == 'true'
+        run: npx -y ${{ env.VERCEL_CLI }} pull --yes --environment=$TARGET --token="$VERCEL_TOKEN"
+
+      - name: Build
+        if: steps.secrets.outputs.ok == 'true'
+        run: npx -y ${{ env.VERCEL_CLI }} build ${{ env.TARGET == 'production' && '--prod' || '' }} --token="$VERCEL_TOKEN"
+
+      - name: Deploy
+        id: deploy
+        if: steps.secrets.outputs.ok == 'true'
+        run: |
+          url=$(npx -y ${{ env.VERCEL_CLI }} deploy --prebuilt ${{ env.TARGET == 'production' && '--prod' || '' }} --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed to $url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Smoke test
+        if: steps.secrets.outputs.ok == 'true'
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        # Production must be publicly reachable: every page returns 200 and the home
+        # page renders. Preview deployments sit behind Vercel Deployment Protection
+        # (302 to the Vercel login), so for them the check is: Vercel reports the
+        # deployment Ready, and each URL answers with 200 or that login redirect.
+        run: |
+          if [ "$TARGET" != "production" ]; then
+            # REST API with the team id: `vercel inspect` / `vercel curl` look up the
+            # token's user and fail ("User not found") with a team-scoped token.
+            host=${URL#https://}
+            state=$(curl -sf -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v13/deployments/$host?teamId=$VERCEL_ORG_ID" | jq -r '.readyState // "UNKNOWN"') \
+              || { echo "::error::could not read the deployment from the Vercel API"; exit 1; }
+            echo "deployment $host -> $state"
+            [ "$state" = "READY" ] || { echo "::error::deployment is $state, not READY"; exit 1; }
+          fi
+          for path in / /marketplace /governance /sitemap.xml /robots.txt; do
+            result=$(curl -s -o /dev/null -w "%{http_code} %{redirect_url}" --retry 3 --retry-delay 5 "$URL$path")
+            code=${result%% *}
+            echo "$path -> $result"
+            if [ "$code" = "200" ]; then continue; fi
+            if [ "$TARGET" != "production" ] && [ "$code" = "302" ] && [[ "$result" == *"vercel.com/sso-api"* ]]; then continue; fi
+            echo "::error::$path returned $code"; exit 1
+          done
+          if [ "$TARGET" = "production" ]; then
+            curl -sf "$URL/" | grep -q "MyHomeLab" || { echo "::error::home page content missing"; exit 1; }
+          fi
+
+      - name: Comment preview URL on the PR
+        if: steps.secrets.outputs.ok == 'true' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        with:
+          script: |
+            const marker = "<!-- vercel-preview -->";
+            const body = `${marker}\n🔍 **Preview deployment:** ${process.env.URL}\n\nCommit \`${context.sha.slice(0, 7)}\` · tests passed (contracts, frontend, E2E).`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find((c) => c.body?.includes(marker));
+            if (existing) await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body });
