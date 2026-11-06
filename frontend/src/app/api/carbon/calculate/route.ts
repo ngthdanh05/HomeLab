@@ -1,5 +1,11 @@
 import { NextRequest } from "next/server";
-import { getStructuredModel, SYSTEM_PROMPTS, withGeminiRetry } from "@/lib/gemini";
+import {
+  GEMINI_RETRY_ATTEMPT_TIMEOUT_MS,
+  getStructuredModel,
+  SYSTEM_PROMPTS,
+  withGeminiRetry,
+  withGeminiTimeout,
+} from "@/lib/gemini";
 import { extractJsonObject } from "@/lib/ai-validation";
 import { errorResponse, jsonResponse, readAIRequest } from "@/lib/api";
 import {
@@ -9,6 +15,8 @@ import {
 } from "@/lib/carbon-utils";
 
 export const runtime = "edge";
+// Gemini API is not available from every edge location (e.g. Hong Kong); run in Singapore.
+export const preferredRegion = "sin1";
 
 const ROUTE = "api/carbon/calculate";
 
@@ -38,7 +46,9 @@ Chỉ trả về JSON:
 }`;
 
     const model = getStructuredModel(SYSTEM_PROMPTS.carbonEstimator);
-    const result = await withGeminiRetry(() => model.generateContent(prompt));
+    const result = await withGeminiRetry(() =>
+      withGeminiTimeout(model.generateContent(prompt), GEMINI_RETRY_ATTEMPT_TIMEOUT_MS),
+    );
     const estimate = normalizeCarbonEstimate(extractJsonObject(result.response.text()));
     return jsonResponse(estimate);
   } catch (error) {

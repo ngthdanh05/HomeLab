@@ -123,3 +123,42 @@ Thực thi lệnh:
 make deploy-sepolia
 make verify-sepolia
 ```
+
+---
+
+## ▲ 4. Frontend trên Vercel (Task 5.4)
+
+| Môi trường | URL | Cách deploy |
+| --- | --- | --- |
+| Production | **https://myhomelab.vercel.app** (project `myhomelab`, team `danhkhongus-projects`) | Push lên `main` → `.github/workflows/deploy.yml` chạy test (contracts, frontend, E2E) → `vercel deploy --prebuilt --prod` |
+| Preview | Mỗi PR một URL, bot comment vào PR | Mở/cập nhật PR → test → `vercel deploy --prebuilt` |
+
+Vercel **không** tự deploy theo Git (`"git": { "deploymentEnabled": false }` trong `frontend/vercel.json`): mọi bản deploy đều đi qua GitHub Actions, nên chỉ code đã pass test mới lên production. Region serverless: `sin1` (Singapore). Các route AI (Edge) cũng ghim `preferredRegion = "sin1"`: Gemini API không phục vụ một số edge location (ví dụ `hkg1`, Hong Kong), khiến request bị treo tới khi Vercel cắt ở 25 s.
+
+### Thiết lập một lần
+
+1. **Tạo và liên kết project** (trong thư mục `frontend/`; *Root Directory* của project để mặc định):
+   ```bash
+   cd frontend
+   npx vercel@65.12.1 login
+   npx vercel@65.12.1 link --yes --project myhomelab
+   ```
+   Lệnh `link` tạo `frontend/.vercel/project.json` (đã gitignore), chứa `orgId` và `projectId`.
+2. **Biến môi trường trên Vercel** (Settings → Environment Variables, cho Production và Preview):
+
+   | Biến | Bắt buộc | Ghi chú |
+   | --- | --- | --- |
+   | `NEXT_PUBLIC_CHAIN_ID` | ✅ | `11155111` |
+   | `GEMINI_API_KEY` | ✅ | chỉ dùng phía server |
+   | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | ✅ | thêm domain Vercel vào allowlist của project trên cloud.reown.com |
+   | `NEXT_PUBLIC_SEPOLIA_RPC_URL` | khuyến nghị | endpoint **Sepolia**; giới hạn domain của API key trong dashboard Alchemy |
+   | `PINATA_JWT` | tuỳ chọn | để đăng bán kèm ảnh |
+   | `NEXT_PUBLIC_IPFS_GATEWAY` | khuyến nghị | cổng Pinata riêng `https://<tên>.mypinata.cloud/ipfs/` (nhanh hơn, có resize ảnh) |
+   | `NEXT_PUBLIC_SITE_URL` | khuyến nghị | domain production, cho canonical/OpenGraph/sitemap |
+   | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | khuyến nghị | rate limit dùng chung; hoặc cài Upstash từ Vercel Marketplace (`KV_REST_API_*`) |
+   | `GEMINI_MODEL` | tuỳ chọn | mặc định `gemini-3.8-flash` |
+3. **GitHub secrets** (repo → Settings → Secrets and variables → Actions):
+   - `VERCEL_TOKEN`: tạo ở Vercel → Account Settings → Tokens;
+   - `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`: lấy trong `frontend/.vercel/project.json`.
+
+   Thiếu các secret này thì workflow vẫn chạy test, còn bước deploy được bỏ qua kèm thông báo.

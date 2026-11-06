@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { isApiKeyError, isGeminiConfigured } from "./gemini";
-import { checkRateLimit } from "./rate-limit";
+import { rateLimit } from "./rate-limit";
 import { ValidationError } from "./ai-validation";
 
 const MAX_BODY_BYTES = 16 * 1024;
@@ -29,7 +29,7 @@ export async function readAIRequest(
   request: NextRequest,
   route: string,
 ): Promise<{ body: unknown } | { error: Response }> {
-  const limit = checkRateLimit(
+  const limit = await rateLimit(
     getClientKey(request, route),
     RATE_LIMIT.requests,
     RATE_LIMIT.windowMs,
@@ -74,7 +74,8 @@ export function errorResponse(error: unknown, route: string, fallback: string): 
   console.error(`[${route}]`, error);
 
   const upstreamStatus = (error as { status?: unknown } | null)?.status;
-  if (upstreamStatus === 429 || upstreamStatus === 503) {
+  // 504 = GeminiTimeoutError (model hanging under load).
+  if (upstreamStatus === 429 || upstreamStatus === 503 || upstreamStatus === 504) {
     return jsonResponse(
       { error: "Dịch vụ AI đang quá tải. Vui lòng thử lại sau ít phút." },
       503,

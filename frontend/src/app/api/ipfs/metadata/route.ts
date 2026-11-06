@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getClientKey, jsonResponse } from "@/lib/api";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { rateLimit } from "@/lib/rate-limit";
 import {
   LISTING_LIMITS,
   detectImageType,
@@ -33,7 +33,7 @@ async function pinata(path: string, body: BodyInit, jwt: string, json = false) {
  * The Pinata JWT stays server-side; the browser only receives the ipfs:// URI.
  */
 export async function POST(request: NextRequest) {
-  const limit = checkRateLimit(getClientKey(request, ROUTE), RATE_LIMIT.requests, RATE_LIMIT.windowMs);
+  const limit = await rateLimit(getClientKey(request, ROUTE), RATE_LIMIT.requests, RATE_LIMIT.windowMs);
   if (!limit.allowed) {
     return jsonResponse(
       { error: "Bạn tải lên quá nhiều lần. Vui lòng thử lại sau ít phút." },

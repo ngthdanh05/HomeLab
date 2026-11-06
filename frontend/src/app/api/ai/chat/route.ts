@@ -1,10 +1,12 @@
 import { NextRequest } from "next/server";
-import { getChatModel } from "@/lib/gemini";
+import { getChatModel, withGeminiTimeout } from "@/lib/gemini";
 import { parseChatRequest } from "@/lib/ai-validation";
 import { errorResponse, readAIRequest } from "@/lib/api";
 import type { ChatContext } from "@/types/ai";
 
 export const runtime = "edge";
+// Gemini API is not available from every edge location (e.g. Hong Kong); run in Singapore.
+export const preferredRegion = "sin1";
 
 const ROUTE = "api/ai/chat";
 
@@ -24,8 +26,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const { message, context } = parseChatRequest(req.body);
-    const result = await getChatModel().generateContentStream(
-      buildPrompt(message, context),
+    const result = await withGeminiTimeout(
+      getChatModel().generateContentStream(buildPrompt(message, context)),
     );
 
     const encoder = new TextEncoder();

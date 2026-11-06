@@ -1,14 +1,10 @@
 name: CI
 
+# Called by deploy.yml (push to main, pull requests) so tests always gate the
+# Vercel deployment; can also be run on its own from the Actions tab.
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_call:
   workflow_dispatch:
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
 
 env:
   FOUNDRY_VERSION: v1.7.1
