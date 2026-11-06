@@ -30,7 +30,7 @@ function Stat({ label, value, hint, accent }: { label: string; value: string; hi
       <p className={`mt-1 break-words font-mono text-xl font-bold sm:text-2xl ${accent}`} aria-live="polite">
         {value}
       </p>
-      {hint && <p className="mt-1 text-[11px] text-slate-500">{hint}</p>}
+      {hint && <p className="mt-1 text-[11px] text-slate-400">{hint}</p>}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { createConfig, fallback, http } from "wagmi";
 import { sepolia, anvil } from "wagmi/chains";
-import { injected, walletConnect } from "wagmi/connectors";
+import { injected, walletConnect, type WalletConnectParameters } from "wagmi/connectors";
 import { getSepoliaRpcUrls } from "@/lib/rpc";
 
 const walletConnectProjectId =
@@ -11,13 +11,56 @@ export const SEPOLIA_RPC_URLS = getSepoliaRpcUrls(process.env.NEXT_PUBLIC_SEPOLI
 
 const RPC_OPTIONS = { timeout: 15_000, retryCount: 2 } as const;
 
+/**
+ * WalletConnect connector that stays dormant until it is actually used.
+ *
+ * wagmi initialises every connector on page load (connector.setup() and
+ * reconnect() both call getProvider()), which downloaded and booted the
+ * WalletConnect SDK (~400 KiB) and opened a relay connection for every visitor.
+ * Now the SDK loads only when the user connects through WalletConnect, or when
+ * their last connection was WalletConnect (so the session is still restored).
+ */
+function lazyWalletConnect(parameters: WalletConnectParameters): ReturnType<typeof walletConnect> {
+  const createWalletConnect = walletConnect(parameters);
+  return (config) => {
+    const base = createWalletConnect(config);
+    let active = false;
+    const isActive = async () => {
+      if (active) return true;
+      try {
+        return (await config.storage?.getItem("recentConnectorId")) === base.id;
+      } catch {
+        return false;
+      }
+    };
+
+    return {
+      ...base,
+      async setup() {
+        if (await isActive()) await base.setup?.call(base);
+      },
+      async getProvider(params) {
+        if (!(await isActive())) return undefined as unknown as Awaited<ReturnType<typeof base.getProvider>>;
+        return base.getProvider.call(base, params);
+      },
+      async isAuthorized() {
+        return (await isActive()) && base.isAuthorized.call(base);
+      },
+      connect: ((params) => {
+        active = true;
+        return base.connect.call(base, params);
+      }) as typeof base.connect,
+    };
+  };
+}
+
 export const config = createConfig({
   chains: [sepolia, anvil],
   connectors: [
     injected({ target: "metaMask" }),
     ...(walletConnectProjectId
       ? [
-          walletConnect({
+          lazyWalletConnect({
             projectId: walletConnectProjectId,
             showQrModal: false,
           }),

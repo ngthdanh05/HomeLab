@@ -47,9 +47,9 @@ export function VoteButtons({ proposalId, isOpen, hasVoted, mySupport, votingPow
   const button = (support: boolean) => {
     const busyHere = isBusy && choice === support;
     const base =
-      "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition-colors disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500";
+      "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition-colors disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-400";
     const tone = support
-      ? "bg-emerald-600 text-white hover:bg-emerald-500"
+      ? "bg-emerald-700 text-white hover:bg-emerald-600"
       : "bg-red-600/90 text-white hover:bg-red-500";
     return (
       <button type="button" onClick={() => vote(support)} disabled={disabled} className={`${base} ${tone}`}>

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
+import { remoteImageProps } from "@/lib/image-loader";
 import type { UserBadge } from "@/hooks/useUserBadges";
 import { formatDateTime, getBadgeType } from "@/lib/dashboard";
 
@@ -35,13 +37,14 @@ export function BadgeCard({ badge, explorerHref }: BadgeCardProps) {
             {badge.isMetadataLoading ? (
               <div className="h-full w-full animate-pulse bg-slate-800" aria-hidden />
             ) : image ? (
-              // eslint-disable-next-line @next/next/no-img-element -- IPFS gateway hosts vary per badge
-              <img
+              <Image
                 src={image}
                 alt={title}
-                loading="lazy"
+                fill
+                sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                 onError={() => setImageFailed(true)}
-                className="h-full w-full object-cover"
+                className="object-cover"
+                {...remoteImageProps(image)}
               />
             ) : (
               <div
@@ -64,7 +67,7 @@ export function BadgeCard({ badge, explorerHref }: BadgeCardProps) {
               </p>
               <h3 className="mt-1 line-clamp-1 font-semibold text-white">{title}</h3>
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-400">
               {badge.issuedAt > 0 ? `Mint ${formatDateTime(badge.issuedAt)}` : "Đang tải ngày mint…"}
             </p>
           </div>
@@ -83,7 +86,7 @@ export function BadgeCard({ badge, explorerHref }: BadgeCardProps) {
             <Detail label="Hành động" value={meta?.action} />
             <Detail label="Bù đắp carbon" value={meta?.carbonOffset} />
           </dl>
-          <span className="mt-auto text-[11px] text-slate-500">Bấm để lật lại</span>
+          <span className="mt-auto text-[11px] text-slate-400">Bấm để lật lại</span>
         </div>
       </button>
       </div>
@@ -92,7 +95,7 @@ export function BadgeCard({ badge, explorerHref }: BadgeCardProps) {
           href={explorerHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-1.5 block text-center text-[11px] text-slate-500 hover:text-emerald-400"
+          className="mt-1.5 block text-center text-[11px] text-slate-400 hover:text-emerald-400"
         >
           Xem NFT trên Etherscan ↗
         </a>
@@ -105,7 +108,7 @@ function Detail({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
     <div className="flex justify-between gap-3">
-      <dt className="text-slate-500">{label}</dt>
+      <dt className="text-slate-400">{label}</dt>
       <dd className="text-right font-medium text-slate-200">{value}</dd>
     </div>
   );

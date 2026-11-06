@@ -1,10 +1,15 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { formatEther } from "viem";
 import { useListingMetadata } from "@/hooks/useMarketplace";
+import { remoteImageProps } from "@/lib/image-loader";
 import { getProductType, shortenAddress, type Listing } from "@/lib/marketplace";
+
+/** Listing grid: 1 column on phones, up to 4 on wide screens. */
+const CARD_SIZES = "(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw";
 
 export function ListingImage({
   src,
@@ -12,12 +17,18 @@ export function ListingImage({
   icon,
   isLoading,
   className = "",
+  sizes = CARD_SIZES,
+  priority = false,
 }: {
   src?: string;
   alt: string;
   icon: string;
   isLoading?: boolean;
+  /** Must include the box size (height/aspect + width): the image fills it. */
   className?: string;
+  sizes?: string;
+  /** Above-the-fold image (e.g. the listing detail page): load eagerly. */
+  priority?: boolean;
 }) {
   if (isLoading) {
     return <div className={`animate-pulse bg-slate-800 ${className}`} aria-hidden />;
@@ -32,8 +43,11 @@ export function ListingImage({
       </div>
     );
   }
-  // eslint-disable-next-line @next/next/no-img-element -- IPFS gateway hosts vary per listing
-  return <img src={src} alt={alt} loading="lazy" className={`object-cover ${className}`} />;
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className="object-cover" {...remoteImageProps(src)} />
+    </div>
+  );
 }
 
 export function ListingCard({ listing }: { listing: Listing }) {
@@ -80,12 +94,12 @@ export function ListingCard({ listing }: { listing: Listing }) {
 
         <div className="flex items-end justify-between border-t border-slate-800 pt-3">
           <div>
-            <p className="text-[10px] uppercase tracking-wide text-slate-500">Giá</p>
+            <p className="text-[10px] uppercase tracking-wide text-slate-400">Giá</p>
             <p className="font-mono text-sm font-bold text-emerald-300">
               {formatEther(listing.price)} ETH
             </p>
           </div>
-          <p className="text-right text-[11px] text-slate-500">
+          <p className="text-right text-[11px] text-slate-400">
             Người bán
             <span className="block font-mono text-slate-300">{shortenAddress(listing.seller)}</span>
           </p>

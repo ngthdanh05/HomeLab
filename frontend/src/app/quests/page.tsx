@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useCallback, useState } from "react";
-import { ConnectKitButton } from "connectkit";
 import { useAccount } from "wagmi";
+import { ConnectWalletButton } from "@/components/layout/ConnectWalletButton";
 import { QuestCard } from "@/components/quests/QuestCard";
 import { QuestCelebration } from "@/components/quests/QuestCelebration";
 import { QuestSummary } from "@/components/quests/QuestProgress";
@@ -53,7 +53,7 @@ export default function QuestsPage() {
       ) : !isConnected ? (
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-slate-800 bg-slate-900/60 p-8 text-center">
           <p className="text-slate-300">Kết nối ví để xem tiến độ và nhận thưởng quest của bạn.</p>
-          <ConnectKitButton />
+          <ConnectWalletButton />
         </div>
       ) : (
         <>
@@ -74,7 +74,10 @@ export default function QuestsPage() {
         </>
       )}
 
-      <section aria-label="Danh sách quest" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      <h2 id="quest-list-title" className="sr-only">
+        Danh sách quest
+      </h2>
+      <section aria-labelledby="quest-list-title" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {quests.map((quest) =>
           address && isConnected ? (
             <QuestCard key={quest.id} quest={quest} contract={address} onClaimed={onClaimed} />

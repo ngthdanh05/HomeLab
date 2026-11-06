@@ -25,14 +25,15 @@ export function TravelAssistant() {
   const [itineraryError, setItineraryError] = useState<string | null>(null);
   const [destination, setDestination] = useState("");
   const [days, setDays] = useState(3);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Scroll only the chat panel (scrollIntoView also scrolled the page, so the
+    // home page jumped past the hero on load), and only once there are messages.
+    const panel = messagesRef.current;
+    if (!panel || messages.length === 0) return;
     // "auto" while streaming avoids the jumpy repeated smooth-scroll animation.
-    messagesEndRef.current?.scrollIntoView({
-      behavior: isLoading ? "auto" : "smooth",
-      block: "nearest",
-    });
+    panel.scrollTo({ top: panel.scrollHeight, behavior: isLoading ? "auto" : "smooth" });
   }, [messages, isLoading]);
 
   const submitMessage = () => {
@@ -99,7 +100,7 @@ export function TravelAssistant() {
         <div className="flex gap-2">
           <button
             onClick={() => setShowItinerary(!showItinerary)}
-            className="px-3 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
+            className="px-3 py-1.5 text-sm bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg transition-colors"
           >
             {showItinerary ? "💬 Chat" : "🗺️ Lịch trình"}
           </button>
@@ -140,7 +141,7 @@ export function TravelAssistant() {
             <button
               onClick={handleGenerateItinerary}
               disabled={!destination.trim() || itineraryLoading}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors font-medium"
+              className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400 text-white rounded-lg transition-colors font-medium"
             >
               {itineraryLoading ? "Đang tạo..." : "Tạo lịch trình"}
             </button>
@@ -160,7 +161,7 @@ export function TravelAssistant() {
       ) : (
         /* Chat Panel */
         <>
-          <div className="flex-1 overflow-y-auto p-6 space-y-2">
+          <div ref={messagesRef} className="flex-1 overflow-y-auto p-6 space-y-2">
             {messages.length === 0 && (
               <div className="text-center space-y-6 py-8">
                 <div className="text-4xl">🌿</div>
@@ -168,7 +169,7 @@ export function TravelAssistant() {
                   <p className="text-slate-300 font-medium mb-1">
                     Xin chào! Tôi là AI Travel Assistant
                   </p>
-                  <p className="text-slate-500 text-sm">
+                  <p className="text-slate-400 text-sm">
                     Hỏi tôi về du lịch sinh thái, văn hóa địa phương, và cách
                     giảm carbon footprint
                   </p>
@@ -197,7 +198,6 @@ export function TravelAssistant() {
               </div>
             )}
 
-            <div ref={messagesEndRef} />
           </div>
 
           {/* Input */}
@@ -228,7 +228,7 @@ export function TravelAssistant() {
                   type="submit"
                   disabled={!input.trim()}
                   aria-label="Gửi câu hỏi"
-                  className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl transition-colors"
+                  className="px-4 py-3 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400 text-white rounded-xl transition-colors"
                 >
                   ➤
                 </button>

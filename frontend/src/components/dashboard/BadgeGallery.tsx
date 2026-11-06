@@ -52,7 +52,7 @@ export function BadgeGallery({ owner }: { owner: Address }) {
                   onClick={() => setFilter(f.value)}
                   className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${
                     filter === f.value
-                      ? "bg-emerald-600 text-white"
+                      ? "bg-emerald-700 text-white"
                       : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                   }`}
                 >
@@ -85,7 +85,7 @@ export function BadgeGallery({ owner }: { owner: Address }) {
           </p>
           <Link
             href="/marketplace"
-            className="mt-4 inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+            className="mt-4 inline-flex rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600"
           >
             Đến Marketplace
           </Link>
