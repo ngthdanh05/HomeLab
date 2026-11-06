@@ -78,12 +78,12 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
             value: fee,
           })
         }
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
       >
         {isBusy && <Spinner />}
         {label}
       </button>
-      <p className="text-[11px] leading-relaxed text-slate-500">
+      <p className="text-[11px] leading-relaxed text-slate-400">
         Toàn bộ phí được chuyển vào Quỹ Cộng đồng (DAO) để tài trợ dự án bảo tồn; bạn nhận NFT
         ImpactBadge loại ZERO_CARBON làm bằng chứng.
         {kg > CARBON_LIMITS.maxOffsetKg && ` Mỗi lần bù đắp tối đa ${formatKg(CARBON_LIMITS.maxOffsetKg)}.`}

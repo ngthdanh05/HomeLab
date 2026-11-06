@@ -793,7 +793,7 @@ function getActiveProposals() external view returns (uint256[] memory)
     - Workflow `.github/workflows/ci.yml`: 3 job `contracts` (forge test), `frontend` (typecheck, lint, unit test), `e2e` (Playwright + Anvil, upload report + coverage). Thêm `.gitmodules` cho `contracts/lib/*` để CI checkout được thư viện.
 - **Definition of Done (DoD)**:
   - [x] Tất cả 5 test suites pass. _(9 test trong 5 file, `npm run e2e`)_
-  - [ ] CI pipeline chạy tests tự động (GitHub Actions). _(đã có `.github/workflows/ci.yml`, chưa chạy trên GitHub — cần push)_
+  - [x] CI pipeline chạy tests tự động (GitHub Actions). _(`.github/workflows/ci.yml`; PR #1: 3/3 job pass trên GitHub, E2E 14 phút; phải cài npm 11 cho khớp lockfile)_
   - [x] Coverage report được generate. _(`frontend/e2e/coverage/`: HTML, `lcov.info`, `coverage-summary.json`; ~70% dòng của 66 file `src/` được chạm tới)_
   - [x] Không có flaky tests (retry ≤ 1 lần). _(`retries: 1`; chạy `--repeat-each=3 --retries=0`: 27/27 pass)_
 
@@ -815,11 +815,12 @@ function getActiveProposals() external view returns (uint256[] memory)
   - Dynamic import Three.js và AI components để giảm First Load JS.
   - Cấu hình `next.config.ts` headers: CSP, X-Frame-Options.
 - **Definition of Done (DoD)**:
-  - [ ] Lighthouse Performance ≥ 85.
-  - [ ] Lighthouse Accessibility ≥ 90.
-  - [ ] Lighthouse SEO ≥ 90.
-  - [ ] No broken images trên production build.
-  - [ ] Core Web Vitals: LCP < 2.5s, CLS < 0.1, FID < 100ms.
+  - [x] Lighthouse Performance ≥ 85. _(mobile 90–98, desktop 100 ở 6/7 trang; `/marketplace/[id]` mobile 72 / desktop 76 do ảnh trên cổng IPFS công khai — xem `docs/AUDIT_REPORT.md` 3.2)_
+  - [x] Lighthouse Accessibility ≥ 90. _(100 mọi trang)_
+  - [x] Lighthouse SEO ≥ 90. _(100 mọi trang)_
+  - [x] No broken images trên production build.
+  - [ ] Core Web Vitals: LCP < 2.5s, CLS < 0.1, FID < 100ms. _(CLS ≤ 0.009 ✓; TBT 0–110 ms ✓; LCP desktop 0.6–0.8 s ✓, mobile mô phỏng: trang chủ 2.4 s ✓, các trang có dữ liệu on-chain 2.8–3.5 s ✗)_
+  - _Cập nhật 2026-11-06:_ báo cáo chi tiết ở `docs/AUDIT_REPORT.md`. Next 14 không hỗ trợ `next.config.ts` → giữ `next.config.mjs`; `public/sitemap.xml` thay bằng `src/app/sitemap.ts` (phục vụ tại `/sitemap.xml`, tự lấy domain). ConnectKit giờ chỉ tải khi mở modal ví (`providers/WalletModal.tsx` + `ConnectWalletButton`), WalletConnect chỉ khởi tạo khi được dùng → JS tải lúc vào trang ~663 → ~319 KiB.
 
 ---
 

@@ -106,7 +106,7 @@ export function QuestCelebration({ quest, onClose }: QuestCelebrationProps) {
               ref={closeRef}
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white hover:bg-emerald-500"
+              className="flex-1 rounded-xl bg-emerald-700 py-2.5 text-sm font-bold text-white hover:bg-emerald-600"
             >
               Tuyệt vời!
             </button>

@@ -19,8 +19,9 @@
 | 4 | Task 4.3 Carbon Tracker | ✅ Hoàn thành (CarbonOffset đã deploy Sepolia, đã bù đắp thật qua UI) |
 | 4 | Task 4.4 Eco Quests | ✅ Hoàn thành (QuestRewards đã deploy Sepolia, đã claim thật qua UI) |
 | 5 | Task 5.1 Community DAO Governance UI | 🟡 Xong trên Anvil, chưa test Sepolia (cần hạ ngưỡng tạo đề xuất) |
-| 5 | Task 5.2 E2E Playwright + CI | 🟡 9/9 E2E pass trên local; workflow CI chưa chạy trên GitHub |
-| 5 | Task 5.3–5.4 Audit, Vercel | ⏳ Chưa bắt đầu |
+| 5 | Task 5.2 E2E Playwright + CI | ✅ Hoàn thành (PR #1 đã merge, CI 3/3 job pass trên GitHub) |
+| 5 | Task 5.3 Performance / A11y / SEO audit | ✅ A11y + SEO 100; Perf mobile 90–98 / desktop 100 (trừ trang chi tiết sản phẩm, bị giới hạn bởi cổng IPFS); LCP mobile 2.4–3.5 s |
+| 5 | Task 5.4 Vercel | ⏳ Chưa bắt đầu |
 
 ## 2. Contract đang dùng trên Sepolia (chain 11155111)
 
@@ -132,6 +133,18 @@ Quyền: EcoToken `MINTER_ROLE` → PaymentSplitter; ImpactBadge `MINTER_ROLE` �
   - Bấm nút giao dịch ngay sau khi tải trang (wagmi đang kết nối lại ví) mở modal kết nối thay vì gửi giao dịch → `useContractTx` chờ kết nối lại xong (tối đa 10 s).
 - Ổn định: `--repeat-each=3 --retries=0` → 27/27 pass.
 
+### 3.11 Task 5.3 — Performance, Accessibility & SEO audit (2026-11-06)
+Chi tiết và bảng điểm: [AUDIT_REPORT.md](AUDIT_REPORT.md). Lighthouse 12.8.2, bản build production (Sepolia).
+- **Accessibility 93–96 → 100, SEO 100, Best Practices 100** ở mọi trang (trừ `/marketplace/[id]`: BP 79 do cookie `_cfuvid` của cổng IPFS Pinata công khai). **Performance mobile 78–84 → 90–98, desktop 100** ở 6/7 trang; `/marketplace/[id]` 72 / 76 do ảnh IPFS (cổng công khai ~5 s/ảnh).
+- **ConnectKit tải theo yêu cầu:** `providers/WalletModal.tsx` (`useWalletModal().open()` thay `useModal()`) + `components/layout/ConnectWalletButton.tsx` (thay `ConnectKitButton`, tải trước khi rê chuột/focus). ConnectKit + framer-motion + qrcode chỉ tải khi mở modal ví → JS tải lúc vào trang ~663 → ~319 KiB, First Load JS trang chủ 444 → 121 kB.
+- Hiệu năng: WalletConnect connector "ngủ" tới khi được dùng (`lazyWalletConnect` trong `config/wagmi.ts`). Trước đây wagmi tải SDK ~400 KiB và mở kết nối relay ở mọi lần tải trang, đây cũng là nguyên nhân khiến reconnect chậm ~0,5 s (Task 5.2). Hai tab Culture/Archive ở trang chủ tải động. `next/image` cho ảnh sản phẩm/badge, kèm loader resize WebP cho cổng Pinata riêng (`lib/image-loader.ts`).
+- Sửa lỗi trang chủ tự cuộn qua phần hero khi tải (do `scrollIntoView` của TravelAssistant).
+- Accessibility: đổi màu đạt WCAG AA (`emerald-600` → `700` cho nền nút có chữ trắng, `slate-500` → `400` cho chữ phụ, 27 file); thứ tự heading (trang chủ có `h1`, Quests có `h2`); `aria-pressed` cho tab.
+- SEO: `lib/seo.ts` (metadataBase, title template, canonical + OpenGraph + Twitter cho từng trang, `generateMetadata` cho trang chi tiết), ảnh OG 1200×630 (`app/opengraph-image.tsx`, Edge runtime), `/sitemap.xml`, `/robots.txt`, viewport/themeColor.
+- Bảo mật: thêm Content-Security-Policy, COOP `same-origin-allow-popups` và HSTS vào `next.config.mjs`.
+- Xoá 3 đường dẫn ảnh `/destinations/*.jpg` không tồn tại (trường `image` của điểm đến không được hiển thị ở đâu).
+- Kiểm tra: unit test 119/119 (thêm `test/seo-image.test.mjs`), E2E 9/9 với CSP mới và modal ví tải trễ (`--repeat-each=3 --retries=0`: 27/27; coverage 74% dòng).
+
 ---
 
 ## 4. Kiểm thử
@@ -139,8 +152,8 @@ Quyền: EcoToken `MINTER_ROLE` → PaymentSplitter; ImpactBadge `MINTER_ROLE` �
 | Bộ test | Lệnh | Kết quả |
 | --- | --- | --- |
 | Smart contracts (Foundry) | `cd contracts && forge test` | 183/183 pass |
-| Frontend unit test | `cd frontend && npm test` | 112/112 pass |
-| E2E (Playwright + Anvil) | `cd frontend && npm run e2e` | 9/9 pass (coverage ~70% dòng `src/`) |
+| Frontend unit test | `cd frontend && npm test` | 119/119 pass |
+| E2E (Playwright + Anvil) | `cd frontend && npm run e2e` | 9/9 pass (coverage ~73% dòng `src/`); chạy trong CI |
 | Typecheck · Lint · Build | `npm run typecheck` · `npx eslint src test e2e` · `npm run build` | Sạch |
 
 ## 5. Chạy dự án
@@ -160,7 +173,7 @@ Biến môi trường cần có trong `frontend/.env`: xem `frontend/.env.exampl
 ## 6. Việc còn tồn đọng / lưu ý
 
 - Quest "Nhà thám hiểm di sản" là tự khai báo (không kiểm chứng on-chain) nên chỉ thưởng badge; muốn thưởng ECO thì cần backend ký xác nhận (EIP-712).
-- **Tiếp theo:** push để chạy CI lần đầu, test Task 5.1 trên Sepolia (xem 3.9), rồi Task 5.3 (Audit). Quest "Tiếng nói cộng đồng" giờ làm được qua trang `/governance`.
+- **Tiếp theo:** Task 5.4 (Vercel; đặt `NEXT_PUBLIC_SITE_URL`, dùng cổng Pinata riêng), test Task 5.1 trên Sepolia (xem 3.9). Quest "Tiếng nói cộng đồng" giờ làm được qua trang `/governance`.
 - Gemini `gemini-3.8-flash` hay quá tải (503, có lúc treo > 90 s). Chỉ route carbon có thử lại; các route `/api/ai/*` có thể dùng `withGeminiRetry` tương tự, hoặc đổi `GEMINI_MODEL`.
 - Deploy lên Sepolia: forge giả lập cục bộ đang ước tính thiếu gas cho giao dịch tạo contract → dùng `--skip-simulation` (đã có trong `make deploy-carbon-sepolia`).
 - Khi deploy lại ImpactBadge / PaymentSplitter / Marketplace phải cập nhật `LOGS_FROM_BLOCK` trong `frontend/src/config/contracts.ts` (block bắt đầu quét event cho lịch sử hoạt động).

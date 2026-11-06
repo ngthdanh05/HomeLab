@@ -79,7 +79,7 @@ export function DigitalArchive360({
       <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col md:flex-row items-center justify-between gap-2 pointer-events-none">
         <div className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-lg border border-slate-800 text-xs text-slate-300 pointer-events-auto flex items-center gap-2">
           <span>🔄 Kéo chuột hoặc vuốt tay để xoay 360°</span>
-          <span className="text-slate-500 hidden sm:inline">|</span>
+          <span className="text-slate-400 hidden sm:inline">|</span>
           <span className="text-emerald-400 hidden sm:inline">
             ✨ Nhấp vào các điểm ngọc lục bảo để xem thuyết minh di sản
           </span>

@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "D2C Marketplace — MyHomeLab",
+export const metadata: Metadata = pageMetadata({
+  title: "D2C Marketplace",
   description:
     "Mua đồ thủ công, đặc sản và tour trải nghiệm trực tiếp từ nghệ nhân. Doanh thu chia minh bạch qua Smart Contract.",
-};
+  path: "/marketplace",
+});
 
 export default function MarketplaceLayout({ children }: { children: React.ReactNode }) {
   return (

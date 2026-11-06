@@ -2,7 +2,7 @@
 
 import React, { useEffect, useId, useState } from "react";
 import { useAccount } from "wagmi";
-import { useModal } from "connectkit";
+import { useWalletModal } from "@/providers/WalletModal";
 import { Spinner } from "@/components/marketplace/PurchaseButton";
 import { GovernanceABI } from "@/config/contracts";
 import { useActiveChain } from "@/hooks/useActiveChain";
@@ -42,7 +42,7 @@ export function CreateProposalModal({
   const formId = useId();
   const { addresses } = useActiveChain();
   const { address: user, isConnected } = useAccount();
-  const { setOpen: setConnectModalOpen } = useModal();
+  const { open: openWalletModal } = useWalletModal();
   const { balance } = useVotingPower(user);
   const { send, status, isBusy } = useContractTx({
     pending: "Đang tạo đề xuất",
@@ -70,7 +70,7 @@ export function CreateProposalModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isConnected) return setConnectModalOpen(true);
+    if (!isConnected) return openWalletModal();
     const formError = validateProposalForm(form);
     if (formError) return setError(formError);
     if (belowThreshold) return setError("Số dư ECO chưa đạt ngưỡng tối thiểu để tạo đề xuất.");
@@ -153,7 +153,7 @@ export function CreateProposalModal({
 
           <div>
             <label htmlFor={`${formId}-desc`} className="mb-1 block text-xs font-medium text-slate-300">
-              Mô tả * <span className="text-slate-500">(mục tiêu, kế hoạch sử dụng quỹ, người thực hiện)</span>
+              Mô tả * <span className="text-slate-400">(mục tiêu, kế hoạch sử dụng quỹ, người thực hiện)</span>
             </label>
             <textarea
               id={`${formId}-desc`}
@@ -165,7 +165,7 @@ export function CreateProposalModal({
               placeholder="Trồng 2.000 cây đước cùng 30 hộ dân địa phương…"
               required
             />
-            <p className="mt-1 text-right text-[11px] text-slate-500">
+            <p className="mt-1 text-right text-[11px] text-slate-400">
               {form.body.length}/{PROPOSAL_LIMITS.body}
             </p>
           </div>
@@ -184,7 +184,7 @@ export function CreateProposalModal({
               required
             />
             {treasuryBalance !== undefined && (
-              <p className={`mt-1 text-[11px] ${exceedsTreasury ? "text-amber-300" : "text-slate-500"}`}>
+              <p className={`mt-1 text-[11px] ${exceedsTreasury ? "text-amber-300" : "text-slate-400"}`}>
                 Quỹ hiện có {formatEth(treasuryBalance)}
                 {exceedsTreasury && " — số yêu cầu lớn hơn số dư, đề xuất chỉ giải ngân được khi Quỹ đủ tiền."}
               </p>
@@ -227,7 +227,7 @@ export function CreateProposalModal({
           <button
             type="submit"
             disabled={isBusy || belowThreshold}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white transition-colors hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400"
           >
             {isBusy && <Spinner />}
             {!isConnected

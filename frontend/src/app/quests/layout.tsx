@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Eco Quests — MyHomeLab",
+export const metadata: Metadata = pageMetadata({
+  title: "Eco Quests",
   description:
     "Hoàn thành nhiệm vụ du lịch bền vững để nhận thêm EcoToken và mở khoá ImpactBadge hiếm, xác minh on-chain.",
-};
+  path: "/quests",
+});
 
 export default function QuestsLayout({ children }: { children: React.ReactNode }) {
   return (

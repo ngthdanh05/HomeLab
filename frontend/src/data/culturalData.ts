@@ -3,7 +3,6 @@ export interface CulturalDestination {
   name: string;
   region: string;
   description: string;
-  image: string;
   dos: string[];
   donts: string[];
   phrases: { phrase: string; meaning: string; pronunciation: string }[];
@@ -20,7 +19,6 @@ export const culturalDestinations: CulturalDestination[] = [
     region: "Miền Trung",
     description:
       "Phố cổ Hội An - Di sản văn hóa thế giới UNESCO với kiến trúc cổ kính và làng nghề truyền thống",
-    image: "/destinations/hoi-an.jpg",
     dos: [
       "Mặc trang phục kín đáo khi vào chùa và hội quán",
       "Hỏi trước khi chụp ảnh người dân địa phương",
@@ -105,7 +103,6 @@ export const culturalDestinations: CulturalDestination[] = [
     region: "Miền Bắc",
     description:
       "Thị trấn sương mù Sa Pa với ruộng bậc thang kỳ vĩ và văn hóa các dân tộc thiểu số H'Mông, Dao đỏ",
-    image: "/destinations/sa-pa.jpg",
     dos: [
       "Mua hàng thủ công trực tiếp từ người phụ nữ H'Mông",
       "Thuê hướng dẫn viên địa phương người dân tộc",
@@ -194,7 +191,6 @@ export const culturalDestinations: CulturalDestination[] = [
     region: "Miền Nam",
     description:
       "Đảo ngọc Phú Quốc với bãi biển trong xanh và hệ sinh thái rừng nhiệt đới phong phú",
-    image: "/destinations/phu-quoc.jpg",
     dos: [
       "Dùng kem chống nắng không chứa hóa chất gây hại san hô",
       "Tham gia tour lặn biển có ý thức môi trường",

@@ -23,7 +23,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       <div
         className={`max-w-[80%] px-4 py-3 rounded-2xl ${
           isUser
-            ? "bg-emerald-600 text-white rounded-tr-sm"
+            ? "bg-emerald-700 text-white rounded-tr-sm"
             : "bg-slate-700 text-slate-100 rounded-tl-sm"
         }`}
       >

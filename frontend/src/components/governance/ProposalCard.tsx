@@ -92,7 +92,7 @@ export function ProposalCard({ proposal, now }: ProposalCardProps) {
       className="group flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-900/60 p-5 transition-colors hover:border-slate-700"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-mono text-xs text-slate-500">#{proposal.id.toString()}</span>
+        <span className="font-mono text-xs text-slate-400">#{proposal.id.toString()}</span>
         <ProposalStatusBadge status={proposal.status} />
       </div>
 
@@ -122,7 +122,7 @@ export function ProposalCard({ proposal, now }: ProposalCardProps) {
 
       <VoteBar proposal={proposal} />
 
-      <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-800 pt-3 text-xs text-slate-500">
+      <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-800 pt-3 text-xs text-slate-400">
         <span>
           Nhận: <span className="font-mono text-slate-300">{shortenAddress(proposal.recipient)}</span>
         </span>

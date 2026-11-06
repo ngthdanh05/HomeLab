@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Carbon Tracker — MyHomeLab",
+export const metadata: Metadata = pageMetadata({
+  title: "Carbon Tracker",
   description:
     "Tính lượng CO₂ của chuyến đi, ước tính bằng AI và bù đắp on-chain để nhận NFT ZERO_CARBON.",
-};
+  path: "/carbon-tracker",
+});
 
 export default function CarbonTrackerLayout({ children }: { children: React.ReactNode }) {
   return (
