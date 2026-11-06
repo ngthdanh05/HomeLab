@@ -10,6 +10,10 @@ import { useToast } from "@/components/ui/Toast";
 import { getTxErrorMessage, isReceiptTimeoutError } from "@/lib/marketplace";
 import { useActiveChain } from "./useActiveChain";
 import { ACTIVITY_QUERY_KEY } from "./useActivityFeed";
+import { PROPOSAL_VOTES_QUERY_KEY } from "./useGovernance";
+
+/** Off-chain (react-query) caches derived from events, refreshed after every tx. */
+const EVENT_QUERY_KEYS = new Set<unknown>([ACTIVITY_QUERY_KEY, PROPOSAL_VOTES_QUERY_KEY]);
 
 export type TxStatus =
   | "idle"
@@ -77,14 +81,14 @@ export function useContractTx({ pending, success }: TxMessages) {
       const txLink = (txHash: Hash) =>
         explorer ? { href: `${explorer}/tx/${txHash}`, label: "Xem trên Etherscan" } : undefined;
 
-      // Refresh wagmi reads and the dashboard activity feed so listings,
-      // balances, badges and history update without F5.
+      // Refresh wagmi reads and event-based caches (activity feed, DAO votes) so
+      // listings, balances, badges, proposals and history update without F5.
       const refreshReads = () =>
         queryClient.invalidateQueries({
           predicate: (q) =>
             q.queryKey[0] === "readContract" ||
             q.queryKey[0] === "readContracts" ||
-            q.queryKey[0] === ACTIVITY_QUERY_KEY,
+            EVENT_QUERY_KEYS.has(q.queryKey[0]),
         });
 
       let pendingToastId: number | undefined;
