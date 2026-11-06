@@ -11,6 +11,8 @@ const nextConfig = {
   // Lets a production build run beside a `next dev` that is using .next.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  // E2E coverage maps V8 coverage of the browser bundles back to src/ (e2e/playwright.config.ts).
+  productionBrowserSourceMaps: process.env.E2E_SOURCEMAPS === "1",
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

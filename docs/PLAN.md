@@ -637,13 +637,13 @@ function getActiveProposals() external view returns (uint256[] memory)
   - `CreateListingModal`: form nhập product name, price, type, ảnh (upload IPFS via Pinata hoặc NFT.Storage). Submit gọi `createListing()`.
   - Payment split info: hiển thị breakout "70% → Nghệ nhân, 20% → Quỹ Cộng đồng, 10% → Nền tảng".
 - **Definition of Done (DoD)**:
-  - [ ] Listing hiển thị đầy đủ từ on-chain data.
-  - [ ] Mua listing thành công trên Sepolia, transaction confirmed.
-  - [ ] Toast "Purchase Successful!" + link Etherscan.
-  - [ ] Tạo listing mới thành công (seller flow).
-  - [ ] Hiển thị spinner trong khi transaction pending.
-  - [ ] Error handling: ví không kết nối → redirect to ConnectKit.
-  - [ ] Mobile responsive.
+  - [x] Listing hiển thị đầy đủ từ on-chain data.
+  - [x] Mua listing thành công trên Sepolia, transaction confirmed.
+  - [x] Toast "Purchase Successful!" + link Etherscan.
+  - [x] Tạo listing mới thành công (seller flow).
+  - [x] Hiển thị spinner trong khi transaction pending.
+  - [x] Error handling: ví không kết nối → redirect to ConnectKit.
+  - [x] Mobile responsive.
 
 ---
 
@@ -666,11 +666,11 @@ function getActiveProposals() external view returns (uint256[] memory)
   - `ActivityFeed`: parse events `PaymentSplit`, `BadgeMinted` từ `useContractEvents` (Wagmi).
   - `TokenBalance`: hiển thị ECO balance với animation counting up.
 - **Definition of Done (DoD)**:
-  - [ ] ECO Token balance hiển thị đúng.
-  - [ ] Badges hiển thị đúng theo ví đang kết nối.
-  - [ ] Metadata ảnh NFT load từ IPFS (có fallback skeleton).
-  - [ ] Activity feed hiển thị ít nhất giao dịch gần nhất.
-  - [ ] Dashboard update sau khi mua hàng (re-fetch).
+  - [x] ECO Token balance hiển thị đúng.
+  - [x] Badges hiển thị đúng theo ví đang kết nối.
+  - [x] Metadata ảnh NFT load từ IPFS (có fallback skeleton).
+  - [x] Activity feed hiển thị ít nhất giao dịch gần nhất.
+  - [x] Dashboard update sau khi mua hàng (re-fetch).
 
 ---
 
@@ -689,14 +689,15 @@ function getActiveProposals() external view returns (uint256[] memory)
   - `carbon-utils.ts`: hệ số phát thải theo loại phương tiện (có thể gọi AI để ước tính).
   - `CarbonMeter.tsx`: visual meter/gauge hiển thị mức phát thải (low/medium/high).
   - `CarbonOffsetButton.tsx`: khi user "offset", mint `ZERO_CARBON` ImpactBadge on-chain. Gọi `ImpactBadge.mintBadge()`.
+    - _Cập nhật 2026-11-05:_ `mintBadge()` chỉ cho ví có `MINTER_ROLE` gọi, nên thêm contract **`CarbonOffset.sol`** (giữ `MINTER_ROLE` trên ImpactBadge). Du khách gọi `CarbonOffset.offset(carbonGrams, metadataURI)` kèm phí theo kg CO₂ (mặc định 0.00001 ETH/kg) → phí chuyển vào `CommunityTreasury`, mint `ZERO_CARBON` cho người gọi. Deploy Sepolia: `make deploy-carbon-sepolia` → `0x4d51Ea6E0ACeBeBa0b96a72655B10457d769DFF5` (block 12068939, đã verify).
   - API `/api/carbon/calculate`: tích hợp Gemini để ước tính carbon từ mô tả hành trình tự do.
   - Summary card: "Chuyến đi của bạn phát thải X kgCO₂. Đã được bù đắp bởi Y badges."
 - **Definition of Done (DoD)**:
-  - [ ] Calculator tính đúng CO₂ cho các phương tiện phổ biến.
-  - [ ] Carbon Meter visual render đúng mức.
-  - [ ] Click "Offset" → mint ZERO_CARBON badge trên Sepolia.
-  - [ ] AI estimate hoạt động với free-text input.
-  - [ ] Mobile responsive.
+  - [x] Calculator tính đúng CO₂ cho các phương tiện phổ biến.
+  - [x] Carbon Meter visual render đúng mức.
+  - [x] Click "Offset" → mint ZERO_CARBON badge trên Sepolia. _(2026-11-05: bù đắp 155,8 kg CO₂ qua UI → badge #3, tx `0x1eab20b9…8bca7b`)_
+  - [x] AI estimate hoạt động với free-text input. _(2026-11-05: API trả 231,71 kg cho mô tả tự do, khớp bảng hệ số. Gemini hay quá tải (503/treo) → route tự thử lại 2 lần; trên UI mới thấy thông báo lỗi quá tải, chưa thấy được kết quả thành công)_
+  - [x] Mobile responsive.
 
 ---
 
@@ -715,12 +716,15 @@ function getActiveProposals() external view returns (uint256[] memory)
   - `QuestCard`: progress bar, reward display (X ECO + badge type).
   - Khi quest hoàn thành: popup celebration + auto-claim reward (gọi contract).
   - Quest completion được lưu on-chain (thêm `QuestTracker` mapping vào `Governance.sol` hoặc contract riêng nếu cần).
+    - _Cập nhật 2026-11-05:_ dùng contract riêng **`QuestRewards.sol`** (có `MINTER_ROLE` trên EcoToken + ImpactBadge). `claim(questId, proofIds)` tự kiểm tra điều kiện on-chain: badge `ECO_CHECKIN` mà ví là người nhận gốc (bằng chứng mua hàng thủ công), `CarbonOffset.offsetCountOf/offsetGramsOf`, `Governance.hasVoted`. Mỗi ví chỉ claim một lần cho mỗi quest (`isCompleted`). Bộ quest mặc định ở `contracts/script/QuestSetup.sol`, khớp `src/data/quests.ts`.
+    - "Xem 5 di sản 360°" → **"Xem cả 3 di sản 360°"** (kho hiện có 3 di sản; mục tiêu tự tăng theo `HERITAGE_IDS`). Đây là hành động off-chain (lưu localStorage, không kiểm chứng được) nên chỉ thưởng badge, **không thưởng ECO** (ECO là quyền biểu quyết DAO).
+    - Không "auto-claim": người dùng bấm "Nhận thưởng" để ký giao dịch (tự bật ví khi người dùng chưa bấm gì gây khó chịu); popup chúc mừng hiện khi giao dịch được xác nhận.
 - **Definition of Done (DoD)**:
-  - [ ] Ít nhất 5 quests được define và hiển thị.
-  - [ ] Progress tracking hoạt động đúng.
-  - [ ] Quest completion popup animation.
-  - [ ] Reward được claim on-chain (ECO mint).
-  - [ ] Completed quests hiển thị check mark và không claim lại được.
+  - [x] Ít nhất 5 quests được define và hiển thị. _(6 quest)_
+  - [x] Progress tracking hoạt động đúng.
+  - [x] Quest completion popup animation.
+  - [x] Reward được claim on-chain (ECO mint). _(Anvil: claim đủ 6 quest qua UI, ECO +95. Sepolia: QuestRewards `0x562845c0bd4F75e1d90207357A57f8aFA8f06F05`, đã claim "Người hùng khí hậu" + "Carbon offset lần đầu" qua UI → +35 ECO, badge Zero Carbon)_
+  - [x] Completed quests hiển thị check mark và không claim lại được. _(contract revert `AlreadyCompleted`)_
 
 ---
 
@@ -749,14 +753,18 @@ function getActiveProposals() external view returns (uint256[] memory)
   - `CreateProposalModal`: form nhập tên dự án, mô tả, số ETH yêu cầu, địa chỉ nhận. Validate ECO balance ≥ threshold.
   - `useGovernance.ts`: fetch proposals, vote status của user hiện tại.
   - Execute button: hiện khi proposal passed + deadline qua → gọi `Governance.execute()`.
+  - _Cập nhật 2026-11-06:_
+    - `Governance.sol` không có `getActiveProposals()` và không lưu `status`: frontend đọc `proposalCount` + `getProposal(id)` và tự suy ra trạng thái (`lib/governance.ts`: đang bỏ phiếu / đã thông qua chờ giải ngân / không thông qua chờ chốt / không đủ quorum / đã giải ngân / đã từ chối).
+    - Contract chỉ có một trường `description` → lưu "tên dự án" ở dòng đầu, mô tả ở phần sau.
+    - ECO là ERC20Votes: phải `delegate()` mới có phiếu, và phiếu tính tại block snapshot (block trước khi tạo đề xuất). Thêm `VotingPowerPanel` (nút "⚡ Kích hoạt quyền vote") và `ExecuteProposalButton`; trang chi tiết có danh sách phiếu bầu (event `VoteCast`).
 - **Definition of Done (DoD)**:
-  - [ ] Danh sách proposals hiển thị từ on-chain data.
-  - [ ] Vote thành công trên Sepolia.
-  - [ ] Double-vote revert + hiển thị lỗi thân thiện "Bạn đã vote rồi".
-  - [ ] Tạo proposal thành công (require ECO balance).
-  - [ ] Execute proposal UI hoạt động sau deadline.
-  - [ ] Treasury stats cập nhật sau giải ngân.
-  - [ ] Mobile responsive.
+  - [x] Danh sách proposals hiển thị từ on-chain data.
+  - [ ] Vote thành công trên Sepolia. _(Anvil: vote qua UI thành công. Sepolia: chưa test — hiện ngưỡng 100 ECO > tổng cung 37 ECO nên chưa ai tạo được đề xuất, xem DESCRIPTION.md)_
+  - [x] Double-vote revert + hiển thị lỗi thân thiện "Bạn đã vote rồi". _(nút bị khoá sau khi vote; contract revert `AlreadyVoted` được map thành "Bạn đã vote rồi…")_
+  - [x] Tạo proposal thành công (require ECO balance). _(Anvil; ví dưới ngưỡng bị chặn trên form)_
+  - [x] Execute proposal UI hoạt động sau deadline. _(Anvil: tua thời gian qua deadline → "Thực thi giải ngân" → Quỹ chuyển 0,3 ETH)_
+  - [x] Treasury stats cập nhật sau giải ngân. _(1 → 0,7 ETH; đã giải ngân 0,3 ETH, không cần F5)_
+  - [x] Mobile responsive. _(375 px, không tràn ngang)_
 
 ---
 
@@ -778,11 +786,16 @@ function getActiveProposals() external view returns (uint256[] memory)
   - Test 03: Nhập hành trình → calculate carbon → click offset → ZERO_CARBON badge mint.
   - Test 04: Tạo proposal → vote → time travel (Anvil) → execute → Treasury balance giảm.
   - Test 05: Dashboard hiển thị đúng ECO balance + badge gallery sau các actions.
+  - _Cập nhật 2026-11-06:_
+    - Các file nằm trong `frontend/e2e/` (cùng package với app). Thêm `fixtures/anvil.ts` (khởi động Anvil, deploy bằng `script/Deploy.s.sol`, seed, snapshot/revert, time travel), `fixtures/mock-wallet.ts` (ví giả lập MetaMask EIP-1193 + EIP-6963, ký bằng tài khoản dev của Anvil), `fixtures/global-setup.ts`, `e2e/README.md`.
+    - Không fork Sepolia: mỗi lần chạy deploy mới lên Anvil sạch (giống `make deploy-local`), mỗi test chạy trong `evm_snapshot` / `evm_revert` nên độc lập, không phụ thuộc thứ tự. Test 03 dùng máy tính theo phương tiện (không gọi Gemini).
+    - Coverage: V8 JS coverage của các file trong `frontend/src` khi chạy E2E (monocart-reporter, source map bật riêng cho bản build E2E).
+    - Workflow `.github/workflows/ci.yml`: 3 job `contracts` (forge test), `frontend` (typecheck, lint, unit test), `e2e` (Playwright + Anvil, upload report + coverage). Thêm `.gitmodules` cho `contracts/lib/*` để CI checkout được thư viện.
 - **Definition of Done (DoD)**:
-  - [ ] Tất cả 5 test suites pass.
-  - [ ] CI pipeline chạy tests tự động (GitHub Actions).
-  - [ ] Coverage report được generate.
-  - [ ] Không có flaky tests (retry ≤ 1 lần).
+  - [x] Tất cả 5 test suites pass. _(9 test trong 5 file, `npm run e2e`)_
+  - [ ] CI pipeline chạy tests tự động (GitHub Actions). _(đã có `.github/workflows/ci.yml`, chưa chạy trên GitHub — cần push)_
+  - [x] Coverage report được generate. _(`frontend/e2e/coverage/`: HTML, `lcov.info`, `coverage-summary.json`; ~70% dòng của 66 file `src/` được chạm tới)_
+  - [x] Không có flaky tests (retry ≤ 1 lần). _(`retries: 1`; chạy `--repeat-each=3 --retries=0`: 27/27 pass)_
 
 ---
 
