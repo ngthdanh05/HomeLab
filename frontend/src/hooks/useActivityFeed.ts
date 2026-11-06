@@ -87,7 +87,8 @@ async function loadActivity(
     questRewards?: bigint;
   },
 ): Promise<ActivityItem[]> {
-  const latest = await client.getBlockNumber();
+  // cacheTime 0: viem caches the block number for 4 s, which would miss a tx mined just now.
+  const latest = await client.getBlockNumber({ cacheTime: 0 });
   const get = (q: EventQuery) => getEventsChunked(client, q, latest);
 
   const market = { address: addresses.marketplace, abi: MarketplaceABI, fromBlock: fromBlocks.marketplace };
