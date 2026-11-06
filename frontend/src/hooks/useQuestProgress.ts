@@ -119,7 +119,7 @@ export function useQuestProgress(user: Address | undefined) {
           args: { voter: user },
           fromBlock: fromBlocks.governance ?? fromBlocks.impactBadge,
         },
-        await c.getBlockNumber(),
+        await c.getBlockNumber({ cacheTime: 0 }),
       );
       return [...new Set(events.map((e) => e.args.proposalId as bigint))];
     },

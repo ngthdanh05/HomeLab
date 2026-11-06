@@ -225,7 +225,8 @@ export function useProposalVotes(id: bigint | null) {
     refetchInterval: REFRESH_MS,
     queryFn: async (): Promise<ProposalVote[]> => {
       if (!client || id === null) return [];
-      const latest = await client.getBlockNumber();
+      // cacheTime 0: viem caches the block number for 4 s, which would miss a vote mined just now.
+      const latest = await client.getBlockNumber({ cacheTime: 0 });
       const events = await getEventsChunked(
         client,
         { address: addresses.governance, abi: GovernanceABI, eventName: "VoteCast", args: { proposalId: id }, fromBlock },
