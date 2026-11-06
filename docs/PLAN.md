@@ -838,9 +838,10 @@ function getActiveProposals() external view returns (uint256[] memory)
   - GitHub Actions workflow: `on: push main` → run Foundry tests → run E2E tests → deploy Vercel.
   - Preview deployments cho mọi PR.
   - Cập nhật `docs/DEPLOYMENTS.md` với production URL.
+  - _Cập nhật 2026-11-06:_ `frontend/vercel.json` (region `sin1`, redirect `/dao` `/carbon` `/market` `/quest`, cache `/360/*`, `installCommand` ghim npm 11 cho khớp lockfile, tắt auto-deploy theo Git). `.github/workflows/deploy.yml` gọi `ci.yml` (giờ là reusable workflow) rồi `vercel pull/build/deploy --prebuilt`: production khi push `main`, preview + comment URL cho PR, smoke test sau deploy. Thêm rate limit Upstash Redis (bật khi có `UPSTASH_REDIS_REST_*`/`KV_REST_API_*`), timeout Gemini 20 s (7 s/lần khi thử lại) và `preferredRegion = "sin1"` cho route AI (từ edge `hkg1` Gemini bị treo tới khi Vercel cắt ở 25 s).
 - **Definition of Done (DoD)**:
-  - [ ] App live trên Vercel URL (https://\*.vercel.app).
-  - [ ] Tất cả env vars được set đúng trên Vercel.
+  - [x] App live trên Vercel URL (https://\*.vercel.app). _(https://myhomelab.vercel.app)_
+  - [x] Tất cả env vars được set đúng trên Vercel. _(9 biến, Production + Preview; `GEMINI_API_KEY`, `PINATA_JWT` dạng sensitive)_
   - [ ] GitHub Actions CI/CD pipeline pass.
   - [ ] Preview deploy hoạt động cho PR mới.
   - [ ] Kết nối MetaMask trên Sepolia thành công từ production URL.

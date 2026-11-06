@@ -21,7 +21,7 @@
 | 5 | Task 5.1 Community DAO Governance UI | 🟡 Xong trên Anvil, chưa test Sepolia (cần hạ ngưỡng tạo đề xuất) |
 | 5 | Task 5.2 E2E Playwright + CI | ✅ Hoàn thành (PR #1 đã merge, CI 3/3 job pass trên GitHub) |
 | 5 | Task 5.3 Performance / A11y / SEO audit | ✅ A11y + SEO 100; Perf mobile 90–98 / desktop 100 (trừ trang chi tiết sản phẩm, bị giới hạn bởi cổng IPFS); LCP mobile 2.4–3.5 s |
-| 5 | Task 5.4 Vercel | ⏳ Chưa bắt đầu |
+| 5 | Task 5.4 Vercel | 🟡 Live tại https://myhomelab.vercel.app; chờ `VERCEL_TOKEN` để CI/CD tự deploy + preview PR; chưa test MetaMask/giao dịch từ production |
 
 ## 2. Contract đang dùng trên Sepolia (chain 11155111)
 
@@ -145,6 +145,14 @@ Chi tiết và bảng điểm: [AUDIT_REPORT.md](AUDIT_REPORT.md). Lighthouse 12
 - Xoá 3 đường dẫn ảnh `/destinations/*.jpg` không tồn tại (trường `image` của điểm đến không được hiển thị ở đâu).
 - Kiểm tra: unit test 119/119 (thêm `test/seo-image.test.mjs`), E2E 9/9 với CSP mới và modal ví tải trễ (`--repeat-each=3 --retries=0`: 27/27; coverage 74% dòng).
 
+### 3.12 Task 5.4 — Vercel production (2026-11-06)
+- **Production:** https://myhomelab.vercel.app (project `myhomelab`, team `danhkhongus-projects`, region `sin1`). 9 biến môi trường được đưa từ `frontend/.env` lên cả Production và Preview (`GEMINI_API_KEY`, `PINATA_JWT` dạng sensitive). Canonical và sitemap tự dùng domain production.
+- `frontend/vercel.json`, `.vercelignore`; `.github/workflows/deploy.yml` (test → `vercel deploy --prebuilt`, production khi push `main`, preview + comment URL cho PR, smoke test). `ci.yml` giờ là reusable workflow. GitHub secrets `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` đã đặt; `VERCEL_TOKEN` do chủ repo tự tạo.
+- **Rate limit dùng chung:** `rateLimit()` dùng Upstash Redis REST khi có `UPSTASH_REDIS_REST_URL/TOKEN` (hoặc `KV_REST_API_*` từ Vercel Marketplace); thiếu thì dùng bộ nhớ như cũ, và Redis lỗi cũng tự quay về bộ nhớ.
+- **Lỗi phát hiện khi lên Vercel (đã sửa):** route AI (Edge) chạy ở `hkg1` (Hong Kong), nơi Gemini API bị treo, nên Vercel cắt ở 25 s với `FUNCTION_INVOCATION_TIMEOUT`. Giờ các route này ghim `preferredRegion = "sin1"`, và lời gọi Gemini có timeout (20 s; 7 s mỗi lần khi thử lại), nên người dùng nhận thông báo "AI đang quá tải" thay vì lỗi 504.
+- Lúc deploy, Gemini `gemini-3.8-flash` đang quá tải (cả từ máy local cũng treo/503), nên chưa xác nhận được câu trả lời AI thật trên production.
+- Lỗi khoá cache `npx` (`ECOMPROMISED`) trong PowerShell (npm 11 global): đã xử lý bằng cách xoá thư mục `npm-cache/_npx/<hash>` bị kẹt.
+
 ---
 
 ## 4. Kiểm thử
@@ -152,7 +160,7 @@ Chi tiết và bảng điểm: [AUDIT_REPORT.md](AUDIT_REPORT.md). Lighthouse 12
 | Bộ test | Lệnh | Kết quả |
 | --- | --- | --- |
 | Smart contracts (Foundry) | `cd contracts && forge test` | 183/183 pass |
-| Frontend unit test | `cd frontend && npm test` | 119/119 pass |
+| Frontend unit test | `cd frontend && npm test` | 126/126 pass |
 | E2E (Playwright + Anvil) | `cd frontend && npm run e2e` | 9/9 pass (coverage ~73% dòng `src/`); chạy trong CI |
 | Typecheck · Lint · Build | `npm run typecheck` · `npx eslint src test e2e` · `npm run build` | Sạch |
 
