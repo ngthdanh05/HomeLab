@@ -94,6 +94,37 @@ export const getStructuredModel = (systemInstruction: string) =>
     },
   });
 
+/**
+ * Vercel Edge Functions must start their response within 25 s, and an overloaded
+ * Gemini model sometimes hangs instead of answering 503. Calls are bounded so the
+ * route can still reply "AI is overloaded" in time.
+ */
+export const GEMINI_TIMEOUT_MS = 20_000;
+/** Per attempt when retrying (3 attempts + back-off must fit in the 25 s budget). */
+export const GEMINI_RETRY_ATTEMPT_TIMEOUT_MS = 7_000;
+
+/** Thrown when Gemini doesn't answer in time; status 504 (not retried). */
+export class GeminiTimeoutError extends Error {
+  readonly status = 504;
+  constructor(ms: number) {
+    super(`Gemini did not respond within ${ms} ms`);
+    this.name = "GeminiTimeoutError";
+  }
+}
+
+/**
+ * Rejects with GeminiTimeoutError if `promise` hasn't settled after `ms`.
+ * For streams, wrap the call that opens the stream (generateContentStream resolves
+ * once the response starts), so long answers are not cut off.
+ */
+export function withGeminiTimeout<T>(promise: Promise<T>, ms = GEMINI_TIMEOUT_MS): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new GeminiTimeoutError(ms)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 /** Upstream statuses worth retrying: overloaded / rate-limited / transient errors. */
 const RETRYABLE_STATUS = new Set([429, 500, 503]);
 

@@ -21,7 +21,7 @@
 | 5 | Task 5.1 Community DAO Governance UI | 🟡 Xong trên Anvil, chưa test Sepolia (cần hạ ngưỡng tạo đề xuất) |
 | 5 | Task 5.2 E2E Playwright + CI | ✅ Hoàn thành (PR #1 đã merge, CI 3/3 job pass trên GitHub) |
 | 5 | Task 5.3 Performance / A11y / SEO audit | ✅ A11y + SEO 100; Perf mobile 90–98 / desktop 100 (trừ trang chi tiết sản phẩm, bị giới hạn bởi cổng IPFS); LCP mobile 2.4–3.5 s |
-| 5 | Task 5.4 Vercel | ⏳ Chưa bắt đầu |
+| 5 | Task 5.4 Vercel | ✅ Hoàn thành: https://myhomelab.vercel.app, CI/CD + preview PR, MetaMask + giao dịch thật từ production |
 
 ## 2. Contract đang dùng trên Sepolia (chain 11155111)
 
@@ -145,6 +145,16 @@ Chi tiết và bảng điểm: [AUDIT_REPORT.md](AUDIT_REPORT.md). Lighthouse 12
 - Xoá 3 đường dẫn ảnh `/destinations/*.jpg` không tồn tại (trường `image` của điểm đến không được hiển thị ở đâu).
 - Kiểm tra: unit test 119/119 (thêm `test/seo-image.test.mjs`), E2E 9/9 với CSP mới và modal ví tải trễ (`--repeat-each=3 --retries=0`: 27/27; coverage 74% dòng).
 
+### 3.12 Task 5.4 — Vercel production (2026-11-06)
+- **Production:** https://myhomelab.vercel.app (project `myhomelab`, team `danhkhongus-projects`, region `sin1`). 9 biến môi trường được đưa từ `frontend/.env` lên cả Production và Preview (`GEMINI_API_KEY`, `PINATA_JWT` dạng sensitive). Canonical và sitemap tự dùng domain production.
+- `frontend/vercel.json`, `.vercelignore`; `.github/workflows/deploy.yml` (test → `vercel deploy --prebuilt`, production khi push `main`, preview + comment URL cho PR, smoke test). `ci.yml` giờ là reusable workflow. GitHub secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` đã đặt.
+- **Rate limit dùng chung:** `rateLimit()` dùng Upstash Redis REST khi có `UPSTASH_REDIS_REST_URL/TOKEN` (hoặc `KV_REST_API_*` từ Vercel Marketplace); thiếu thì dùng bộ nhớ như cũ, và Redis lỗi cũng tự quay về bộ nhớ.
+- **Lỗi phát hiện khi lên Vercel (đã sửa):** route AI (Edge) chạy ở `hkg1` (Hong Kong), nơi Gemini API bị treo, nên Vercel cắt ở 25 s với `FUNCTION_INVOCATION_TIMEOUT`. Giờ các route này ghim `preferredRegion = "sin1"`, và lời gọi Gemini có timeout (20 s; 7 s mỗi lần khi thử lại), nên người dùng nhận thông báo "AI đang quá tải" thay vì lỗi 504.
+- **Đã kiểm tra từ production** (MetaMask, Sepolia): ví owner `0x37a0…9242` đăng bán (tx `0xd1693cde…16e10a`, block 12077263), ví `0x2377…bA20` mua 0,01 ETH (tx `0x4cd69cd8…2f86853`, block 12077275) → chia 0,007 / 0,002 / 0,001 ETH, +1 ECO, ImpactBadge #5.
+- CI/CD: PR #3 có 4/4 check pass (3 bộ test + deploy preview); bot comment URL preview vào PR. Preview được Vercel Deployment Protection bảo vệ, nên smoke test đọc `readyState` qua Vercel REST API (`vercel inspect` / `vercel curl` lỗi "User not found" với token có scope team).
+- Lúc deploy, Gemini `gemini-3.8-flash` đang quá tải (cả từ máy local cũng treo/503), nên chưa xác nhận được câu trả lời AI thật trên production.
+- Lỗi khoá cache `npx` (`ECOMPROMISED`) trong PowerShell (npm 11 global): đã xử lý bằng cách xoá thư mục `npm-cache/_npx/<hash>` bị kẹt.
+
 ---
 
 ## 4. Kiểm thử
@@ -152,7 +162,7 @@ Chi tiết và bảng điểm: [AUDIT_REPORT.md](AUDIT_REPORT.md). Lighthouse 12
 | Bộ test | Lệnh | Kết quả |
 | --- | --- | --- |
 | Smart contracts (Foundry) | `cd contracts && forge test` | 183/183 pass |
-| Frontend unit test | `cd frontend && npm test` | 119/119 pass |
+| Frontend unit test | `cd frontend && npm test` | 126/126 pass |
 | E2E (Playwright + Anvil) | `cd frontend && npm run e2e` | 9/9 pass (coverage ~73% dòng `src/`); chạy trong CI |
 | Typecheck · Lint · Build | `npm run typecheck` · `npx eslint src test e2e` · `npm run build` | Sạch |
 
@@ -173,7 +183,7 @@ Biến môi trường cần có trong `frontend/.env`: xem `frontend/.env.exampl
 ## 6. Việc còn tồn đọng / lưu ý
 
 - Quest "Nhà thám hiểm di sản" là tự khai báo (không kiểm chứng on-chain) nên chỉ thưởng badge; muốn thưởng ECO thì cần backend ký xác nhận (EIP-712).
-- **Tiếp theo:** Task 5.4 (Vercel; đặt `NEXT_PUBLIC_SITE_URL`, dùng cổng Pinata riêng), test Task 5.1 trên Sepolia (xem 3.9). Quest "Tiếng nói cộng đồng" giờ làm được qua trang `/governance`.
+- **Tiếp theo:** toàn bộ Phase 5 đã xong ngoại trừ test DAO trên Sepolia (Task 5.1, xem 3.9: cần hạ `proposalThreshold`). Khuyến nghị: cổng Pinata riêng (`NEXT_PUBLIC_IPFS_GATEWAY`), Upstash Redis cho rate limit, giới hạn domain cho API key Alchemy và WalletConnect. Quest "Tiếng nói cộng đồng" giờ làm được qua trang `/governance`.
 - Gemini `gemini-3.8-flash` hay quá tải (503, có lúc treo > 90 s). Chỉ route carbon có thử lại; các route `/api/ai/*` có thể dùng `withGeminiRetry` tương tự, hoặc đổi `GEMINI_MODEL`.
 - Deploy lên Sepolia: forge giả lập cục bộ đang ước tính thiếu gas cho giao dịch tạo contract → dùng `--skip-simulation` (đã có trong `make deploy-carbon-sepolia`).
 - Khi deploy lại ImpactBadge / PaymentSplitter / Marketplace phải cập nhật `LOGS_FROM_BLOCK` trong `frontend/src/config/contracts.ts` (block bắt đầu quét event cho lịch sử hoạt động).
