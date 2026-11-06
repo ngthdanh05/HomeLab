@@ -2,8 +2,9 @@
 
 Tài liệu định hướng cho Claude Code (và lập trình viên mới) khi làm việc trong repo này.
 Mô tả nghiệp vụ chi tiết nằm ở [README.md](README.md), [docs/PLAN.md](docs/PLAN.md),
-địa chỉ đã deploy ở [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md), báo cáo bảo mật ở
-[docs/AUDIT_REPORT.md](docs/AUDIT_REPORT.md).
+địa chỉ đã deploy ở [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md), báo cáo audit Lighthouse
+(hiệu năng, accessibility, SEO) ở [docs/AUDIT_REPORT.md](docs/AUDIT_REPORT.md).
+Smart contract **chưa** được audit bảo mật bởi bên thứ ba.
 
 ---
 
@@ -184,14 +185,21 @@ sequenceDiagram
 
 ### 2.5 Tham số theo mạng
 
-| Tham số | Anvil (31337) | Sepolia |
-| --- | --- | --- |
-| Chia tiền artisan/treasury/platform | 7000 / 2000 / 1000 BPS | như Anvil |
-| `ecoRewardRate` | 100 ECO / 1 ETH | như Anvil |
-| `proposalThreshold` | 1 ECO | 100 ECO |
-| `quorumBps` | 100 (1%) | 500 (5%) |
-| `votingPeriod` | 1 giờ (tối thiểu cho phép) | 3 ngày |
-| `CarbonOffset.pricePerKgWei` | 0.00001 ETH/kg | như Anvil (đổi qua `CARBON_PRICE_PER_KG_WEI`) |
+| Tham số | Anvil (31337) | Sepolia — mặc định `Deploy.s.sol` | Sepolia — on-chain hiện tại |
+| --- | --- | --- | --- |
+| Chia tiền artisan/treasury/platform | 7000 / 2000 / 1000 BPS | như Anvil | như Anvil |
+| `ecoRewardRate` | 100 ECO / 1 ETH | như Anvil | như Anvil |
+| `proposalThreshold` | 1 ECO | 100 ECO | 100 ECO |
+| `quorumBps` | 100 (1%) | 500 (5%) | **400 (4%)** |
+| `votingPeriod` | 1 giờ (tối thiểu cho phép) | 3 ngày | **50 400 s (14 giờ)** |
+| `CarbonOffset.pricePerKgWei` | 0.00001 ETH/kg | như Anvil (đổi qua `CARBON_PRICE_PER_KG_WEI`) | 0.00001 ETH/kg |
+
+Owner có thể đổi 3 tham số DAO bằng `setProposalThreshold` / `setQuorumBps` / `setVotingPeriod`, nên giá trị
+on-chain có thể khác mặc định của script. Kiểm tra trước khi dựa vào chúng (đọc lần cuối: 2026-11-06):
+
+```bash
+cast call 0x1e0404A2EDC3BB2139A82d2e8372631A11697998 "quorumBps()(uint256)" --rpc-url https://ethereum-sepolia-rpc.publicnode.com
+```
 
 Thứ tự deploy (quan trọng vì địa chỉ Anvil là **tất định** theo nonce của account #0 và đã
 hard-code trong [frontend/src/config/contracts.ts](frontend/src/config/contracts.ts)):
