@@ -104,7 +104,7 @@ function ActivityRow({ item, explorerUrl }: { item: ActivityItem; explorerUrl?: 
           )}
         </div>
 
-        <p className="flex flex-wrap gap-x-3 text-[11px] text-slate-500">
+        <p className="flex flex-wrap gap-x-3 text-[11px] text-slate-400">
           <span>{item.timestamp ? formatDateTime(item.timestamp) : `Block #${item.blockNumber}`}</span>
           {explorerUrl ? (
             <a

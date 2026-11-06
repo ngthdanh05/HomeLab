@@ -56,7 +56,7 @@ export default function GovernancePage() {
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="shrink-0 rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white shadow-lg shadow-emerald-950 transition-colors hover:bg-emerald-500"
+            className="shrink-0 rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white shadow-lg shadow-emerald-950 transition-colors hover:bg-emerald-600"
           >
             ＋ Tạo đề xuất
           </button>
@@ -157,7 +157,7 @@ export default function GovernancePage() {
                   → <span className="font-mono">{shortenAddress(d.recipient)}</span>
                 </span>
                 <span className="font-mono font-bold text-amber-300">{formatEth(d.amount)}</span>
-                <span className="text-xs text-slate-500">{formatDateTime(d.timestamp)}</span>
+                <span className="text-xs text-slate-400">{formatDateTime(d.timestamp)}</span>
               </li>
             ))}
           </ul>

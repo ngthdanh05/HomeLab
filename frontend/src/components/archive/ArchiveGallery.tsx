@@ -67,7 +67,7 @@ export function ArchiveGallery() {
                   onClick={() => setFilter(cat)}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
                     filter === cat
-                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/50"
+                      ? "bg-emerald-700 text-white shadow-md shadow-emerald-900/50"
                       : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                   }`}
                 >
@@ -133,7 +133,7 @@ export function ArchiveGallery() {
                   </div>
 
                   <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs">
-                    <span className="text-slate-500">
+                    <span className="text-slate-400">
                       {item.hotspots.length} điểm chú giải
                     </span>
                     <span className="text-emerald-400 font-semibold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">

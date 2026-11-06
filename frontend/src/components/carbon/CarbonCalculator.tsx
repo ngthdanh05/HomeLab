@@ -106,7 +106,7 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
             aria-selected={tab === t.id}
             onClick={() => switchTab(t.id)}
             className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              tab === t.id ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-slate-200"
+              tab === t.id ? "bg-emerald-700 text-white" : "text-slate-400 hover:text-slate-200"
             }`}
           >
             {t.label}
@@ -190,7 +190,7 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
           >
             + Thêm chặng
           </button>
-          <p className="text-[11px] leading-relaxed text-slate-500">
+          <p className="text-[11px] leading-relaxed text-slate-400">
             Hệ số phát thải trung bình (kg CO₂/km) tham khảo bộ hệ số DEFRA 2023; ô tô và xe máy được chia
             cho số người đi chung. Kết quả là ước tính.
           </p>
@@ -209,13 +209,13 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
             />
           </label>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] text-slate-500">
+            <span className="text-[11px] text-slate-400">
               {description.length}/{CARBON_LIMITS.descriptionLength}
             </span>
             <button
               type="submit"
               disabled={aiState.loading || description.trim().length < 10}
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+              className="flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
             >
               {aiState.loading && (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden />

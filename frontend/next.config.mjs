@@ -1,9 +1,39 @@
+const isDev = process.env.NODE_ENV !== "production";
+
+/**
+ * Content-Security-Policy. Next.js injects inline bootstrap scripts (no nonce in
+ * this setup), and ConnectKit injects inline styles, so 'unsafe-inline' stays for
+ * those two. connect-src allows any https/wss origin because listing and badge
+ * metadata may live on any IPFS gateway and wallets use their own relays; plain
+ * http is limited to the local Anvil node. Dev mode also needs eval (React Refresh).
+ */
+const csp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https: wss: http://127.0.0.1:8545 http://localhost:8545",
+  "frame-src https://verify.walletconnect.com https://verify.walletconnect.org",
+  "worker-src 'self' blob:",
+  "media-src 'self' data: blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
 /** @type {import('next').NextConfig} */
 const securityHeaders = [
+  { key: "Content-Security-Policy", value: csp },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // Wallet SDKs (WalletConnect / Coinbase) open popups that must keep window.opener.
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+  // Ignored over plain http (localhost); enforced once deployed behind HTTPS.
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
 ];
 
 const nextConfig = {

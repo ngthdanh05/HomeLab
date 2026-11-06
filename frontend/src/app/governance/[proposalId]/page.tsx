@@ -92,7 +92,7 @@ export default function ProposalDetailPage() {
         <article className="space-y-6 rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-7">
           <header className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-sm text-slate-500">Đề xuất #{proposal.id.toString()}</span>
+              <span className="font-mono text-sm text-slate-400">Đề xuất #{proposal.id.toString()}</span>
               <ProposalStatusBadge status={proposal.status} />
             </div>
             <h1 className="break-words text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
@@ -105,7 +105,7 @@ export default function ProposalDetailPage() {
               {proposal.body}
             </p>
           ) : (
-            <p className="text-sm italic text-slate-500">Không có mô tả.</p>
+            <p className="text-sm italic text-slate-400">Không có mô tả.</p>
           )}
 
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
@@ -119,7 +119,7 @@ export default function ProposalDetailPage() {
                 {isOpen ? `⏳ ${formatCountdown(secondsLeft)}` : formatDateTime(Number(proposal.deadline))}
               </dd>
               {isOpen && (
-                <dd className="text-[11px] text-slate-500">Kết thúc {formatDateTime(Number(proposal.deadline))}</dd>
+                <dd className="text-[11px] text-slate-400">Kết thúc {formatDateTime(Number(proposal.deadline))}</dd>
               )}
             </div>
             <div className="rounded-xl bg-slate-800/60 p-3">
@@ -137,7 +137,7 @@ export default function ProposalDetailPage() {
           </dl>
 
           <VoteBar proposal={proposal} />
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-400">
             Phiếu tính theo ECO đã kích hoạt quyền vote tại block snapshot #{proposal.snapshotBlock.toString()} (block
             ngay trước khi đề xuất được tạo).
           </p>

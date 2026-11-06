@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Dashboard — MyHomeLab",
+export const metadata: Metadata = pageMetadata({
+  title: "Dashboard",
   description:
     "Số dư EcoToken, bộ sưu tập NFT ImpactBadge và lịch sử giao dịch on-chain của bạn.",
-};
+  path: "/dashboard",
+});
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (

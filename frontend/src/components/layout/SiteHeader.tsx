@@ -3,10 +3,10 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ConnectKitButton } from "connectkit";
 import { useAccount } from "wagmi";
 import { getChainName } from "@/config/contracts";
 import { useActiveChain } from "@/hooks/useActiveChain";
+import { ConnectWalletButton } from "./ConnectWalletButton";
 
 const NAV_LINKS = [
   { href: "/", label: "🌿 Khám phá" },
@@ -50,7 +50,7 @@ export function SiteHeader() {
               aria-current={isActive(link.href) ? "page" : undefined}
               className={`whitespace-nowrap rounded-xl px-1.5 py-2 text-center text-xs font-medium transition-colors sm:flex-1 sm:px-3 sm:text-sm md:flex-none ${
                 isActive(link.href)
-                  ? "bg-emerald-600 text-white"
+                  ? "bg-emerald-700 text-white"
                   : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
               }`}
             >
@@ -70,7 +70,7 @@ export function SiteHeader() {
                 : getChainName(chainId)}
             </span>
           </div>
-          <ConnectKitButton />
+          <ConnectWalletButton />
         </div>
       </div>
     </header>

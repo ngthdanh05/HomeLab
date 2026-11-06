@@ -3,7 +3,7 @@
 import React, { useEffect, useId, useState } from "react";
 import { parseEther } from "viem";
 import { useAccount } from "wagmi";
-import { useModal } from "connectkit";
+import { useWalletModal } from "@/providers/WalletModal";
 import { MarketplaceABI } from "@/config/contracts";
 import { useContractTx } from "@/hooks/useContractTx";
 import { useActiveChain } from "@/hooks/useActiveChain";
@@ -60,7 +60,7 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
   const formId = useId();
   const { addresses } = useActiveChain();
   const { isConnected } = useAccount();
-  const { setOpen: setConnectModalOpen } = useModal();
+  const { open: openWalletModal } = useWalletModal();
   const { send, status, isBusy } = useContractTx({
     pending: "Đang đăng bán sản phẩm",
     success: "Đăng bán thành công! 🎉",
@@ -102,7 +102,7 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
     if (!price) return setError("Giá không hợp lệ (ví dụ: 0.01).");
     setError(null);
     // Connect before uploading so we don't pin metadata for a listing never created.
-    if (!isConnected) return setConnectModalOpen(true);
+    if (!isConnected) return openWalletModal();
 
     let metadataURI: string;
     try {
@@ -260,7 +260,7 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
           <button
             type="submit"
             disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white transition-colors hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400"
           >
             {busy && <Spinner />}
             {uploading
