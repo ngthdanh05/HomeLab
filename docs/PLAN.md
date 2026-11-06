@@ -842,8 +842,8 @@ function getActiveProposals() external view returns (uint256[] memory)
 - **Definition of Done (DoD)**:
   - [x] App live trên Vercel URL (https://\*.vercel.app). _(https://myhomelab.vercel.app)_
   - [x] Tất cả env vars được set đúng trên Vercel. _(9 biến, Production + Preview; `GEMINI_API_KEY`, `PINATA_JWT` dạng sensitive)_
-  - [ ] GitHub Actions CI/CD pipeline pass.
-  - [ ] Preview deploy hoạt động cho PR mới.
+  - [x] GitHub Actions CI/CD pipeline pass. _(PR #3: test 3/3 + deploy preview pass; production deploy chạy khi merge vào `main`)_
+  - [x] Preview deploy hoạt động cho PR mới. _(PR #3: bot comment URL preview; preview được Vercel Deployment Protection bảo vệ, smoke test đọc `readyState` qua Vercel API)_
   - [ ] Kết nối MetaMask trên Sepolia thành công từ production URL.
   - [ ] Ít nhất 1 giao dịch on-chain thành công từ production app.
 

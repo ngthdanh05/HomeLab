@@ -21,7 +21,7 @@
 | 5 | Task 5.1 Community DAO Governance UI | 🟡 Xong trên Anvil, chưa test Sepolia (cần hạ ngưỡng tạo đề xuất) |
 | 5 | Task 5.2 E2E Playwright + CI | ✅ Hoàn thành (PR #1 đã merge, CI 3/3 job pass trên GitHub) |
 | 5 | Task 5.3 Performance / A11y / SEO audit | ✅ A11y + SEO 100; Perf mobile 90–98 / desktop 100 (trừ trang chi tiết sản phẩm, bị giới hạn bởi cổng IPFS); LCP mobile 2.4–3.5 s |
-| 5 | Task 5.4 Vercel | 🟡 Live tại https://myhomelab.vercel.app; chờ `VERCEL_TOKEN` để CI/CD tự deploy + preview PR; chưa test MetaMask/giao dịch từ production |
+| 5 | Task 5.4 Vercel | 🟡 Live tại https://myhomelab.vercel.app; CI/CD + preview PR hoạt động (PR #3); chưa test MetaMask/giao dịch từ production |
 
 ## 2. Contract đang dùng trên Sepolia (chain 11155111)
 
