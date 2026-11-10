@@ -6,11 +6,13 @@ import type { Address } from "viem";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useUserBadges } from "@/hooks/useUserBadges";
 import { BADGE_TYPES } from "@/lib/dashboard";
+import { useI18n } from "@/providers/LocaleProvider";
 import { BadgeCard, BadgeCardSkeleton } from "./BadgeCard";
 
 type Filter = "all" | number;
 
 export function BadgeGallery({ owner }: { owner: Address }) {
+  const { t } = useI18n();
   const { addresses, explorerUrl } = useActiveChain();
   const { badges, isLoading, error, refetch } = useUserBadges(owner);
   const [filter, setFilter] = useState<Filter>("all");
@@ -28,19 +30,19 @@ export function BadgeGallery({ owner }: { owner: Address }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="badge-gallery-title" className="text-xl font-bold text-white">
-            🏅 Bộ sưu tập ImpactBadge
+            🏅 {t("Bộ sưu tập ImpactBadge", "ImpactBadge collection")}
           </h2>
           <p className="text-sm text-slate-400">
-            NFT Proof of Action ghi nhận đóng góp của bạn. Bấm vào badge để xem chi tiết.
+            {t("NFT Proof of Action ghi nhận đóng góp của bạn. Bấm vào badge để xem chi tiết.", "Proof of Action NFTs record your contributions. Click a badge to see its details.")}
           </p>
         </div>
         {badges.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Lọc badge">
-            {[{ value: "all" as Filter, label: `Tất cả (${badges.length})` }]
+          <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label={t("Lọc badge", "Filter badges")}>
+            {[{ value: "all" as Filter, label: `${t("Tất cả", "All")} (${badges.length})` }]
               .concat(
-                BADGE_TYPES.filter((t) => counts.has(t.value)).map((t) => ({
-                  value: t.value,
-                  label: `${t.icon} ${t.label} (${counts.get(t.value)})`,
+                BADGE_TYPES.filter((type) => counts.has(type.value)).map((type) => ({
+                  value: type.value,
+                  label: `${type.icon} ${type.label} (${counts.get(type.value)})`,
                 })),
               )
               .map((f) => (
@@ -65,9 +67,9 @@ export function BadgeGallery({ owner }: { owner: Address }) {
 
       {error && badges.length === 0 ? (
         <div className="rounded-2xl border border-red-900/60 bg-red-950/30 p-6 text-center text-sm text-red-200">
-          Không đọc được danh sách badge.{" "}
+          {t("Không đọc được danh sách badge.", "Could not read your badges.")}{" "}
           <button type="button" onClick={() => void refetch()} className="font-semibold underline">
-            Thử lại
+            {t("Thử lại", "Try again")}
           </button>
         </div>
       ) : isLoading ? (
@@ -79,15 +81,15 @@ export function BadgeGallery({ owner }: { owner: Address }) {
       ) : badges.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 p-8 text-center">
           <p className="text-4xl">🌱</p>
-          <p className="mt-2 font-semibold text-white">Bạn chưa có badge nào</p>
+          <p className="mt-2 font-semibold text-white">{t("Bạn chưa có badge nào", "You have no badges yet")}</p>
           <p className="mt-1 text-sm text-slate-400">
-            Mua một sản phẩm thủ công hoặc tour trải nghiệm để nhận NFT ImpactBadge đầu tiên.
+            {t("Mua một sản phẩm thủ công hoặc tour trải nghiệm để nhận NFT ImpactBadge đầu tiên.", "Buy a handicraft or experience tour to receive your first ImpactBadge NFT.")}
           </p>
           <Link
             href="/marketplace"
             className="mt-4 inline-flex rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600"
           >
-            Đến Marketplace
+            {t("Đến Marketplace", "Go to Marketplace")}
           </Link>
         </div>
       ) : (

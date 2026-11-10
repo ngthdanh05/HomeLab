@@ -7,6 +7,7 @@ import { formatEther } from "viem";
 import { useListingMetadata } from "@/hooks/useMarketplace";
 import { remoteImageProps } from "@/lib/image-loader";
 import { getProductType, shortenAddress, type Listing } from "@/lib/marketplace";
+import { useI18n } from "@/providers/LocaleProvider";
 
 /** Listing grid: 1 column on phones, up to 4 on wide screens. */
 const CARD_SIZES = "(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw";
@@ -51,9 +52,10 @@ export function ListingImage({
 }
 
 export function ListingCard({ listing }: { listing: Listing }) {
+  const { t } = useI18n();
   const metadata = useListingMetadata(listing.metadataURI);
   const type = getProductType(listing.pType);
-  const name = metadata.data?.name ?? `Sản phẩm #${listing.id}`;
+  const name = metadata.data?.name ?? `${t("Sản phẩm", "Product")} #${listing.id}`;
 
   return (
     <Link
@@ -69,11 +71,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
           className="h-44 w-full"
         />
         <span className="absolute left-3 top-3 rounded-md border border-slate-700 bg-slate-900/85 px-2 py-0.5 text-[10px] font-medium text-emerald-400 backdrop-blur-sm">
-          {type.icon} {type.label}
+          {type.icon} {t<string>(type.label, type.labelEn)}
         </span>
         {!listing.isActive && (
           <span className="absolute right-3 top-3 rounded-full bg-slate-700/90 px-2 py-0.5 text-[10px] font-semibold text-slate-200">
-            Đã bán / Đã huỷ
+            {t("Đã bán / Đã huỷ", "Sold / Cancelled")}
           </span>
         )}
       </div>
@@ -94,13 +96,13 @@ export function ListingCard({ listing }: { listing: Listing }) {
 
         <div className="flex items-end justify-between border-t border-slate-800 pt-3">
           <div>
-            <p className="text-[10px] uppercase tracking-wide text-slate-400">Giá</p>
+            <p className="text-[10px] uppercase tracking-wide text-slate-400">{t("Giá", "Price")}</p>
             <p className="font-mono text-sm font-bold text-emerald-300">
               {formatEther(listing.price)} ETH
             </p>
           </div>
           <p className="text-right text-[11px] text-slate-400">
-            Người bán
+            {t("Người bán", "Seller")}
             <span className="block font-mono text-slate-300">{shortenAddress(listing.seller)}</span>
           </p>
         </div>

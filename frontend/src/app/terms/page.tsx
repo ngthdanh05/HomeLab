@@ -1,14 +1,57 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/layout/LegalPage";
+import { pick } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
 import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = pageMetadata({
-  title: "Điều khoản sử dụng",
-  description: "Điều khoản sử dụng bản thử nghiệm MyHomeLab trên testnet.",
-  path: "/terms",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  return pageMetadata({
+    title: pick(locale, "Điều khoản sử dụng", "Terms of Use"),
+    description: pick(
+      locale,
+      "Điều khoản sử dụng bản thử nghiệm MyHomeLab trên testnet.",
+      "Terms of use for the MyHomeLab testnet preview.",
+    ),
+    path: "/terms",
+    locale,
+  });
+}
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const locale = await getLocale();
+  if (locale === "en") {
+    return (
+      <LegalPage title="Terms of Use">
+        <h2>1. Service status</h2>
+        <p>
+          MyHomeLab runs on a test network. Testnet ETH, ECO and ImpactBadge in this version have no monetary value. The smart
+          contracts have not been independently audited. Do not send real assets to the project&apos;s addresses.
+        </p>
+        <h2>2. Blockchain transactions</h2>
+        <ul>
+          <li>You manage your own wallet and private keys; we cannot recover or reverse transactions.</li>
+          <li>When you buy, the money is held in escrow until you confirm delivery or the deadline shown on the order passes.</li>
+          <li>Disputes are handled by the arbiter address appointed by the platform.</li>
+        </ul>
+        <h2>3. Sellers</h2>
+        <p>
+          Only verified artisan wallets can list products. Sellers are responsible for the accuracy of their products, delivery
+          and their own legal obligations.
+        </p>
+        <h2>4. Carbon offsets</h2>
+        <p>
+          Offset fees go to the DAO-managed Community Treasury. They are not currently tied to verified carbon credits, and the
+          badge only records your contribution.
+        </p>
+        <h2>5. ECO token</h2>
+        <p>ECO is used for voting in the DAO. ECO is not an investment and promises no profit.</p>
+        <h2>6. AI content</h2>
+        <p>AI-generated suggestions can be wrong. Check important information before making decisions.</p>
+      </LegalPage>
+    );
+  }
+
   return (
     <LegalPage title="Điều khoản sử dụng">
       <h2>1. Tình trạng dịch vụ</h2>

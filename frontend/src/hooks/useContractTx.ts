@@ -6,6 +6,7 @@ import { encodeFunctionData, type Abi, type Address, type Hash } from "viem";
 import { useConfig, useSwitchChain, useWriteContract, type Config } from "wagmi";
 import { estimateGas, getAccount, waitForTransactionReceipt, watchAccount } from "wagmi/actions";
 import { useToast } from "@/components/ui/Toast";
+import { useI18n } from "@/providers/LocaleProvider";
 import { useWalletModal } from "@/providers/WalletModal";
 import { getTxErrorMessage, isReceiptTimeoutError } from "@/lib/marketplace";
 import { useActiveChain } from "./useActiveChain";
@@ -92,6 +93,7 @@ export function useContractTx({ pending, success }: TxMessages) {
   const { writeContractAsync } = useWriteContract();
   const { open: openWalletModal } = useWalletModal();
   const { toast, dismiss } = useToast();
+  const { locale, t } = useI18n();
 
   const [status, setStatus] = useState<TxStatus>("idle");
   const [hash, setHash] = useState<Hash>();
@@ -106,7 +108,7 @@ export function useContractTx({ pending, success }: TxMessages) {
 
       const explorer = config.chains.find((c) => c.id === chainId)?.blockExplorers?.default.url;
       const txLink = (txHash: Hash) =>
-        explorer ? { href: `${explorer}/tx/${txHash}`, label: "Xem trên Etherscan" } : undefined;
+        explorer ? { href: `${explorer}/tx/${txHash}`, label: t("Xem trên Etherscan", "View on Etherscan") } : undefined;
 
       // Refresh wagmi reads and event-based caches (activity feed, DAO votes) so
       // listings, balances, badges, proposals and history update without F5.
@@ -144,7 +146,7 @@ export function useContractTx({ pending, success }: TxMessages) {
         setStatus("pending");
         pendingToastId = toast({
           title: pending,
-          description: "Đang chờ giao dịch được xác nhận trên blockchain…",
+          description: t("Đang chờ giao dịch được xác nhận trên blockchain…", "Waiting for the transaction to be confirmed on the blockchain…"),
           variant: "info",
           link: txLink(txHash),
           duration: 0,
@@ -156,7 +158,7 @@ export function useContractTx({ pending, success }: TxMessages) {
           timeout: RECEIPT_TIMEOUT_MS,
           pollingInterval: RECEIPT_POLLING_MS,
         });
-        if (receipt.status !== "success") throw new Error("Giao dịch bị revert on-chain.");
+        if (receipt.status !== "success") throw new Error(t("Giao dịch bị revert on-chain.", "The transaction reverted on-chain."));
 
         setStatus("success");
         toast({ title: success, variant: "success", link: txLink(txHash) });
@@ -168,9 +170,11 @@ export function useContractTx({ pending, success }: TxMessages) {
           // The tx is on its way; don't call it a failure, and refresh in case it landed.
           setStatus("unconfirmed");
           toast({
-            title: "Giao dịch đã gửi, đang chờ xác nhận",
-            description:
+            title: t("Giao dịch đã gửi, đang chờ xác nhận", "Transaction sent, waiting for confirmation"),
+            description: t(
               "Mạng đang chậm nên chưa nhận được xác nhận. Hãy kiểm tra trên Etherscan; danh sách sẽ cập nhật khi giao dịch hoàn tất.",
+              "The network is slow, so no confirmation has arrived yet. Check Etherscan; the list will update when the transaction completes.",
+            ),
             variant: "info",
             link: txLink(txHash),
             duration: 15_000,
@@ -180,8 +184,8 @@ export function useContractTx({ pending, success }: TxMessages) {
         }
         setStatus("error");
         toast({
-          title: "Giao dịch thất bại",
-          description: getTxErrorMessage(error),
+          title: t("Giao dịch thất bại", "Transaction failed"),
+          description: getTxErrorMessage(error, locale),
           variant: "error",
         });
         return null;
@@ -200,6 +204,8 @@ export function useContractTx({ pending, success }: TxMessages) {
       openWalletModal,
       toast,
       dismiss,
+      locale,
+      t,
     ],
   );
 

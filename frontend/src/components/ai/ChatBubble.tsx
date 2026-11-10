@@ -2,12 +2,15 @@
 
 import React from "react";
 import { ChatMessage } from "@/hooks/useAIChat";
+import { intlLocale } from "@/lib/i18n";
+import { useI18n } from "@/providers/LocaleProvider";
 
 interface ChatBubbleProps {
   message: ChatMessage;
 }
 
 export function ChatBubble({ message }: ChatBubbleProps) {
+  const { locale } = useI18n();
   const isUser = message.role === "user";
 
   return (
@@ -37,7 +40,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
           )}
         </p>
         <p className={`text-xs mt-1 ${isUser ? "text-emerald-200" : "text-slate-400"}`}>
-          {message.timestamp.toLocaleTimeString("vi-VN", {
+          {message.timestamp.toLocaleTimeString(intlLocale(locale), {
             hour: "2-digit",
             minute: "2-digit",
           })}

@@ -7,12 +7,15 @@ import { TravelAssistant } from "@/components/ai/TravelAssistant";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { getChainName } from "@/config/contracts";
 import { useActiveChain } from "@/hooks/useActiveChain";
+import { siteTagline } from "@/lib/seo";
+import { useI18n } from "@/providers/LocaleProvider";
 
 type MainTab = "ai" | "culture" | "archive";
 
-const TabSkeleton = () => (
-  <div className="h-96 animate-pulse rounded-3xl bg-slate-900" aria-label="Đang tải" role="status" />
-);
+function TabSkeleton() {
+  const { t } = useI18n();
+  return <div className="h-96 animate-pulse rounded-3xl bg-slate-900" aria-label={t("Đang tải", "Loading")} role="status" />;
+}
 
 // Only the default tab (AI assistant) ships with the page; the other tabs load on first open.
 const CultureGuideSection = dynamic(
@@ -25,6 +28,7 @@ const ArchiveGallery = dynamic(
 );
 
 export default function Home() {
+  const { locale, t } = useI18n();
   const [activeTab, setActiveTab] = useState<MainTab>("ai");
   const { isConnected, address } = useAccount();
   const { chainId, addresses: contractAddresses, isWrongNetwork } = useActiveChain();
@@ -40,15 +44,16 @@ export default function Home() {
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-900 border border-emerald-900/50 p-6 sm:p-8">
           <div className="relative z-10 max-w-3xl space-y-3">
             <div className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-950/80 border border-emerald-800/80 px-3 py-1 rounded-full">
-              <span>✨ Trợ lý Du lịch Thông minh & Di Sản Số Hóa</span>
+              <span>{t("✨ Trợ lý Du lịch Thông minh & Di Sản Số Hóa", "✨ Smart Travel Assistant & Digital Heritage")}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Khám phá Du lịch Sinh thái Tuần hoàn cùng AI & Three.js
+              {t("Khám phá Du lịch Sinh thái Tuần hoàn cùng AI & Three.js", "Explore Circular Eco-Tourism with AI & Three.js")}
             </h1>
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              Tối ưu hành trình giảm thiểu phát thải Carbon, học văn hóa & tiếng
-              nói bản địa cùng Gemini AI, và đắm chìm trong không gian di sản 360°
-              được lưu trữ phi tập trung.
+              {t(
+                "Tối ưu hành trình giảm thiểu phát thải Carbon, học văn hóa & tiếng nói bản địa cùng Gemini AI, và đắm chìm trong không gian di sản 360° được lưu trữ phi tập trung.",
+                "Plan low-carbon journeys, learn local culture and language with Gemini AI, and immerse yourself in 360° heritage spaces stored on decentralized networks.",
+              )}
             </p>
           </div>
         </div>
@@ -66,7 +71,7 @@ export default function Home() {
             }`}
           >
             <span>🤖</span>
-            <span>AI Travel Assistant</span>
+            <span>{t("Trợ lý du lịch AI", "AI Travel Assistant")}</span>
           </button>
 
           <button
@@ -80,7 +85,7 @@ export default function Home() {
             }`}
           >
             <span>🏛️</span>
-            <span>Culture & Language</span>
+            <span>{t("Văn hoá & Ngôn ngữ", "Culture & Language")}</span>
           </button>
 
           <button
@@ -94,7 +99,7 @@ export default function Home() {
             }`}
           >
             <span>🌐</span>
-            <span>360° Digital Archive</span>
+            <span>{t("Di sản số 360°", "360° Heritage")}</span>
           </button>
         </div>
 
@@ -104,11 +109,18 @@ export default function Home() {
             <div className="space-y-4">
               <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2">
                 <span>
-                  💡 <strong>Gợi ý:</strong> Nhập câu hỏi bên dưới hoặc chuyển
-                  sang tab <strong>&ldquo;🗺️ Lịch trình&rdquo;</strong> trong khung chat để AI tự
-                  động lên kế hoạch theo số ngày.
+                  {t(
+                    <>
+                      💡 <strong>Gợi ý:</strong> Nhập câu hỏi bên dưới hoặc chuyển sang tab{" "}
+                      <strong>&ldquo;🗺️ Lịch trình&rdquo;</strong> trong khung chat để AI tự động lên kế hoạch theo số ngày.
+                    </>,
+                    <>
+                      💡 <strong>Tip:</strong> Type a question below or switch to the{" "}
+                      <strong>&ldquo;🗺️ Itinerary&rdquo;</strong> tab in the chat panel to let the AI plan your trip by number of days.
+                    </>,
+                  )}
                 </span>
-                <span className="text-emerald-400">Powered by Google Gemini</span>
+                <span className="text-emerald-400">{t("Vận hành bởi Google Gemini", "Powered by Google Gemini")}</span>
               </div>
               <TravelAssistant />
             </div>
@@ -131,11 +143,11 @@ export default function Home() {
         <div className="bg-slate-900/50 rounded-2xl p-6 border border-slate-800 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <span aria-hidden>⛓️</span> On-chain Ecosystem Contracts
+              <span aria-hidden>⛓️</span> {t("Hợp đồng on-chain của hệ sinh thái", "On-chain Ecosystem Contracts")}
             </h2>
             <span className="text-xs text-emerald-400 font-mono">
-              Network: {chainName}
-              {isWrongNetwork && " (ví đang ở mạng chưa hỗ trợ)"}
+              {t("Mạng", "Network")}: {chainName}
+              {isWrongNetwork && t(" (ví đang ở mạng chưa hỗ trợ)", " (wallet is on an unsupported network)")}
             </span>
           </div>
 
@@ -160,7 +172,7 @@ export default function Home() {
 
           {isConnected && address && (
             <div className="text-xs text-slate-400 pt-2 border-t border-slate-800/80 flex items-center justify-between">
-              <span>Ví du khách đang kết nối:</span>
+              <span>{t("Ví du khách đang kết nối:", "Connected traveller wallet:")}</span>
               <span className="font-mono text-emerald-300">{address}</span>
             </div>
           )}
@@ -170,9 +182,9 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-slate-900/60 border-t border-slate-800 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400 space-y-1">
-          <p>© 2026 MyHomeLab — Hệ sinh thái Du lịch số Tuần hoàn & Tái tạo.</p>
+          <p>© 2026 MyHomeLab — {siteTagline(locale)}.</p>
           <p className="text-slate-400">
-            Powered by Next.js 14 App Router, Wagmi v2, Google Gemini API & Three.js.
+            {t("Xây dựng trên", "Powered by")} Next.js 14 App Router, Wagmi v2, Google Gemini API & Three.js.
           </p>
         </div>
       </footer>

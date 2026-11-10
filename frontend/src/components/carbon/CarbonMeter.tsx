@@ -8,6 +8,7 @@ import {
   formatKg,
   getCarbonLevel,
 } from "@/lib/carbon-utils";
+import { useI18n } from "@/providers/LocaleProvider";
 
 const CX = 120;
 const CY = 120;
@@ -34,8 +35,10 @@ const ZONES = [
 
 /** Semicircular gauge of a trip's emissions with low / medium / high zones. */
 export function CarbonMeter({ kg }: { kg: number }) {
+  const { locale, t } = useI18n();
   const level = getCarbonLevel(kg);
   const info = LEVEL_INFO[level];
+  const levelLabel = t(info.label, info.labelEn);
   const tip = point(kg, R - 18);
 
   return (
@@ -47,8 +50,8 @@ export function CarbonMeter({ kg }: { kg: number }) {
         aria-valuemin={0}
         aria-valuemax={METER_MAX_KG}
         aria-valuenow={Math.round(Math.min(kg, METER_MAX_KG))}
-        aria-valuetext={`${formatKg(kg)}, mức ${info.label}`}
-        aria-label="Mức phát thải carbon"
+        aria-valuetext={t(`${formatKg(kg, locale)}, mức ${levelLabel}`, `${formatKg(kg, locale)}, ${levelLabel} level`)}
+        aria-label={t("Mức phát thải carbon", "Carbon emission level")}
       >
         {ZONES.map((zone) => (
           <path
@@ -76,11 +79,11 @@ export function CarbonMeter({ kg }: { kg: number }) {
           {METER_MAX_KG}+
         </text>
       </svg>
-      <p className="-mt-1 font-mono text-3xl font-extrabold text-white">{formatKg(kg)}</p>
+      <p className="-mt-1 font-mono text-3xl font-extrabold text-white">{formatKg(kg, locale)}</p>
       <p className="mt-1 text-sm font-semibold" style={{ color: info.color }}>
-        Mức phát thải: {info.label}
+        {t("Mức phát thải", "Emission level")}: {levelLabel}
       </p>
-      <p className="mt-1 max-w-xs text-center text-xs text-slate-400">{info.hint}</p>
+      <p className="mt-1 max-w-xs text-center text-xs text-slate-400">{t(info.hint, info.hintEn)}</p>
     </div>
   );
 }

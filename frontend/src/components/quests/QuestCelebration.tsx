@@ -2,8 +2,9 @@
 
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
-import type { QuestDefinition } from "@/data/quests";
+import { localizeQuest, type QuestDefinition } from "@/data/quests";
 import { getBadgeType } from "@/lib/dashboard";
+import { useI18n } from "@/providers/LocaleProvider";
 
 const COLORS = ["#10b981", "#f59e0b", "#38bdf8", "#a78bfa", "#f472b6", "#facc15"];
 
@@ -26,7 +27,9 @@ interface QuestCelebrationProps {
 }
 
 /** Popup shown after a quest reward is claimed on-chain. */
-export function QuestCelebration({ quest, onClose }: QuestCelebrationProps) {
+export function QuestCelebration({ quest: rawQuest, onClose }: QuestCelebrationProps) {
+  const { locale, t } = useI18n();
+  const quest = localizeQuest(rawQuest, locale);
   const closeRef = useRef<HTMLButtonElement>(null);
   const badge = quest.rewardBadgeType !== undefined ? getBadgeType(quest.rewardBadgeType) : undefined;
 
@@ -77,7 +80,7 @@ export function QuestCelebration({ quest, onClose }: QuestCelebrationProps) {
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 text-4xl shadow-lg shadow-emerald-900">
             {quest.icon}
           </div>
-          <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-emerald-300">Quest hoàn thành!</p>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-emerald-300">{t("Quest hoàn thành!", "Quest complete!")}</p>
           <h2 id="quest-celebration-title" className="mt-1 text-xl font-extrabold text-white">
             {quest.title}
           </h2>
@@ -85,12 +88,12 @@ export function QuestCelebration({ quest, onClose }: QuestCelebrationProps) {
           <ul className="mt-4 space-y-2 text-sm">
             {quest.ecoReward > 0 && (
               <li className="rounded-xl bg-emerald-500/15 px-3 py-2 font-semibold text-emerald-300">
-                🌱 +{quest.ecoReward} ECO đã vào ví của bạn
+                🌱 +{quest.ecoReward} ECO {t("đã vào ví của bạn", "added to your wallet")}
               </li>
             )}
             {badge && (
               <li className="rounded-xl bg-violet-500/15 px-3 py-2 font-semibold text-violet-300">
-                {badge.icon} Badge {badge.label} đã được mint
+                {badge.icon} Badge {badge.label} {t("đã được mint", "has been minted")}
               </li>
             )}
           </ul>
@@ -100,7 +103,7 @@ export function QuestCelebration({ quest, onClose }: QuestCelebrationProps) {
               href="/dashboard"
               className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm font-medium text-slate-200 hover:border-emerald-600"
             >
-              Xem Dashboard
+              {t("Xem Dashboard", "View Dashboard")}
             </Link>
             <button
               ref={closeRef}
@@ -108,7 +111,7 @@ export function QuestCelebration({ quest, onClose }: QuestCelebrationProps) {
               onClick={onClose}
               className="flex-1 rounded-xl bg-emerald-700 py-2.5 text-sm font-bold text-white hover:bg-emerald-600"
             >
-              Tuyệt vời!
+              {t("Tuyệt vời!", "Great!")}
             </button>
           </div>
         </div>

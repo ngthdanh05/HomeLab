@@ -4,6 +4,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { formatUnits, type Address } from "viem";
 import { ECO_DECIMALS, useEcoTokenBalance } from "@/hooks/useEcoTokenBalance";
 import { easeOutCubic, formatTokenAmount } from "@/lib/dashboard";
+import { intlLocale } from "@/lib/i18n";
+import { useI18n } from "@/providers/LocaleProvider";
 
 const COUNT_UP_MS = 1_200;
 
@@ -37,6 +39,7 @@ function useCountUp(target: number | undefined) {
 }
 
 export function TokenBalance({ owner }: { owner: Address }) {
+  const { locale, t } = useI18n();
   const { balance, rewardRate, isLoading, error } = useEcoTokenBalance(owner);
   const target = balance !== undefined ? Number(formatUnits(balance, ECO_DECIMALS)) : undefined;
   const animated = useCountUp(target);
@@ -49,20 +52,20 @@ export function TokenBalance({ owner }: { owner: Address }) {
     >
       <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-500/10 blur-2xl" />
       <p id="eco-balance-title" className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-        🌱 Số dư EcoToken
+        🌱 {t("Số dư EcoToken", "EcoToken balance")}
       </p>
 
       {isLoading ? (
-        <div className="mt-3 h-10 w-48 animate-pulse rounded-lg bg-slate-800" aria-label="Đang tải số dư" />
+        <div className="mt-3 h-10 w-48 animate-pulse rounded-lg bg-slate-800" aria-label={t("Đang tải số dư", "Loading balance")} />
       ) : error ? (
-        <p className="mt-3 text-sm text-red-300">Không đọc được số dư ECO. Vui lòng thử lại sau.</p>
+        <p className="mt-3 text-sm text-red-300">{t("Không đọc được số dư ECO. Vui lòng thử lại sau.", "Could not read your ECO balance. Please try again later.")}</p>
       ) : (
         <p className="mt-2 flex items-baseline gap-2" aria-live="polite">
           <span className="font-mono text-4xl font-extrabold tracking-tight text-white tabular-nums">
             {/* Exact bigint formatting once the animation ends; floats only while counting. */}
             {done && balance !== undefined
-              ? formatTokenAmount(balance, ECO_DECIMALS)
-              : animated.toLocaleString("vi-VN", { maximumFractionDigits: 4 })}
+              ? formatTokenAmount(balance, ECO_DECIMALS, 4, locale)
+              : animated.toLocaleString(intlLocale(locale), { maximumFractionDigits: 4 })}
           </span>
           <span className="text-lg font-semibold text-emerald-300">ECO</span>
         </p>
@@ -70,9 +73,12 @@ export function TokenBalance({ owner }: { owner: Address }) {
 
       <p className="mt-3 text-xs leading-relaxed text-slate-400">
         {rewardRate !== undefined && rewardRate > 0n
-          ? `Mỗi 1 ETH chi tiêu trên Marketplace thưởng ${formatTokenAmount(rewardRate, ECO_DECIMALS)} ECO.`
-          : "Nhận ECO mỗi khi mua sản phẩm hoặc tour trên Marketplace."}{" "}
-        Dùng ECO để biểu quyết trong DAO Quỹ Cộng đồng.
+          ? t(
+              `Mỗi 1 ETH chi tiêu trên Marketplace thưởng ${formatTokenAmount(rewardRate, ECO_DECIMALS, 4, locale)} ECO.`,
+              `Every 1 ETH spent on the Marketplace earns ${formatTokenAmount(rewardRate, ECO_DECIMALS, 4, locale)} ECO.`,
+            )
+          : t("Nhận ECO mỗi khi mua sản phẩm hoặc tour trên Marketplace.", "Earn ECO every time you buy a product or tour on the Marketplace.")}{" "}
+        {t("Dùng ECO để biểu quyết trong DAO Quỹ Cộng đồng.", "Use ECO to vote in the Community Treasury DAO.")}
       </p>
     </section>
   );

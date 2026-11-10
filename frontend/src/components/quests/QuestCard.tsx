@@ -8,8 +8,10 @@ import { Spinner } from "@/components/marketplace/PurchaseButton";
 import { QuestRewardsABI } from "@/config/contracts";
 import { useContractTx } from "@/hooks/useContractTx";
 import type { QuestWithProgress } from "@/hooks/useQuestProgress";
+import { localizeQuest } from "@/data/quests";
 import { getBadgeType } from "@/lib/dashboard";
 import { formatQuestCount } from "@/lib/quests";
+import { useI18n } from "@/providers/LocaleProvider";
 import { QuestProgressBar } from "./QuestProgress";
 
 interface QuestCardProps {
@@ -21,12 +23,14 @@ interface QuestCardProps {
 }
 
 /** One Eco Quest: rewards, progress and the on-chain claim button. */
-export function QuestCard({ quest, contract, onClaimed }: QuestCardProps) {
+export function QuestCard({ quest: rawQuest, contract, onClaimed }: QuestCardProps) {
+  const { locale, t } = useI18n();
+  const quest = localizeQuest(rawQuest, locale);
   const { isConnected } = useAccount();
   const { progress } = quest;
   const { send, status, isBusy } = useContractTx({
-    pending: `Đang nhận thưởng "${quest.title}"`,
-    success: `Hoàn thành quest "${quest.title}"! 🎉`,
+    pending: t(`Đang nhận thưởng "${quest.title}"`, `Claiming "${quest.title}"`),
+    success: t(`Hoàn thành quest "${quest.title}"! 🎉`, `Quest "${quest.title}" completed! 🎉`),
   });
 
   const completed = progress.state === "completed";
@@ -40,7 +44,7 @@ export function QuestCard({ quest, contract, onClaimed }: QuestCardProps) {
       functionName: "claim",
       args: [BigInt(quest.id), progress.proofIds],
     });
-    if (result?.outcome === "confirmed") onClaimed(quest);
+    if (result?.outcome === "confirmed") onClaimed(rawQuest);
   };
 
   return (
@@ -73,7 +77,7 @@ export function QuestCard({ quest, contract, onClaimed }: QuestCardProps) {
           <span
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-slate-950"
             role="img"
-            aria-label="Đã hoàn thành"
+            aria-label={t("Đã hoàn thành", "Completed")}
           >
             ✓
           </span>
@@ -92,24 +96,24 @@ export function QuestCard({ quest, contract, onClaimed }: QuestCardProps) {
           </span>
         )}
         {quest.kind === "heritage-views" && (
-          <span className="rounded-lg bg-slate-800 px-2 py-1 text-slate-400" title="Hành động off-chain nên không thưởng ECO">
-            Theo dõi trên trình duyệt này
+          <span className="rounded-lg bg-slate-800 px-2 py-1 text-slate-400" title={t("Hành động off-chain nên không thưởng ECO", "Off-chain action, so no ECO reward")}>
+            {t("Theo dõi trên trình duyệt này", "Tracked in this browser")}
           </span>
         )}
       </div>
 
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs text-slate-400">
-          <span>Tiến độ</span>
+          <span>{t("Tiến độ", "Progress")}</span>
           <span className="font-mono text-slate-200">
             {progress.state === "loading" && !completed
               ? "…"
-              : `${formatQuestCount(quest, progress.current)} / ${formatQuestCount(quest, progress.target)}`}
+              : `${formatQuestCount(quest, progress.current, locale)} / ${formatQuestCount(quest, progress.target, locale)}`}
           </span>
         </div>
         <QuestProgressBar
           ratio={progress.ratio}
-          label={`Tiến độ quest ${quest.title}`}
+          label={t(`Tiến độ quest ${quest.title}`, `Progress of quest ${quest.title}`)}
           tone={completed ? "emerald" : ready ? "amber" : "slate"}
         />
       </div>
@@ -117,7 +121,7 @@ export function QuestCard({ quest, contract, onClaimed }: QuestCardProps) {
       <div className="mt-auto">
         {completed ? (
           <p className="rounded-xl bg-emerald-500/10 py-2.5 text-center text-sm font-semibold text-emerald-300">
-            Đã nhận thưởng
+            {t("Đã nhận thưởng", "Reward claimed")}
           </p>
         ) : ready && isConnected ? (
           <button
@@ -128,12 +132,12 @@ export function QuestCard({ quest, contract, onClaimed }: QuestCardProps) {
           >
             {isBusy && <Spinner />}
             {status === "awaiting-wallet"
-              ? "Xác nhận trong ví…"
+              ? t("Xác nhận trong ví…", "Confirm in wallet…")
               : status === "pending"
-                ? "Đang nhận thưởng on-chain…"
+                ? t("Đang nhận thưởng on-chain…", "Claiming on-chain…")
                 : status === "unconfirmed"
-                  ? "Đang chờ xác nhận…"
-                  : "🎁 Nhận thưởng"}
+                  ? t("Đang chờ xác nhận…", "Waiting for confirmation…")
+                  : t("🎁 Nhận thưởng", "🎁 Claim reward")}
           </button>
         ) : (
           <Link

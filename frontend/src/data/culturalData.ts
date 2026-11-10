@@ -1,3 +1,6 @@
+import { pick, type Locale } from "../lib/i18n.ts";
+import { CULTURAL_EN } from "./culturalData.en.ts";
+
 export interface CulturalDestination {
   id: string;
   name: string;
@@ -277,6 +280,16 @@ export const culturalDestinations: CulturalDestination[] = [
       "Thuê xe đạp điện thay xe máy giúp giảm 100% phát thải tại chỗ. Dùng ống hút giấy và nói không với nhựa một lần",
   },
 ];
+
+const englishDestinations: CulturalDestination[] = culturalDestinations.map((destination) => ({
+  ...destination,
+  ...CULTURAL_EN[destination.id],
+  phrases: destination.phrases.map((p) => ({ ...p, phrase: p.phrase.replace("tiếng H'Mông", "H'Mông") })),
+}));
+
+export function getCulturalDestinations(locale: Locale): CulturalDestination[] {
+  return pick(locale, culturalDestinations, englishDestinations);
+}
 
 export const getCulturalDestination = (
   id: string

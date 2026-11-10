@@ -10,6 +10,8 @@ import {
   type CarbonEstimate,
   type TripLeg,
 } from "@/lib/carbon-utils";
+import type { Locale } from "@/lib/i18n";
+import { useI18n } from "@/providers/LocaleProvider";
 
 export interface TripResult {
   totalKg: number;
@@ -18,6 +20,8 @@ export interface TripResult {
   source: "calculator" | "ai";
   /** Short text of the trip, stored in the badge metadata. */
   summary: string;
+  /** Set for calculator results, so their labels can follow the language. */
+  legs?: TripLeg[];
 }
 
 export const DEFAULT_LEGS: TripLeg[] = [
@@ -25,16 +29,20 @@ export const DEFAULT_LEGS: TripLeg[] = [
   { mode: "bus", km: 30 },
 ];
 
-export function resultFromLegs(legs: TripLeg[]): TripResult {
-  const { totalKg, breakdown } = calculateTrip(legs);
+export function resultFromLegs(legs: TripLeg[], locale: Locale = "vi"): TripResult {
+  const { totalKg, breakdown } = calculateTrip(legs, locale);
   return {
     totalKg,
     breakdown,
     suggestions: [],
     source: "calculator",
+    legs,
     summary: legs
       .filter((l) => l.km > 0)
-      .map((l) => `${getTransportMode(l.mode)?.label ?? l.mode} ${l.km} km`)
+      .map((l) => {
+        const mode = getTransportMode(l.mode);
+        return `${mode ? (locale === "en" ? mode.labelEn : mode.label) : l.mode} ${l.km} km`;
+      })
       .join(", "),
   };
 }
@@ -45,6 +53,7 @@ const inputClass =
   "w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
 
 export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) => void }) {
+  const { locale, t } = useI18n();
   const [tab, setTab] = useState<Tab>("calculator");
   const [legs, setLegs] = useState<TripLeg[]>(DEFAULT_LEGS);
   const [description, setDescription] = useState("");
@@ -54,14 +63,14 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
 
   const updateLegs = (next: TripLeg[]) => {
     setLegs(next);
-    onResult(resultFromLegs(next));
+    onResult(resultFromLegs(next, locale));
   };
   const updateLeg = (index: number, patch: Partial<TripLeg>) =>
     updateLegs(legs.map((leg, i) => (i === index ? { ...leg, ...patch } : leg)));
 
   const switchTab = (next: Tab) => {
     setTab(next);
-    if (next === "calculator") onResult(resultFromLegs(legs));
+    if (next === "calculator") onResult(resultFromLegs(legs, locale));
     else if (aiState.estimate) onResult(resultFromEstimate(aiState.estimate, description));
   };
 
@@ -75,13 +84,13 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
         body: JSON.stringify({ description }),
       });
       const data = (await response.json().catch(() => ({}))) as CarbonEstimate & { error?: string };
-      if (!response.ok) throw new Error(data.error || "Không thể ước tính carbon. Vui lòng thử lại.");
+      if (!response.ok) throw new Error(data.error || t("Không thể ước tính carbon. Vui lòng thử lại.", "Could not estimate carbon. Please try again."));
       setAiState({ loading: false, estimate: data });
       onResult(resultFromEstimate(data, description));
     } catch (error) {
       setAiState({
         loading: false,
-        error: error instanceof Error ? error.message : "Không thể ước tính carbon.",
+        error: error instanceof Error ? error.message : t("Không thể ước tính carbon.", "Could not estimate carbon."),
       });
     }
   };
@@ -89,27 +98,27 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
   return (
     <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6" aria-labelledby="calc-title">
       <h2 id="calc-title" className="text-lg font-bold text-white">
-        🧮 Tính phát thải chuyến đi
+        🧮 {t("Tính phát thải chuyến đi", "Calculate trip emissions")}
       </h2>
 
-      <div className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-950 p-1" role="tablist" aria-label="Cách tính">
+      <div className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-950 p-1" role="tablist" aria-label={t("Cách tính", "Calculation method")}>
         {(
           [
-            { id: "calculator", label: "Theo phương tiện" },
-            { id: "ai", label: "✨ Mô tả cho AI" },
+            { id: "calculator", label: t("Theo phương tiện", "By transport") },
+            { id: "ai", label: t("✨ Mô tả cho AI", "✨ Describe to AI") },
           ] as const
-        ).map((t) => (
+        ).map((option) => (
           <button
-            key={t.id}
+            key={option.id}
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => switchTab(t.id)}
+            aria-selected={tab === option.id}
+            onClick={() => switchTab(option.id)}
             className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              tab === t.id ? "bg-emerald-700 text-white" : "text-slate-400 hover:text-slate-200"
+              tab === option.id ? "bg-emerald-700 text-white" : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            {t.label}
+            {option.label}
           </button>
         ))}
       </div>
@@ -123,9 +132,9 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
                 key={index}
                 className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-800 bg-slate-950/50 p-3 sm:grid-cols-[1.4fr_1fr_1fr_auto] sm:items-end"
               >
-                <legend className="sr-only">Chặng {index + 1}</legend>
+                <legend className="sr-only">{t("Chặng", "Leg")} {index + 1}</legend>
                 <label className="col-span-2 text-xs text-slate-400 sm:col-span-1">
-                  Phương tiện
+                  {t("Phương tiện", "Transport")}
                   <select
                     value={leg.mode}
                     onChange={(e) => updateLeg(index, { mode: e.target.value as TripLeg["mode"] })}
@@ -133,13 +142,13 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
                   >
                     {TRANSPORT_MODES.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.icon} {m.label}
+                        {m.icon} {t<string>(m.label, m.labelEn)}
                       </option>
                     ))}
                   </select>
                 </label>
                 <label className="text-xs text-slate-400">
-                  Quãng đường (km)
+                  {t("Quãng đường (km)", "Distance (km)")}
                   <input
                     type="number"
                     inputMode="decimal"
@@ -155,7 +164,7 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
                   />
                 </label>
                 <label className={`text-xs ${mode?.perVehicle ? "text-slate-400" : "text-slate-600"}`}>
-                  Số người đi chung
+                  {t("Số người đi chung", "People sharing")}
                   <input
                     type="number"
                     min={1}
@@ -174,7 +183,7 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
                   type="button"
                   onClick={() => updateLegs(legs.filter((_, i) => i !== index))}
                   disabled={legs.length === 1}
-                  aria-label={`Xoá chặng ${index + 1}`}
+                  aria-label={t(`Xoá chặng ${index + 1}`, `Remove leg ${index + 1}`)}
                   className="col-span-2 rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-400 hover:border-red-700 hover:text-red-300 disabled:opacity-30 sm:col-span-1"
                 >
                   ✕
@@ -188,23 +197,28 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
             disabled={legs.length >= CARBON_LIMITS.maxLegs}
             className="w-full rounded-xl border border-dashed border-slate-700 py-2 text-sm text-slate-400 hover:border-emerald-600 hover:text-emerald-300 disabled:opacity-40"
           >
-            + Thêm chặng
+            {t("+ Thêm chặng", "+ Add leg")}
           </button>
           <p className="text-[11px] leading-relaxed text-slate-400">
-            Hệ số phát thải trung bình (kg CO₂/km) tham khảo bộ hệ số DEFRA 2023; ô tô và xe máy được chia
-            cho số người đi chung. Kết quả là ước tính.
+            {t(
+              "Hệ số phát thải trung bình (kg CO₂/km) tham khảo bộ hệ số DEFRA 2023; ô tô và xe máy được chia cho số người đi chung. Kết quả là ước tính.",
+              "Average emission factors (kg CO₂/km) are based on the DEFRA 2023 factors; cars and motorbikes are divided by the number of people sharing. Results are estimates.",
+            )}
           </p>
         </div>
       ) : (
         <form onSubmit={estimate} className="mt-4 space-y-3">
           <label className="block text-xs text-slate-400">
-            Mô tả hành trình của bạn
+            {t("Mô tả hành trình của bạn", "Describe your trip")}
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={CARBON_LIMITS.descriptionLength}
               rows={5}
-              placeholder="Ví dụ: Bay từ Hà Nội vào Đà Nẵng, đi xe khách lên Hội An, ở homestay 3 đêm, thuê xe máy đi Mỹ Sơn khoảng 40 km rồi bay về."
+              placeholder={t(
+                "Ví dụ: Bay từ Hà Nội vào Đà Nẵng, đi xe khách lên Hội An, ở homestay 3 đêm, thuê xe máy đi Mỹ Sơn khoảng 40 km rồi bay về.",
+                "Example: Fly from Hanoi to Da Nang, take a coach to Hoi An, stay 3 nights in a homestay, rent a motorbike to My Son (about 40 km), then fly home.",
+              )}
               className={`${inputClass} mt-1 resize-y`}
             />
           </label>
@@ -220,7 +234,7 @@ export function CarbonCalculator({ onResult }: { onResult: (result: TripResult) 
               {aiState.loading && (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden />
               )}
-              {aiState.loading ? "AI đang ước tính…" : "Ước tính bằng AI"}
+              {aiState.loading ? t("AI đang ước tính…", "AI is estimating…") : t("Ước tính bằng AI", "Estimate with AI")}
             </button>
           </div>
           {aiState.error && (

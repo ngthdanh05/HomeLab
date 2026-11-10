@@ -2,12 +2,14 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { CulturalDestination } from "@/data/culturalData";
+import { useI18n } from "@/providers/LocaleProvider";
 
 interface LanguageLearningProps {
   destination: CulturalDestination;
 }
 
 export function LanguageLearning({ destination }: LanguageLearningProps) {
+  const { t } = useI18n();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [completed, setCompleted] = useState<Set<number>>(new Set());
@@ -47,18 +49,18 @@ export function LanguageLearning({ destination }: LanguageLearningProps) {
     <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-white font-bold text-lg">
-          💬 Học ngôn ngữ địa phương
+          💬 {t("Học ngôn ngữ địa phương", "Learn the local language")}
         </h3>
         <div className="flex items-center gap-3 text-sm text-slate-400">
           <span>
-            {completed.size}/{phrases.length} đã học
+            {completed.size}/{phrases.length} {t("đã học", "learned")}
           </span>
           {completed.size > 0 && (
             <button
               onClick={handleReset}
               className="text-emerald-400 hover:text-emerald-300 transition-colors"
             >
-              Làm lại
+              {t("Làm lại", "Start over")}
             </button>
           )}
         </div>
@@ -84,7 +86,7 @@ export function LanguageLearning({ destination }: LanguageLearningProps) {
             handleFlip();
           }
         }}
-        aria-label={flipped ? "Xem lại cụm từ" : "Lật thẻ để xem nghĩa"}
+        aria-label={flipped ? t("Xem lại cụm từ", "Back to the phrase") : t("Lật thẻ để xem nghĩa", "Flip the card to see the meaning")}
         aria-pressed={flipped}
         style={{ perspective: "1000px" }}
       >
@@ -104,9 +106,9 @@ export function LanguageLearning({ destination }: LanguageLearningProps) {
             <p className="text-2xl sm:text-3xl font-bold text-white mb-2 px-4 text-center">
               {currentPhrase.phrase}
             </p>
-            <p className="text-emerald-300 text-sm">Phát âm: {currentPhrase.pronunciation}</p>
+            <p className="text-emerald-300 text-sm">{t("Phát âm", "Pronunciation")}: {currentPhrase.pronunciation}</p>
             <p className="text-slate-400 text-xs mt-4">
-              Nhấn để xem nghĩa 👆
+              {t("Nhấn để xem nghĩa 👆", "Tap to see the meaning 👆")}
             </p>
           </div>
 
@@ -137,7 +139,7 @@ export function LanguageLearning({ destination }: LanguageLearningProps) {
           onClick={handlePrev}
           className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors"
         >
-          ← Trước
+          {t("← Trước", "← Previous")}
         </button>
 
         <div className="flex gap-1">
@@ -159,14 +161,14 @@ export function LanguageLearning({ destination }: LanguageLearningProps) {
           onClick={handleNext}
           className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl transition-colors"
         >
-          Tiếp →
+          {t("Tiếp →", "Next →")}
         </button>
       </div>
 
       {/* All phrases list */}
       <div className="mt-6 border-t border-slate-700 pt-4">
         <p className="text-slate-400 text-xs mb-3 uppercase tracking-wide">
-          Tất cả cụm từ
+          {t("Tất cả cụm từ", "All phrases")}
         </p>
         <div className="space-y-2">
           {phrases.map((p, idx) => (

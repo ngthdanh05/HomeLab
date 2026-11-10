@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
+import { ogLocale, pick, type Locale } from "./i18n.ts";
 
 export const SITE_NAME = "MyHomeLab";
 export const SITE_TAGLINE = "Hệ sinh thái Du lịch số Tuần hoàn & Tái tạo";
 export const SITE_DESCRIPTION =
   "Du lịch sinh thái tuần hoàn trên blockchain: mua trực tiếp từ nghệ nhân (chia doanh thu 70/20/10 bằng Smart Contract), bù đắp carbon, nhận EcoToken và NFT ImpactBadge, DAO Quỹ Cộng đồng, AI Travel Assistant và di sản 360°.";
+
+const SITE_TAGLINE_EN = "Circular & Regenerative Digital Tourism Ecosystem";
+const SITE_DESCRIPTION_EN =
+  "Circular eco-tourism on the blockchain: buy directly from artisans (70/20/10 revenue split by smart contract), offset carbon, earn EcoToken and ImpactBadge NFTs, join the Community Treasury DAO, plan with an AI travel assistant and explore 360° heritage.";
+
+export const siteTagline = (locale: Locale) => pick(locale, SITE_TAGLINE, SITE_TAGLINE_EN);
+export const siteDescription = (locale: Locale) => pick(locale, SITE_DESCRIPTION, SITE_DESCRIPTION_EN);
 
 /**
  * Absolute site origin for canonical URLs, OpenGraph and the sitemap.
@@ -41,10 +49,12 @@ export function pageMetadata({
   title,
   description,
   path,
+  locale = "vi",
 }: {
   title: string;
   description: string;
   path: string;
+  locale?: Locale;
 }): Metadata {
   return {
     title,
@@ -52,7 +62,7 @@ export function pageMetadata({
     alternates: { canonical: path },
     openGraph: {
       type: "website",
-      locale: "vi_VN",
+      locale: ogLocale(locale),
       siteName: SITE_NAME,
       title: `${title} — ${SITE_NAME}`,
       description,

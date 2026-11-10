@@ -4,6 +4,7 @@
 import React, { useEffect, useRef } from "react";
 import { ConnectKitProvider, useModal } from "connectkit";
 import { DEFAULT_CHAIN_ID } from "../config/contracts";
+import { useI18n } from "./LocaleProvider";
 
 function ModalOpener({ openRequest }: { openRequest: number }) {
   const { setOpen } = useModal();
@@ -26,6 +27,7 @@ function ModalOpener({ openRequest }: { openRequest: number }) {
 
 /** ConnectKit's provider + modal, mounted beside the app (inside WagmiProvider). */
 export function ConnectKitLayer({ openRequest }: { openRequest: number }) {
+  const { t } = useI18n();
   return (
     <ConnectKitProvider
       customTheme={{
@@ -37,7 +39,7 @@ export function ConnectKitLayer({ openRequest }: { openRequest: number }) {
       mode="dark"
       // Connect on the chain the app is built for (NEXT_PUBLIC_CHAIN_ID); ConnectKit
       // otherwise asks the wallet to switch to the first configured chain (Sepolia).
-      options={{ initialChainId: DEFAULT_CHAIN_ID }}
+      options={{ initialChainId: DEFAULT_CHAIN_ID, language: t("vi-VN", "en-US") }}
     >
       <ModalOpener openRequest={openRequest} />
     </ConnectKitProvider>

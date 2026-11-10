@@ -1,13 +1,22 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { pick } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
 import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = pageMetadata({
-  title: "Dashboard",
-  description:
-    "Số dư EcoToken, bộ sưu tập NFT ImpactBadge và lịch sử giao dịch on-chain của bạn.",
-  path: "/dashboard",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  return pageMetadata({
+    title: "Dashboard",
+    description: pick(
+      locale,
+      "Số dư EcoToken, bộ sưu tập NFT ImpactBadge và lịch sử giao dịch on-chain của bạn.",
+      "Your EcoToken balance, ImpactBadge NFT collection and on-chain transaction history.",
+    ),
+    path: "/dashboard",
+    locale,
+  });
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (

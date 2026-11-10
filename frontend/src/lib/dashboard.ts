@@ -1,5 +1,6 @@
 // Framework-free helpers for the user dashboard (unit-tested with plain Node).
 
+import { intlLocale, type Locale } from "./i18n.ts";
 import { resolveImageUri } from "./marketplace.ts";
 
 /** Mirrors `enum BadgeType` in contracts/src/ImpactBadge.sol. */
@@ -10,6 +11,7 @@ export const BADGE_TYPES = [
     label: "Eco Check-in",
     icon: "🌿",
     description: "Ủng hộ nghệ nhân địa phương qua giao dịch D2C minh bạch.",
+    descriptionEn: "Supported local artisans through a transparent direct-to-consumer purchase.",
     gradient: "from-emerald-500 via-teal-600 to-emerald-900",
   },
   {
@@ -18,6 +20,7 @@ export const BADGE_TYPES = [
     label: "Zero Carbon",
     icon: "🌍",
     description: "Trả phí bù đắp phát thải carbon của chuyến đi vào Quỹ Cộng đồng.",
+    descriptionEn: "Paid a fee into the Community Treasury to offset a trip's carbon emissions.",
     gradient: "from-sky-500 via-cyan-600 to-sky-900",
   },
   {
@@ -26,6 +29,7 @@ export const BADGE_TYPES = [
     label: "Culture Guardian",
     icon: "🏮",
     description: "Ủng hộ đặc sản, trải nghiệm văn hoá, góp phần gìn giữ di sản bản địa.",
+    descriptionEn: "Supported local specialties and cultural experiences, helping preserve local heritage.",
     gradient: "from-amber-500 via-orange-600 to-rose-900",
   },
   {
@@ -34,6 +38,7 @@ export const BADGE_TYPES = [
     label: "Community Donor",
     icon: "🤝",
     description: "Đóng góp cho Quỹ Cộng đồng hoặc tham gia quyết định của DAO.",
+    descriptionEn: "Contributed to the Community Treasury or took part in a DAO decision.",
     gradient: "from-violet-500 via-fuchsia-600 to-violet-900",
   },
 ] as const;
@@ -97,15 +102,16 @@ export function normalizeBadgeMetadata(raw: unknown, gateway?: string): BadgeMet
 }
 
 /** Exact decimal formatting of a token amount (no float rounding of large balances). */
-export function formatTokenAmount(value: bigint, decimals = 18, maxFractionDigits = 4): string {
+export function formatTokenAmount(value: bigint, decimals = 18, maxFractionDigits = 4, locale: Locale = "vi"): string {
   const negative = value < 0n;
   const abs = negative ? -value : value;
   const base = 10n ** BigInt(decimals);
   const whole = abs / base;
   let fraction = (abs % base).toString().padStart(decimals, "0").slice(0, maxFractionDigits);
   fraction = fraction.replace(/0+$/, "");
-  const wholeText = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${negative ? "-" : ""}${wholeText}${fraction ? `,${fraction}` : ""}`;
+  const [thousands, decimal] = locale === "en" ? [",", "."] : [".", ","];
+  const wholeText = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, thousands);
+  return `${negative ? "-" : ""}${wholeText}${fraction ? `${decimal}${fraction}` : ""}`;
 }
 
 /** Inclusive [from, to] block windows of at most `chunkSize` blocks, newest first. */
@@ -277,8 +283,8 @@ export function buildActivityFeed(events: ChainEvent[], user: string): ActivityI
   return items.sort((a, b) => (a.blockNumber === b.blockNumber ? 0 : a.blockNumber > b.blockNumber ? -1 : 1));
 }
 
-export function formatDateTime(unixSeconds: number): string {
-  return new Date(unixSeconds * 1000).toLocaleString("vi-VN", {
+export function formatDateTime(unixSeconds: number, locale: Locale = "vi"): string {
+  return new Date(unixSeconds * 1000).toLocaleString(intlLocale(locale), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

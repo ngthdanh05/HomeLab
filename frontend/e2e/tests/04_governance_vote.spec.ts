@@ -41,10 +41,10 @@ test.describe("04 · Community DAO", () => {
     await card.getByRole("link", { name: "Bỏ phiếu →" }).click();
     await expect(page).toHaveURL(/\/governance\/1$/);
 
-    await page.getByRole("button", { name: "Vote For 👍" }).click();
+    await page.getByRole("button", { name: "Đồng ý 👍" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Bỏ phiếu thành công!" })).toBeVisible();
     await expect(page.getByText(/Bạn đã vote rồi — Đồng ý/)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Vote For 👍" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Đồng ý 👍" })).toBeDisabled();
     await expect(page.getByText("👍 50 ECO (100%)")).toBeVisible();
 
     // Time travel past the deadline; reload so the page reads the new block time at once.

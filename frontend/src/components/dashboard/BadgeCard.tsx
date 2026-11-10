@@ -5,6 +5,7 @@ import Image from "next/image";
 import { remoteImageProps } from "@/lib/image-loader";
 import type { UserBadge } from "@/hooks/useUserBadges";
 import { formatDateTime, getBadgeType } from "@/lib/dashboard";
+import { useI18n } from "@/providers/LocaleProvider";
 
 interface BadgeCardProps {
   badge: UserBadge;
@@ -14,6 +15,7 @@ interface BadgeCardProps {
 
 /** An ImpactBadge NFT; click (or Enter/Space) flips it to show its details. */
 export function BadgeCard({ badge, explorerHref }: BadgeCardProps) {
+  const { locale, t } = useI18n();
   const [flipped, setFlipped] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const type = getBadgeType(badge.badgeType);
@@ -28,7 +30,7 @@ export function BadgeCard({ badge, explorerHref }: BadgeCardProps) {
         type="button"
         onClick={() => setFlipped((f) => !f)}
         aria-pressed={flipped}
-        aria-label={`${title}. ${flipped ? "Đang xem chi tiết, bấm để lật lại" : "Bấm để xem chi tiết"}`}
+        aria-label={`${title}. ${flipped ? t("Đang xem chi tiết, bấm để lật lại", "Showing details, click to flip back") : t("Bấm để xem chi tiết", "Click to see details")}`}
         className={`flip-card-inner h-full w-full rounded-2xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${flipped ? "is-flipped" : ""}`}
       >
         {/* Front */}
@@ -68,7 +70,7 @@ export function BadgeCard({ badge, explorerHref }: BadgeCardProps) {
               <h3 className="mt-1 line-clamp-1 font-semibold text-white">{title}</h3>
             </div>
             <p className="text-[11px] text-slate-400">
-              {badge.issuedAt > 0 ? `Mint ${formatDateTime(badge.issuedAt)}` : "Đang tải ngày mint…"}
+              {badge.issuedAt > 0 ? `${t("Mint", "Minted")} ${formatDateTime(badge.issuedAt, locale)}` : t("Đang tải ngày mint…", "Loading mint date…")}
             </p>
           </div>
         </div>
@@ -78,15 +80,15 @@ export function BadgeCard({ badge, explorerHref }: BadgeCardProps) {
           <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
             Proof of Action · #{badge.tokenId.toString()}
           </p>
-          <p className="text-sm leading-relaxed text-slate-200">{meta?.description ?? type.description}</p>
+          <p className="text-sm leading-relaxed text-slate-200">{meta?.description ?? t<string>(type.description, type.descriptionEn)}</p>
           <dl className="space-y-1.5 text-xs">
-            <Detail label="Loại badge" value={`${type.icon} ${type.label}`} />
-            <Detail label="Ngày mint" value={badge.issuedAt > 0 ? formatDateTime(badge.issuedAt) : undefined} />
-            <Detail label="Địa điểm" value={meta?.location} />
-            <Detail label="Hành động" value={meta?.action} />
-            <Detail label="Bù đắp carbon" value={meta?.carbonOffset} />
+            <Detail label={t("Loại badge", "Badge type")} value={`${type.icon} ${type.label}`} />
+            <Detail label={t("Ngày mint", "Mint date")} value={badge.issuedAt > 0 ? formatDateTime(badge.issuedAt, locale) : undefined} />
+            <Detail label={t("Địa điểm", "Location")} value={meta?.location} />
+            <Detail label={t("Hành động", "Action")} value={meta?.action} />
+            <Detail label={t("Bù đắp carbon", "Carbon offset")} value={meta?.carbonOffset} />
           </dl>
-          <span className="mt-auto text-[11px] text-slate-400">Bấm để lật lại</span>
+          <span className="mt-auto text-[11px] text-slate-400">{t("Bấm để lật lại", "Click to flip back")}</span>
         </div>
       </button>
       </div>
@@ -97,7 +99,7 @@ export function BadgeCard({ badge, explorerHref }: BadgeCardProps) {
           rel="noopener noreferrer"
           className="mt-1.5 block text-center text-[11px] text-slate-400 hover:text-emerald-400"
         >
-          Xem NFT trên Etherscan ↗
+          {t("Xem NFT trên Etherscan ↗", "View NFT on Etherscan ↗")}
         </a>
       )}
     </div>

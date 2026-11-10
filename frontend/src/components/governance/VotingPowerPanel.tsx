@@ -9,17 +9,19 @@ import { useContractTx } from "@/hooks/useContractTx";
 import { useVotingPower } from "@/hooks/useGovernance";
 import { formatTokenAmount } from "@/lib/dashboard";
 import { shortenAddress } from "@/lib/marketplace";
+import { useI18n } from "@/providers/LocaleProvider";
 
 /**
  * ECO balance and voting power of the connected wallet. ECO (ERC20Votes) only
  * counts after delegate(); this panel lets the user delegate to themselves.
  */
 export function VotingPowerPanel({ user }: { user: Address }) {
+  const { locale, t } = useI18n();
   const { addresses } = useActiveChain();
   const { balance, votes, delegatee, state, refetch } = useVotingPower(user);
   const { send, status, isBusy } = useContractTx({
-    pending: "Đang kích hoạt quyền biểu quyết",
-    success: "Đã kích hoạt quyền biểu quyết! 🗳️",
+    pending: t("Đang kích hoạt quyền biểu quyết", "Activating voting power"),
+    success: t("Đã kích hoạt quyền biểu quyết! 🗳️", "Voting power activated! 🗳️"),
   });
 
   const activate = async () => {
@@ -36,32 +38,42 @@ export function VotingPowerPanel({ user }: { user: Address }) {
 
   return (
     <section
-      aria-label="Quyền biểu quyết của bạn"
+      aria-label={t("Quyền biểu quyết của bạn", "Your voting power")}
       className={`flex flex-col gap-4 rounded-3xl border p-5 sm:flex-row sm:items-center sm:justify-between ${
         needsDelegate ? "border-amber-700/60 bg-amber-950/20" : "border-slate-800 bg-slate-900/60"
       }`}
     >
       <div className="flex flex-wrap gap-x-8 gap-y-3">
         <div>
-          <p className="text-xs text-slate-400">Số dư ECO</p>
+          <p className="text-xs text-slate-400">{t("Số dư ECO", "ECO balance")}</p>
           <p className="font-mono text-lg font-bold text-white">
-            {balance !== undefined ? formatTokenAmount(balance, 18, 2) : "—"}
+            {balance !== undefined ? formatTokenAmount(balance, 18, 2, locale) : "—"}
           </p>
         </div>
         <div>
-          <p className="text-xs text-slate-400">Quyền biểu quyết hiện tại</p>
+          <p className="text-xs text-slate-400">{t("Quyền biểu quyết hiện tại", "Current voting power")}</p>
           <p className="font-mono text-lg font-bold text-emerald-300">
-            {votes !== undefined ? formatTokenAmount(votes, 18, 2) : "—"}
+            {votes !== undefined ? formatTokenAmount(votes, 18, 2, locale) : "—"}
           </p>
         </div>
         <div className="max-w-md self-center text-xs text-slate-400">
-          {state === "no-tokens" && "Bạn chưa có ECO. Mua sản phẩm thủ công hoặc hoàn thành quest để nhận ECO."}
+          {state === "no-tokens" &&
+            t("Bạn chưa có ECO. Mua sản phẩm thủ công hoặc hoàn thành quest để nhận ECO.", "You have no ECO yet. Buy handicrafts or complete quests to earn ECO.")}
           {state === "not-delegated" &&
-            "ECO của bạn chưa được tính phiếu. Kích hoạt quyền vote (delegate cho chính mình) để bỏ phiếu cho các đề xuất được tạo sau đó."}
+            t(
+              "ECO của bạn chưa được tính phiếu. Kích hoạt quyền vote (delegate cho chính mình) để bỏ phiếu cho các đề xuất được tạo sau đó.",
+              "Your ECO does not count as votes yet. Activate voting power (delegate to yourself) to vote on proposals created after that.",
+            )}
           {state === "delegated-elsewhere" &&
-            `Bạn đang uỷ quyền biểu quyết cho ${shortenAddress(delegatee ?? "")}. Kích hoạt để tự bỏ phiếu.`}
+            t(
+              `Bạn đang uỷ quyền biểu quyết cho ${shortenAddress(delegatee ?? "")}. Kích hoạt để tự bỏ phiếu.`,
+              `You have delegated your votes to ${shortenAddress(delegatee ?? "")}. Activate to vote yourself.`,
+            )}
           {state === "active" &&
-            "✅ Quyền biểu quyết đã kích hoạt. Phiếu của mỗi đề xuất tính theo số ECO tại thời điểm đề xuất được tạo."}
+            t(
+              "✅ Quyền biểu quyết đã kích hoạt. Phiếu của mỗi đề xuất tính theo số ECO tại thời điểm đề xuất được tạo.",
+              "✅ Voting power is active. Votes on each proposal are based on your ECO when the proposal was created.",
+            )}
         </div>
       </div>
 
@@ -74,10 +86,10 @@ export function VotingPowerPanel({ user }: { user: Address }) {
         >
           {isBusy && <Spinner />}
           {status === "awaiting-wallet"
-            ? "Xác nhận trong ví…"
+            ? t("Xác nhận trong ví…", "Confirm in wallet…")
             : status === "pending"
-              ? "Đang chờ xác nhận…"
-              : "⚡ Kích hoạt quyền vote"}
+              ? t("Đang chờ xác nhận…", "Waiting for confirmation…")
+              : t("⚡ Kích hoạt quyền vote", "⚡ Activate voting power")}
         </button>
       )}
     </section>
