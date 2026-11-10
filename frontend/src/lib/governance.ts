@@ -13,24 +13,48 @@ export interface OnChainProposal {
   votesFor: bigint;
   votesAgainst: bigint;
   finalized: boolean;
+  /** Earliest time a passed proposal can be executed (deadline + timelock). */
+  executeAfter: bigint;
+  cancelled: boolean;
 }
+
+/** Governance.EXECUTION_GRACE_PERIOD (14 days). */
+export const EXECUTION_GRACE_SECONDS = 14n * 86_400n;
 
 /**
  * Lifecycle derived from on-chain fields (the contract only stores `finalized`):
+ * - pending     — voting delay: holders can still delegate, votes open after the snapshot block
  * - active      — voting open (now < deadline)
- * - passed      — voting over, quorum met, For > Against; anyone can execute → disbursement
+ * - queued      — voting over, quorum met, For > Against; waiting for the timelock
+ * - passed      — timelock over; anyone can execute → disbursement
+ * - expired     — passed but not executed within the grace period
+ * - cancelled   — cancelled by the guardian
  * - defeated    — voting over, quorum met, For ≤ Against; execute() records the rejection
  * - no-quorum   — voting over without quorum; execute() always reverts (QuorumNotReached)
  * - executed    — finalized with For > Against: Treasury has paid the recipient
  * - rejected    — finalized with For ≤ Against
  */
-export type ProposalStatus = "active" | "passed" | "defeated" | "no-quorum" | "executed" | "rejected";
+export type ProposalStatus =
+  | "pending"
+  | "active"
+  | "queued"
+  | "passed"
+  | "defeated"
+  | "no-quorum"
+  | "expired"
+  | "cancelled"
+  | "executed"
+  | "rejected";
 
 export const PROPOSAL_STATUS_INFO: Record<
   ProposalStatus,
   { label: string; icon: string; tone: "sky" | "emerald" | "amber" | "slate" | "red" }
 > = {
+  pending: { label: "Sắp mở bỏ phiếu", icon: "⏳", tone: "slate" },
   active: { label: "Đang bỏ phiếu", icon: "🗳️", tone: "sky" },
+  queued: { label: "Đã thông qua · đang chờ timelock", icon: "🔒", tone: "amber" },
+  expired: { label: "Quá hạn giải ngân", icon: "⌛", tone: "slate" },
+  cancelled: { label: "Đã bị huỷ", icon: "🚫", tone: "red" },
   passed: { label: "Đã thông qua · chờ giải ngân", icon: "✅", tone: "amber" },
   defeated: { label: "Không thông qua · chờ chốt", icon: "👎", tone: "red" },
   "no-quorum": { label: "Không đủ quorum", icon: "⏸️", tone: "slate" },
@@ -38,12 +62,19 @@ export const PROPOSAL_STATUS_INFO: Record<
   rejected: { label: "Đã bị từ chối", icon: "❌", tone: "red" },
 };
 
-export function getProposalStatus(p: OnChainProposal, nowSeconds: number): ProposalStatus {
+/** `blockNumber` detects the voting delay; without it a delayed proposal reads as active. */
+export function getProposalStatus(p: OnChainProposal, nowSeconds: number, blockNumber?: bigint): ProposalStatus {
+  if (p.cancelled) return "cancelled";
   const passedVote = p.votesFor > p.votesAgainst;
   if (p.finalized) return passedVote ? "executed" : "rejected";
-  if (BigInt(Math.floor(nowSeconds)) < p.deadline) return "active";
+  const now = BigInt(Math.floor(nowSeconds));
+  if (now < p.deadline) {
+    return blockNumber !== undefined && blockNumber <= p.snapshotBlock ? "pending" : "active";
+  }
   if (p.votesFor + p.votesAgainst < p.quorumVotes) return "no-quorum";
-  return passedVote ? "passed" : "defeated";
+  if (!passedVote) return "defeated";
+  if (now < p.executeAfter) return "queued";
+  return now > p.executeAfter + EXECUTION_GRACE_SECONDS ? "expired" : "passed";
 }
 
 /** execute() succeeds (barring treasury balance) only for these statuses. */

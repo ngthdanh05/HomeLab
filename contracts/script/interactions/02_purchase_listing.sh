@@ -58,6 +58,10 @@ TX_RECEIPT=$(cast send \
 
 TX_HASH=$(echo "$TX_RECEIPT" | grep -o '"transactionHash": *"[^"]*"' | head -1 | cut -d'"' -f4)
 echo "✅ purchaseListing thanh cong! TxHash: $TX_HASH"
+
+# Tiền nằm trong escrow tới khi người mua xác nhận đã nhận hàng.
+cast send --rpc-url "$RPC_URL" --private-key "$BUYER_PK" "$MARKETPLACE" "confirmDelivery(uint256)" "$LISTING_ID" > /dev/null
+echo "✅ confirmDelivery thanh cong: da giai ngan khoi escrow"
 echo "----------------------------------------------------------"
 
 # Số dư sau khi mua

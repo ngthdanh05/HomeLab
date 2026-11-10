@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getStructuredModel, SYSTEM_PROMPTS, withGeminiTimeout } from "@/lib/gemini";
+import { getStructuredModel, SYSTEM_PROMPTS, withGeminiBudget } from "@/lib/gemini";
 import {
   extractJsonObject,
   normalizeCultureGuide,
@@ -25,9 +25,8 @@ ${context ? `Ngữ cảnh bổ sung: """${context}"""` : ""}
 
 Chỉ trả về JSON. "meaning" là nghĩa tiếng Anh, có ít nhất 5 phần tử trong mỗi danh sách.`;
 
-    const result = await withGeminiTimeout(
-      getStructuredModel(SYSTEM_PROMPTS.cultureGuide).generateContent(prompt),
-    );
+    const model = getStructuredModel(SYSTEM_PROMPTS.cultureGuide);
+    const result = await withGeminiBudget(() => model.generateContent(prompt));
     const guide = normalizeCultureGuide(extractJsonObject(result.response.text()));
 
     return jsonResponse(guide);

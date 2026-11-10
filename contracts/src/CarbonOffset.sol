@@ -2,7 +2,9 @@
 pragma solidity ^0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ImpactBadge} from "./ImpactBadge.sol";
 
 interface ITreasuryDeposit {
@@ -10,28 +12,27 @@ interface ITreasuryDeposit {
 }
 
 /// @title CarbonOffset
-/// @notice Du khách tự bù đắp phát thải CO₂ của chuyến đi: trả phí theo kg CO₂,
-///         toàn bộ phí vào CommunityTreasury (quỹ bảo tồn do DAO quản lý) và nhận
-///         NFT ImpactBadge loại ZERO_CARBON làm bằng chứng (Proof of Action).
-/// @dev Contract này cần MINTER_ROLE trên ImpactBadge. Lượng phát thải tính bằng gram
-///      để giữ được phần lẻ (vd 12.5 kg = 12_500 g).
-contract CarbonOffset is Ownable, ReentrancyGuard {
+/// @notice Pays a CO2 offset fee into CommunityTreasury and mints a ZERO_CARBON ImpactBadge.
+/// @dev Needs MINTER_ROLE on ImpactBadge. Amounts are in grams.
+contract CarbonOffset is Ownable2Step, ReentrancyGuard, Pausable {
     ImpactBadge public immutable impactBadge;
     ITreasuryDeposit public immutable treasury;
 
-    /// @notice Giá bù đắp cho 1 kg CO₂ (wei).
+    /// @notice Price per kg of CO2, in wei.
     uint256 public pricePerKgWei;
 
-    /// @notice Giới hạn một lần offset: 100 tấn CO₂.
+    /// @notice Minimum per offset: 1 kg CO2.
+    uint256 public constant MIN_OFFSET_GRAMS = 1_000;
+    /// @notice Maximum per offset: 100 t CO2.
     uint256 public constant MAX_OFFSET_GRAMS = 100_000_000;
-    /// @notice Metadata (thường là data: URI JSON) tối đa 2 KB để hạn chế gas/spam.
+    /// @notice Metadata limit (2 KB) against gas spam.
     uint256 public constant MAX_METADATA_URI_LENGTH = 2048;
 
-    /// @notice Tổng gram CO₂ mỗi ví đã bù đắp.
+    /// @notice Total grams offset per wallet.
     mapping(address => uint256) public offsetGramsOf;
-    /// @notice Số lần bù đắp (cũng là số badge ZERO_CARBON nhận qua contract này) của mỗi ví.
+    /// @notice Number of offsets per wallet.
     mapping(address => uint256) public offsetCountOf;
-    /// @notice Tổng gram CO₂ đã bù đắp trên toàn nền tảng.
+    /// @notice Total grams offset on the platform.
     uint256 public totalOffsetGrams;
 
     event CarbonOffsetted(address indexed user, uint256 indexed tokenId, uint256 carbonGrams, uint256 paid);
@@ -53,21 +54,22 @@ contract CarbonOffset is Ownable, ReentrancyGuard {
         emit PricePerKgUpdated(pricePerKgWei_);
     }
 
-    /// @notice Phí (wei) để bù đắp `carbonGrams` gram CO₂, làm tròn lên.
+    /// @notice Fee in wei for `carbonGrams`, rounded up.
     function quoteOffset(uint256 carbonGrams) public view returns (uint256) {
         return (carbonGrams * pricePerKgWei + 999) / 1000;
     }
 
-    /// @notice Bù đắp `carbonGrams` gram CO₂ và nhận badge ZERO_CARBON.
-    /// @param metadataURI Metadata của badge; để trống sẽ dùng metadata mặc định của ImpactBadge.
-    /// @return tokenId Badge vừa mint. ETH gửi thừa được hoàn lại.
+    /// @notice Offsets `carbonGrams` and mints a ZERO_CARBON badge; excess ETH is refunded.
+    /// @param metadataURI Badge metadata; empty uses the ImpactBadge default.
+    /// @return tokenId The minted badge.
     function offset(uint256 carbonGrams, string calldata metadataURI)
         external
         payable
         nonReentrant
+        whenNotPaused
         returns (uint256 tokenId)
     {
-        if (carbonGrams == 0 || carbonGrams > MAX_OFFSET_GRAMS) revert InvalidCarbonAmount();
+        if (carbonGrams < MIN_OFFSET_GRAMS || carbonGrams > MAX_OFFSET_GRAMS) revert InvalidCarbonAmount();
         if (bytes(metadataURI).length > MAX_METADATA_URI_LENGTH) revert MetadataTooLong();
 
         uint256 required = quoteOffset(carbonGrams);
@@ -94,6 +96,15 @@ contract CarbonOffset is Ownable, ReentrancyGuard {
         }
 
         emit CarbonOffsetted(msg.sender, tokenId, carbonGrams, required);
+    }
+
+    /// @notice Emergency stop for new offsets.
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     function setPricePerKg(uint256 newPrice) external onlyOwner {

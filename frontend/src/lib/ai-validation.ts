@@ -19,7 +19,14 @@ export const LIMITS = {
   minDays: 1,
   maxDays: 14,
   listItems: 20,
+  historyMessages: 8,
+  historyMessageLength: 1000,
 } as const;
+
+export interface ChatHistoryMessage {
+  role: "user" | "model";
+  text: string;
+}
 
 export class ValidationError extends Error {}
 
@@ -67,9 +74,25 @@ function parseInterests(value: unknown): string[] {
     .slice(0, LIMITS.maxInterests);
 }
 
+/** Keeps recent well-formed turns; Gemini requires the history to start with the user. */
+function parseHistory(value: unknown): ChatHistoryMessage[] {
+  if (!Array.isArray(value)) return [];
+  const turns = value
+    .slice(-LIMITS.historyMessages)
+    .filter(isRecord)
+    .map((m) => ({
+      role: m.role === "model" ? ("model" as const) : ("user" as const),
+      text: sanitizeText(m.text, LIMITS.historyMessageLength),
+    }))
+    .filter((m) => m.text);
+  const firstUser = turns.findIndex((m) => m.role === "user");
+  return firstUser === -1 ? [] : turns.slice(firstUser);
+}
+
 export function parseChatRequest(body: unknown): {
   message: string;
   context: ChatContext;
+  history: ChatHistoryMessage[];
 } {
   if (!isRecord(body)) throw new ValidationError("Invalid request body");
 
@@ -81,6 +104,7 @@ export function parseChatRequest(body: unknown): {
 
   return {
     message,
+    history: parseHistory(body.history),
     context: {
       destination:
         sanitizeText(rawContext.destination, LIMITS.destinationLength) || undefined,

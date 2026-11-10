@@ -149,6 +149,28 @@ export default function ProposalDetailPage() {
               {formatDateTime(disbursement.timestamp)}.
             </p>
           )}
+          {proposal.status === "pending" && (
+            <p className="rounded-xl border border-slate-700 bg-slate-800/60 p-3 text-sm text-slate-300">
+              Bỏ phiếu mở sau block #{proposal.snapshotBlock.toString()}. Hãy kích hoạt quyền vote trước block này để
+              phiếu của bạn được tính.
+            </p>
+          )}
+          {proposal.status === "queued" && (
+            <p className="rounded-xl border border-amber-800/60 bg-amber-950/40 p-3 text-sm text-amber-200">
+              Đề xuất đã thông qua và đang trong thời gian chờ an toàn. Có thể giải ngân từ{" "}
+              {new Date(Number(proposal.executeAfter) * 1000).toLocaleString("vi-VN")}.
+            </p>
+          )}
+          {proposal.status === "expired" && (
+            <p className="rounded-xl border border-slate-700 bg-slate-800/60 p-3 text-sm text-slate-300">
+              Đề xuất đã quá thời hạn giải ngân nên không thể thực thi nữa.
+            </p>
+          )}
+          {proposal.status === "cancelled" && (
+            <p className="rounded-xl border border-red-800/60 bg-red-950/40 p-3 text-sm text-red-200">
+              Đề xuất đã bị guardian huỷ và không giải ngân.
+            </p>
+          )}
           {proposal.status === "no-quorum" && (
             <p className="rounded-xl border border-slate-700 bg-slate-800/60 p-3 text-sm text-slate-300">
               Đề xuất không đạt quorum nên không thể thực thi và không giải ngân.
@@ -189,7 +211,7 @@ export default function ProposalDetailPage() {
             </section>
           )}
 
-          {isConnected && user && isOpen && <VotingPowerPanel user={user} />}
+          {isConnected && user && (isOpen || proposal.status === "pending") && <VotingPowerPanel user={user} />}
 
           <section aria-labelledby="voters-heading" className="space-y-3 rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
             <h2 id="voters-heading" className="font-bold text-white">

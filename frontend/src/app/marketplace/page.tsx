@@ -7,13 +7,14 @@ import { SplitBreakdown } from "@/components/marketplace/SplitBreakdown";
 import { getChainName } from "@/config/contracts";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useListings } from "@/hooks/useMarketplace";
-import { PRODUCT_TYPES } from "@/lib/marketplace";
+import { LISTINGS_PAGE_SIZE, PRODUCT_TYPES } from "@/lib/marketplace";
 
 type Filter = "all" | "active" | (typeof PRODUCT_TYPES)[number]["value"];
 
 export default function MarketplacePage() {
   const { chainId } = useActiveChain();
-  const { listings, isLoading, error, refetch } = useListings();
+  const [limit, setLimit] = useState(LISTINGS_PAGE_SIZE);
+  const { listings, hasMore, isLoading, error, refetch } = useListings(limit);
   const [filter, setFilter] = useState<Filter>("active");
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -43,9 +44,9 @@ export default function MarketplacePage() {
               Mua trực tiếp từ nghệ nhân địa phương
             </h1>
             <p className="text-sm leading-relaxed text-slate-300 sm:text-base">
-              Không qua trung gian: mỗi giao dịch được Smart Contract chia ngay cho nghệ nhân,
-              Quỹ Cộng đồng bảo tồn và nền tảng. Người mua nhận NFT ImpactBadge làm bằng chứng
-              đóng góp.
+              Tiền được giữ an toàn trong escrow tới khi bạn xác nhận đã nhận hàng, rồi Smart
+              Contract tự chia cho nghệ nhân, Quỹ Cộng đồng bảo tồn và nền tảng. Người mua nhận NFT
+              ImpactBadge làm bằng chứng đóng góp.
             </p>
           </div>
           <button
@@ -111,6 +112,18 @@ export default function MarketplacePage() {
           {visible.map((listing) => (
             <ListingCard key={listing.id.toString()} listing={listing} />
           ))}
+        </div>
+      )}
+
+      {hasMore && !error && (
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => setLimit((n) => n + LISTINGS_PAGE_SIZE)}
+            className="rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-700"
+          >
+            Xem thêm sản phẩm
+          </button>
         </div>
       )}
 

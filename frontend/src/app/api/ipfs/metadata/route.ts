@@ -1,7 +1,13 @@
 import { NextRequest } from "next/server";
+import { createPublicClient, fallback, http, isAddress, type Address, type Hex } from "viem";
+import { anvil, sepolia } from "viem/chains";
+import { DEFAULT_CHAIN_ID, MarketplaceABI, getContractAddresses } from "@/config/contracts";
 import { getClientKey, jsonResponse } from "@/lib/api";
 import { rateLimit } from "@/lib/rate-limit";
+import { getSepoliaRpcUrls } from "@/lib/rpc";
 import {
+  buildUploadMessage,
+  isFreshUploadTimestamp,
   LISTING_LIMITS,
   detectImageType,
   validateListingText,
@@ -12,6 +18,31 @@ export const runtime = "nodejs";
 const ROUTE = "api/ipfs/metadata";
 const PINATA_API = "https://api.pinata.cloud/pinning";
 const RATE_LIMIT = { requests: 10, windowMs: 60_000 };
+
+const WALLET_RATE_LIMIT = { requests: 5, windowMs: 60_000 };
+
+const client = createPublicClient({
+  chain: DEFAULT_CHAIN_ID === anvil.id ? anvil : sepolia,
+  transport:
+    DEFAULT_CHAIN_ID === anvil.id
+      ? http("http://127.0.0.1:8545")
+      : fallback(getSepoliaRpcUrls(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL).map((url) => http(url, { timeout: 8_000 }))),
+});
+
+/** Only verified artisans can list, so only they may pin. Unreadable rules (older deployment, RPC outage) allow. */
+async function canList(address: Address): Promise<boolean> {
+  const market = { address: getContractAddresses(DEFAULT_CHAIN_ID).marketplace, abi: MarketplaceABI } as const;
+  try {
+    const [required, verified] = await Promise.all([
+      client.readContract({ ...market, functionName: "artisanVerificationRequired" }),
+      client.readContract({ ...market, functionName: "verifiedArtisan", args: [address] }),
+    ]);
+    return required !== true || verified === true;
+  } catch (error) {
+    console.error(`[${ROUTE}] cannot read artisan rules`, error);
+    return true;
+  }
+}
 
 async function pinata(path: string, body: BodyInit, jwt: string, json = false) {
   const response = await fetch(`${PINATA_API}/${path}`, {
@@ -57,6 +88,32 @@ export async function POST(request: NextRequest) {
     form = await request.formData();
   } catch {
     return jsonResponse({ error: "Dữ liệu gửi lên không hợp lệ." }, 400);
+  }
+
+  const address = String(form.get("address") ?? "");
+  const timestamp = Number(form.get("timestamp"));
+  const signature = String(form.get("signature") ?? "") as Hex;
+  if (!isAddress(address) || !isFreshUploadTimestamp(timestamp)) {
+    return jsonResponse({ error: "Chữ ký tải lên không hợp lệ hoặc đã hết hạn." }, 401);
+  }
+  let signed = false;
+  try {
+    signed = await client.verifyMessage({ address, message: buildUploadMessage(address, timestamp), signature });
+  } catch {
+    signed = false;
+  }
+  if (!signed) return jsonResponse({ error: "Chữ ký tải lên không hợp lệ hoặc đã hết hạn." }, 401);
+
+  const walletLimit = await rateLimit(`${ROUTE}:${address.toLowerCase()}`, WALLET_RATE_LIMIT.requests, WALLET_RATE_LIMIT.windowMs);
+  if (!walletLimit.allowed) {
+    return jsonResponse(
+      { error: "Ví này tải lên quá nhiều lần. Vui lòng thử lại sau ít phút." },
+      429,
+      { "Retry-After": String(walletLimit.retryAfterSeconds) },
+    );
+  }
+  if (!(await canList(address))) {
+    return jsonResponse({ error: "Ví của bạn chưa được xác thực là nghệ nhân." }, 403);
   }
 
   const name = String(form.get("name") ?? "").trim();

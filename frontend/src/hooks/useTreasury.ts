@@ -44,6 +44,14 @@ export function useTreasury() {
   });
   const length = typeof lengthQuery.data === "bigint" ? Number(lengthQuery.data) : undefined;
 
+  const totalDisbursedQuery = useReadContract({
+    address: treasury,
+    abi: CommunityTreasuryABI,
+    functionName: "totalDisbursed",
+    chainId,
+    query: { refetchInterval: REFRESH_MS, retry: false },
+  });
+
   const indexes = useMemo(() => {
     if (!length) return [];
     const out: number[] = [];
@@ -72,20 +80,24 @@ export function useTreasury() {
     });
   }, [recordsQuery.data, indexes]);
 
-  const totalDisbursed = disbursements.reduce((sum, d) => sum + d.amount, 0n);
+  // Treasury deployed before the on-chain counter: fall back to summing the fetched records.
+  const summed = length !== undefined && (length === 0 || disbursements.length > 0)
+    ? disbursements.reduce((sum, d) => sum + d.amount, 0n)
+    : undefined;
+  const totalDisbursed = typeof totalDisbursedQuery.data === "bigint" ? totalDisbursedQuery.data : summed;
 
   return {
     address: treasury,
     balance: typeof balance.data === "bigint" ? balance.data : undefined,
     disbursements,
     disbursementCount: length,
-    /** Sum of the fetched records (all of them unless there are > DISBURSEMENTS_LIMIT). */
-    totalDisbursed: length !== undefined && (length === 0 || disbursements.length > 0) ? totalDisbursed : undefined,
+    totalDisbursed,
     isLoading: balance.isLoading || lengthQuery.isLoading,
     isError: balance.isError || lengthQuery.isError || recordsQuery.isError,
     refetch: () => {
       void balance.refetch();
       void lengthQuery.refetch();
+      void totalDisbursedQuery.refetch();
       void recordsQuery.refetch();
     },
   };

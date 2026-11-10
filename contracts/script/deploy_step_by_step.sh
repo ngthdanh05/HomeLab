@@ -180,17 +180,17 @@ echo "🔑 EcoToken.grantRole(MINTER_ROLE → PaymentSplitter)..."
 cast send $CAST_FLAGS "$ECO_TOKEN" \
   "grantRole(bytes32,address)" "$MINTER_ROLE" "$PAYMENT_SPLITTER"
 
-echo "🔑 EcoToken.grantRole(MINTER_ROLE → Marketplace)..."
-cast send $CAST_FLAGS "$ECO_TOKEN" \
-  "grantRole(bytes32,address)" "$MINTER_ROLE" "$MARKETPLACE"
+echo "🔑 PaymentSplitter.setMarketplace(Marketplace)..."
+cast send $CAST_FLAGS "$PAYMENT_SPLITTER" \
+  "setMarketplace(address)" "$MARKETPLACE"
 
 echo "🔑 ImpactBadge.grantRole(MINTER_ROLE → Marketplace)..."
 cast send $CAST_FLAGS "$IMPACT_BADGE" \
   "grantRole(bytes32,address)" "$MINTER_ROLE" "$MARKETPLACE"
 
-echo "🔑 ImpactBadge.grantRole(MINTER_ROLE → PaymentSplitter)..."
+echo "🔑 ImpactBadge.revokeRole(MINTER_ROLE → Deployer)..."
 cast send $CAST_FLAGS "$IMPACT_BADGE" \
-  "grantRole(bytes32,address)" "$MINTER_ROLE" "$PAYMENT_SPLITTER"
+  "revokeRole(bytes32,address)" "$MINTER_ROLE" "$DEPLOYER"
 
 echo "🔑 CommunityTreasury.setGovernance(Governance)..."
 cast send $CAST_FLAGS "$TREASURY" \

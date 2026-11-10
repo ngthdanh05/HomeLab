@@ -28,6 +28,8 @@ export const PUBLIC_ROUTES = [
   { path: "/quests", priority: 0.7, changeFrequency: "weekly" },
   { path: "/governance", priority: 0.7, changeFrequency: "daily" },
   { path: "/dashboard", priority: 0.4, changeFrequency: "weekly" },
+  { path: "/terms", priority: 0.2, changeFrequency: "yearly" },
+  { path: "/privacy", priority: 0.2, changeFrequency: "yearly" },
 ] as const;
 
 /**

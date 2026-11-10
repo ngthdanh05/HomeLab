@@ -16,13 +16,13 @@ contract GovernanceTest is Test {
     address alice = makeAddr("alice"); // 400
     address bob = makeAddr("bob"); //     300
     address carol = makeAddr("carol"); // 200
-    address dave = makeAddr("dave"); //    50 (dưới threshold)
+    address dave = makeAddr("dave"); //    50 (below threshold)
     address eve = makeAddr("eve"); //      50
     address nobody = makeAddr("nobody"); //  0
     address payable recipient = payable(makeAddr("recipient"));
 
     uint256 constant THRESHOLD = 100 ether;
-    uint256 constant QUORUM_BPS = 1000; // 10% của 1000 = 100 ECO
+    uint256 constant QUORUM_BPS = 1000; // 10% of 1000 = 100 ECO
     uint256 constant PERIOD = 7 days;
     uint256 constant AMOUNT = 10 ether;
 
@@ -44,8 +44,13 @@ contract GovernanceTest is Test {
         treasury = new CommunityTreasury(owner);
         gov = new Governance(address(eco), payable(address(treasury)), THRESHOLD, QUORUM_BPS, PERIOD, owner);
 
-        vm.prank(owner);
+        vm.startPrank(owner);
         treasury.setGovernance(address(gov));
+        // Delay, timelock and cap are covered in SecurityRegressions.t.sol.
+        gov.setVotingDelayBlocks(0);
+        gov.setExecutionDelay(0);
+        gov.setMaxDisbursementBps(10_000);
+        vm.stopPrank();
         vm.deal(address(treasury), 100 ether);
 
         _mintAndDelegate(alice, 400 ether);
@@ -54,7 +59,7 @@ contract GovernanceTest is Test {
         _mintAndDelegate(dave, 50 ether);
         _mintAndDelegate(eve, 50 ether);
 
-        vm.roll(block.number + 10); // checkpoints nằm trong quá khứ
+        vm.roll(block.number + 10); // checkpoints in the past
     }
 
     function _mintAndDelegate(address who, uint256 amt) internal {
@@ -239,19 +244,19 @@ contract GovernanceTest is Test {
     function test_Vote_WeightUsesSnapshot_NotCurrentBalance() public {
         uint256 id = _propose();
 
-        // Sau khi propose: bob chuyển hết ECO cho dave + dave tự delegate
+        // After propose: bob sends all ECO to dave, who self-delegates
         vm.prank(bob);
         eco.transfer(dave, 300 ether);
         vm.prank(dave);
         eco.delegate(dave);
         vm.roll(block.number + 1);
 
-        // dave vote → weight chỉ là 50 (snapshot), không phải 350
+        // dave's weight is 50 (snapshot), not 350
         vm.prank(dave);
         gov.vote(id, true);
         assertEq(gov.getProposal(id).votesFor, 50 ether);
 
-        // bob đã chuyển token nhưng vẫn vote được với 300 (snapshot)
+        // bob still votes with 300 (snapshot)
         vm.prank(bob);
         gov.vote(id, true);
         assertEq(gov.getProposal(id).votesFor, 350 ether);
@@ -273,7 +278,7 @@ contract GovernanceTest is Test {
 
         vm.expectEmit(true, true, false, true);
         emit ProposalExecuted(id, recipient, AMOUNT);
-        gov.execute(id); // ai cũng gọi được
+        gov.execute(id); // anyone can call
 
         assertEq(recipient.balance, recipientBefore + AMOUNT);
         assertEq(address(treasury).balance, treasuryBefore - AMOUNT);
@@ -312,7 +317,7 @@ contract GovernanceTest is Test {
         vm.prank(dave);
         gov.vote(id, true); // 50
         vm.prank(eve);
-        gov.vote(id, true); // 50 → tổng 100 = quorum
+        gov.vote(id, true); // 50, total 100 = quorum
 
         vm.warp(block.timestamp + PERIOD);
         gov.execute(id);
@@ -359,7 +364,7 @@ contract GovernanceTest is Test {
 
         vm.expectRevert(Governance.AlreadyFinalized.selector);
         gov.execute(id);
-        assertEq(recipient.balance, AMOUNT); // không giải ngân lần 2
+        assertEq(recipient.balance, AMOUNT); // no second payout
     }
 
     function test_Execute_RevertWhenAlreadyRejected() public {
@@ -388,7 +393,7 @@ contract GovernanceTest is Test {
         vm.expectRevert(abi.encodeWithSelector(CommunityTreasury.InsufficientBalance.selector, 100 ether, 500 ether));
         gov.execute(id);
 
-        // revert → proposal chưa finalized, có thể execute lại sau khi treasury được nạp
+        // reverted: not finalized, can execute once funded
         assertFalse(gov.getProposal(id).finalized);
         vm.deal(address(treasury), 600 ether);
         gov.execute(id);
@@ -412,7 +417,7 @@ contract GovernanceTest is Test {
         uint256 id = _propose(); // quorum = 100 ECO
 
         vm.prank(owner);
-        gov.setQuorumBps(9000); // đổi sau khi tạo → không ảnh hưởng proposal cũ
+        gov.setQuorumBps(9000); // later change does not affect the existing proposal
 
         vm.prank(alice);
         gov.vote(id, true);

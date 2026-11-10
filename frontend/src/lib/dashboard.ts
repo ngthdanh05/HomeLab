@@ -17,7 +17,7 @@ export const BADGE_TYPES = [
     key: "ZERO_CARBON",
     label: "Zero Carbon",
     icon: "🌍",
-    description: "Lựa chọn sản phẩm địa phương / bù đắp phát thải carbon của chuyến đi.",
+    description: "Trả phí bù đắp phát thải carbon của chuyến đi vào Quỹ Cộng đồng.",
     gradient: "from-sky-500 via-cyan-600 to-sky-900",
   },
   {
@@ -25,7 +25,7 @@ export const BADGE_TYPES = [
     key: "CULTURE_GUARDIAN",
     label: "Culture Guardian",
     icon: "🏮",
-    description: "Tham gia trải nghiệm văn hoá, góp phần gìn giữ di sản bản địa.",
+    description: "Ủng hộ đặc sản, trải nghiệm văn hoá, góp phần gìn giữ di sản bản địa.",
     gradient: "from-amber-500 via-orange-600 to-rose-900",
   },
   {
@@ -33,12 +33,16 @@ export const BADGE_TYPES = [
     key: "COMMUNITY_DONOR",
     label: "Community Donor",
     icon: "🤝",
-    description: "Đóng góp vượt ngưỡng vào Quỹ Cộng đồng bảo tồn.",
+    description: "Đóng góp cho Quỹ Cộng đồng hoặc tham gia quyết định của DAO.",
     gradient: "from-violet-500 via-fuchsia-600 to-violet-900",
   },
 ] as const;
 
 export type BadgeTypeInfo = (typeof BADGE_TYPES)[number];
+
+/** ImpactBadge.DEFAULT_METADATA_URI */
+export const DEFAULT_BADGE_URI =
+  "data:application/json;base64,eyJuYW1lIjoiTXlIb21lTGFiIEltcGFjdCBCYWRnZSIsImRlc2NyaXB0aW9uIjoiUHJvb2Ygb2YgQWN0aW9uIGJhZGdlIGlzc3VlZCBieSBNeUhvbWVMYWIuIn0=";
 
 export function getBadgeType(value: number): BadgeTypeInfo {
   return BADGE_TYPES.find((t) => t.value === value) ?? BADGE_TYPES[0];
@@ -141,6 +145,7 @@ export type ActivityKind =
   | "listing"
   | "cancel"
   | "income"
+  | "refund"
   | "reward"
   | "offset"
   | "quest"
@@ -192,6 +197,7 @@ export function buildActivityFeed(events: ChainEvent[], user: string): ActivityI
     const reward = find("EcoRewarded", (e) => sameAddress(e.args.visitor, user));
     const offset = find("CarbonOffsetted", (e) => sameAddress(e.args.user, user));
     const quest = find("QuestCompleted", (e) => sameAddress(e.args.user, user));
+    const refunded = find("OrderRefunded", (e) => sameAddress(e.args.buyer, user));
     const badges = group
       .filter((e) => e.eventName === "BadgeMinted" && sameAddress(e.args.to, user))
       .map((e) => ({ tokenId: e.args.tokenId as bigint, badgeType: Number(e.args.badgeType) }));
@@ -211,7 +217,14 @@ export function buildActivityFeed(events: ChainEvent[], user: string): ActivityI
       badges,
     };
 
-    if (bought) {
+    if (refunded) {
+      items.push({
+        ...base,
+        kind: "refund",
+        listingId: refunded.args.listingId as bigint,
+        amountWei: refunded.args.price as bigint,
+      });
+    } else if (bought) {
       items.push({
         ...base,
         kind: "purchase",
@@ -224,7 +237,8 @@ export function buildActivityFeed(events: ChainEvent[], user: string): ActivityI
         ...base,
         kind: "sale",
         listingId: sold.args.listingId as bigint,
-        amountWei: split?.artisan ?? (sold.args.price as bigint),
+        // Purchase tx only funds the escrow; the seller's income shows up on release.
+        amountWei: split?.artisan,
         split,
       });
     } else if (created) {

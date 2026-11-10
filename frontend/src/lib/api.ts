@@ -3,8 +3,12 @@ import { isApiKeyError, isGeminiConfigured } from "./gemini";
 import { rateLimit } from "./rate-limit";
 import { ValidationError } from "./ai-validation";
 
-const MAX_BODY_BYTES = 16 * 1024;
+// Chat history can hold several Vietnamese messages (up to 3 bytes per character).
+const MAX_BODY_BYTES = 40 * 1024;
 const RATE_LIMIT = { requests: 20, windowMs: 60_000 };
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** All AI routes together; caps the Gemini bill when many IPs are used. */
+const DEFAULT_AI_DAILY_LIMIT = 5_000;
 
 export function jsonResponse(
   body: unknown,
@@ -19,7 +23,7 @@ export function jsonResponse(
 
 export function getClientKey(request: NextRequest, route: string): string {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const ip = forwarded || request.headers.get("x-real-ip") || request.ip || "unknown";
+  const ip = forwarded || request.headers.get("x-real-ip") || "unknown";
   return `${route}:${ip}`;
 }
 
@@ -40,6 +44,18 @@ export async function readAIRequest(
         { error: "Bạn gửi quá nhiều yêu cầu. Vui lòng thử lại sau ít phút." },
         429,
         { "Retry-After": String(limit.retryAfterSeconds) },
+      ),
+    };
+  }
+
+  const dailyLimit = Number(process.env.AI_DAILY_LIMIT) || DEFAULT_AI_DAILY_LIMIT;
+  const budget = await rateLimit("ai:global", dailyLimit, DAY_MS);
+  if (!budget.allowed) {
+    return {
+      error: jsonResponse(
+        { error: "Dịch vụ AI đã đạt giới hạn trong ngày. Vui lòng quay lại sau." },
+        503,
+        { "Retry-After": String(budget.retryAfterSeconds) },
       ),
     };
   }

@@ -7,9 +7,8 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ProductType, IImpactBadge} from "./interfaces/IMarketPlaceDeps.sol";
 
 /// @title ImpactBadge
-/// @notice ERC-721 NFT "Proof of Action": chứng nhận các hành động tạo tác động tích cực.
-/// @dev Chỉ địa chỉ có MINTER_ROLE mới được mint. Metadata nằm trên IPFS (ipfs://...).
-///      tokenId bắt đầu từ 1 và tăng dần.
+/// @notice ERC-721 Proof of Action badges.
+/// @dev Minting requires MINTER_ROLE. Token ids start at 1.
 contract ImpactBadge is ERC721, ERC721URIStorage, AccessControl, IImpactBadge {
     enum BadgeType {
         ECO_CHECKIN,
@@ -26,13 +25,14 @@ contract ImpactBadge is ERC721, ERC721URIStorage, AccessControl, IImpactBadge {
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
+    /// @dev Inline metadata, independent of IPFS gateways.
     string public constant DEFAULT_METADATA_URI =
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/badge.json";
+        "data:application/json;base64,eyJuYW1lIjoiTXlIb21lTGFiIEltcGFjdCBCYWRnZSIsImRlc2NyaXB0aW9uIjoiUHJvb2Ygb2YgQWN0aW9uIGJhZGdlIGlzc3VlZCBieSBNeUhvbWVMYWIuIn0=";
 
-    /// @dev tokenId kế tiếp sẽ được mint (bắt đầu từ 1).
+    /// @dev Next token id (starts at 1).
     uint256 private _nextTokenId = 1;
 
-    /// @notice tokenId => thông tin badge lưu on-chain
+    /// @notice On-chain badge data by token id.
     mapping(uint256 tokenId => Badge) private _badges;
 
     event BadgeMinted(address indexed to, uint256 tokenId, BadgeType badgeType);
@@ -40,30 +40,31 @@ contract ImpactBadge is ERC721, ERC721URIStorage, AccessControl, IImpactBadge {
     error EmptyMetadataURI();
     error BadgeDoesNotExist(uint256 tokenId);
 
-    /// @param admin Địa chỉ nhận DEFAULT_ADMIN_ROLE và MINTER_ROLE ban đầu.
+    /// @param admin Receives DEFAULT_ADMIN_ROLE and the initial MINTER_ROLE.
     constructor(address admin) ERC721("Impact Badge", "IMPACT") {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MINTER_ROLE, admin);
     }
 
-    /// @notice Mint một badge theo ProductType (chuẩn IImpactBadge cho Marketplace).
+    /// @notice Mints a badge for a purchase of `pType`.
     function mint(address to, ProductType pType) external override onlyRole(MINTER_ROLE) returns (uint256 tokenId) {
         BadgeType bType;
         if (pType == ProductType.Handicraft) {
             bType = BadgeType.ECO_CHECKIN;
         } else if (pType == ProductType.Food) {
-            bType = BadgeType.ZERO_CARBON;
+            // ZERO_CARBON is reserved for CarbonOffset.
+            bType = BadgeType.CULTURE_GUARDIAN;
         } else {
             bType = BadgeType.CULTURE_GUARDIAN;
         }
         return _mintBadgeInternal(to, bType, DEFAULT_METADATA_URI);
     }
 
-    /// @notice Mint một badge mới cho `to` kèm URI tùy chỉnh.
-    /// @param to Người nhận badge.
-    /// @param badgeType Loại badge.
-    /// @param metadataURI IPFS URI của metadata (vd: ipfs://Qm...).
-    /// @return tokenId ID của badge vừa mint.
+    /// @notice Mints a badge with a custom URI.
+    /// @param to Recipient.
+    /// @param badgeType Badge type.
+    /// @param metadataURI Metadata URI.
+    /// @return tokenId The minted badge.
     function mintBadge(address to, BadgeType badgeType, string calldata metadataURI)
         external
         onlyRole(MINTER_ROLE)
@@ -88,14 +89,14 @@ contract ImpactBadge is ERC721, ERC721URIStorage, AccessControl, IImpactBadge {
         emit BadgeMinted(to, tokenId, badgeType);
     }
 
-    /// @notice Lấy thông tin on-chain của một badge.
+    /// @notice On-chain data of a badge.
     function getBadge(uint256 tokenId) external view returns (Badge memory) {
         if (_ownerOf(tokenId) == address(0)) revert BadgeDoesNotExist(tokenId);
         return _badges[tokenId];
     }
 
-    /// @notice Danh sách tokenId mà `owner` đang sở hữu (theo thứ tự tăng dần).
-    /// @dev O(totalMinted) — dùng cho off-chain/view, không nên gọi trong giao dịch.
+    /// @notice Token ids held by `owner`, ascending.
+    /// @dev O(totalMinted); intended for off-chain calls.
     function getBadgesByOwner(address owner) external view returns (uint256[] memory tokenIds) {
         uint256 balance = balanceOf(owner);
         tokenIds = new uint256[](balance);
@@ -110,7 +111,7 @@ contract ImpactBadge is ERC721, ERC721URIStorage, AccessControl, IImpactBadge {
         }
     }
 
-    /// @notice Tổng số badge đã mint.
+    /// @notice Total badges minted.
     function totalMinted() external view returns (uint256) {
         return _nextTokenId - 1;
     }

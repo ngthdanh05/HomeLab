@@ -12,7 +12,7 @@ import {CarbonOffset} from "../src/CarbonOffset.sol";
 import {QuestRewards} from "../src/QuestRewards.sol";
 import {QuestSetup} from "../script/QuestSetup.sol";
 
-/// @dev Thử claim lại khi nhận badge thưởng (reentrancy).
+/// @dev Tries to re-claim on badge receipt.
 contract ReentrantQuester {
     QuestRewards internal quests;
     uint256 internal questId;
@@ -68,6 +68,7 @@ contract QuestRewardsTest is Test {
 
         vm.startPrank(owner);
         treasury.setGovernance(address(gov));
+        gov.setVotingDelayBlocks(0);
         badge.grantRole(badge.MINTER_ROLE(), address(carbon));
         badge.grantRole(badge.MINTER_ROLE(), address(quests));
         eco.grantRole(eco.MINTER_ROLE(), address(quests));
@@ -78,7 +79,7 @@ contract QuestRewardsTest is Test {
 
     // ───────────────────────── helpers ─────────────────────────
 
-    /// @dev Giống Marketplace mua hàng thủ công: mint badge ECO_CHECKIN cho `to`.
+    /// @dev Mimics a Marketplace handicraft purchase.
     function _craftBadge(address to) internal returns (uint256) {
         vm.prank(owner);
         return badge.mintBadge(to, ImpactBadge.BadgeType.ECO_CHECKIN, "ipfs://craft");
@@ -130,36 +131,42 @@ contract QuestRewardsTest is Test {
         vm.startPrank(owner);
         QuestRewards.Quest memory q = quests.getQuest(Q_HERITAGE);
 
-        // Quest tự khai báo không được thưởng ECO
+        // Self-attested quests cannot reward ECO
         q.ecoReward = 1 ether;
         vm.expectRevert(QuestRewards.InvalidQuest.selector);
         quests.addQuest(q);
 
-        // Thưởng đúng loại badge làm bằng chứng
+        // Rewarding the proof badge type
         q = quests.getQuest(Q_THREE_CRAFTS);
         q.rewardBadgeType = ImpactBadge.BadgeType.ECO_CHECKIN;
         vm.expectRevert(QuestRewards.InvalidQuest.selector);
         quests.addQuest(q);
 
-        // Thưởng badge ECO_CHECKIN (bằng chứng mua hàng) dù ở loại quest khác
+        // Rewarding ECO_CHECKIN on any quest type
         q = quests.getQuest(Q_DAO_VOTE);
         q.rewardBadgeType = ImpactBadge.BadgeType.ECO_CHECKIN;
         vm.expectRevert(QuestRewards.InvalidQuest.selector);
         quests.addQuest(q);
 
-        // Quest đếm số lượng với target = 0
+        // Non-purchase quests cannot reward ECO
+        q = quests.getQuest(Q_FIRST_OFFSET);
+        q.ecoReward = 1 ether;
+        vm.expectRevert(QuestRewards.InvalidQuest.selector);
+        quests.addQuest(q);
+
+        // Count-based quest with target 0
         q = quests.getQuest(Q_FIRST_OFFSET);
         q.target = 0;
         vm.expectRevert(QuestRewards.InvalidQuest.selector);
         quests.addQuest(q);
 
-        // Không có phần thưởng nào
+        // No reward at all
         q = quests.getQuest(Q_FIRST_OFFSET);
-        q.ecoReward = 0;
+        q.rewardsBadge = false;
         vm.expectRevert(QuestRewards.InvalidQuest.selector);
         quests.addQuest(q);
 
-        // Badge thưởng thiếu metadata
+        // Reward badge without metadata
         q = quests.getQuest(Q_DAO_VOTE);
         q.badgeURI = "";
         vm.expectRevert(QuestRewards.InvalidQuest.selector);
@@ -245,7 +252,7 @@ contract QuestRewardsTest is Test {
 
         assertFalse(quests.canClaim(alice, Q_FIRST_CRAFT, _ids(bobs)));
         assertFalse(quests.canClaim(alice, Q_FIRST_CRAFT, _ids(wrongType)));
-        assertFalse(quests.canClaim(alice, Q_FIRST_CRAFT, _ids(999))); // không tồn tại
+        assertFalse(quests.canClaim(alice, Q_FIRST_CRAFT, _ids(999))); // does not exist
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(QuestRewards.RequirementNotMet.selector, Q_FIRST_CRAFT));
         quests.claim(Q_FIRST_CRAFT, _ids(999));
@@ -256,9 +263,9 @@ contract QuestRewardsTest is Test {
         vm.prank(bob);
         badge.transferFrom(bob, alice, id);
 
-        // Alice đang giữ badge nhưng không phải người nhận gốc
+        // Alice holds the badge but is not its original recipient
         assertFalse(quests.canClaim(alice, Q_FIRST_CRAFT, _ids(id)));
-        // Bob vẫn chứng minh được việc mua hàng của mình
+        // Bob can still prove his purchase
         assertTrue(quests.canClaim(bob, Q_FIRST_CRAFT, _ids(id)));
     }
 
@@ -273,10 +280,11 @@ contract QuestRewardsTest is Test {
 
     function test_FirstOffset() public {
         assertFalse(quests.canClaim(alice, Q_FIRST_OFFSET, new uint256[](0)));
-        _offset(alice, 500);
+        _offset(alice, 1_000);
         vm.prank(alice);
-        quests.claim(Q_FIRST_OFFSET, new uint256[](0));
-        assertEq(eco.balanceOf(alice), 10 ether);
+        uint256 badgeId = quests.claim(Q_FIRST_OFFSET, new uint256[](0));
+        assertEq(eco.balanceOf(alice), 0);
+        assertEq(uint8(badge.getBadge(badgeId).badgeType), uint8(ImpactBadge.BadgeType.COMMUNITY_DONOR));
     }
 
     function test_ClimateHero_NeedsHundredKg() public {
@@ -285,10 +293,10 @@ contract QuestRewardsTest is Test {
         vm.expectRevert(abi.encodeWithSelector(QuestRewards.RequirementNotMet.selector, Q_CLIMATE_HERO));
         quests.claim(Q_CLIMATE_HERO, new uint256[](0));
 
-        _offset(alice, 40_000); // tổng 100 kg
+        _offset(alice, 40_000); // 100 kg in total
         vm.prank(alice);
         uint256 badgeId = quests.claim(Q_CLIMATE_HERO, new uint256[](0));
-        assertEq(eco.balanceOf(alice), 25 ether);
+        assertEq(eco.balanceOf(alice), 0);
         assertEq(uint8(badge.getBadge(badgeId).badgeType), uint8(ImpactBadge.BadgeType.ZERO_CARBON));
     }
 
@@ -310,12 +318,12 @@ contract QuestRewardsTest is Test {
         gov.vote(proposalId, true);
 
         assertTrue(quests.canClaim(bob, Q_DAO_VOTE, _ids(proposalId)));
-        assertFalse(quests.canClaim(bob, Q_DAO_VOTE, new uint256[](0))); // thiếu proposalId
-        assertFalse(quests.canClaim(alice, Q_DAO_VOTE, _ids(proposalId))); // alice chưa vote
+        assertFalse(quests.canClaim(bob, Q_DAO_VOTE, new uint256[](0))); // missing proposalId
+        assertFalse(quests.canClaim(alice, Q_DAO_VOTE, _ids(proposalId))); // alice has not voted
 
         vm.prank(bob);
         uint256 badgeId = quests.claim(Q_DAO_VOTE, _ids(proposalId));
-        assertEq(eco.balanceOf(bob), 120 ether);
+        assertEq(eco.balanceOf(bob), 100 ether);
         assertEq(uint8(badge.getBadge(badgeId).badgeType), uint8(ImpactBadge.BadgeType.COMMUNITY_DONOR));
     }
 
@@ -360,18 +368,18 @@ contract QuestRewardsTest is Test {
         bytes32 minterRole = eco.MINTER_ROLE();
         vm.prank(owner);
         eco.revokeRole(minterRole, address(quests));
-        _offset(alice, 1000);
+        uint256 proof = _craftBadge(alice);
         vm.prank(alice);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector, address(quests), minterRole
             )
         );
-        quests.claim(Q_FIRST_OFFSET, new uint256[](0));
+        quests.claim(Q_FIRST_CRAFT, _ids(proof));
     }
 
     function testFuzz_OffsetGramsThreshold(uint256 grams) public {
-        grams = bound(grams, 1, 200_000);
+        grams = bound(grams, 1_000, 200_000);
         _offset(alice, grams);
         assertEq(quests.canClaim(alice, Q_CLIMATE_HERO, new uint256[](0)), grams >= 100_000);
     }

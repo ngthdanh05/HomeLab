@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
 
-type Params = { params: { proposalId: string } };
+type Params = { params: Promise<{ proposalId: string }> };
 
 // The page itself is a client component (reads the proposal on-chain), so the
 // per-proposal canonical URL and title live here.
-export function generateMetadata({ params }: Params): Metadata {
+export async function generateMetadata(props: Params): Promise<Metadata> {
+  const params = await props.params;
   const id = /^\d{1,30}$/.test(params.proposalId) ? params.proposalId : "";
   return pageMetadata({
     title: id ? `Đề xuất DAO #${id}` : "Đề xuất DAO",

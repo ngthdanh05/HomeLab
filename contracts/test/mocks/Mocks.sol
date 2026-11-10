@@ -6,7 +6,7 @@ import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20P
 import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
 
-/// @dev Mock ECO Token (ERC20Votes). Thay bằng ECOToken thật nếu nó đã là ERC20Votes.
+/// @dev Mock ERC20Votes token.
 contract MockECO is ERC20, ERC20Permit, ERC20Votes {
     constructor() ERC20("ECO", "ECO") ERC20Permit("ECO") {}
 
@@ -23,8 +23,7 @@ contract MockECO is ERC20, ERC20Permit, ERC20Votes {
     }
 }
 
-/// @dev Mock PaymentSplitter: nhận ETH rồi chuyển toàn bộ cho `to`.
-///      Thay bằng PaymentSplitter thật của dự án trong integration test.
+/// @dev Mock PaymentSplitter: forwards all ETH to `to`.
 contract MockPaymentSplitter {
     receive() external payable {}
 
@@ -34,7 +33,7 @@ contract MockPaymentSplitter {
     }
 }
 
-/// @dev Recipient luôn revert khi nhận ETH.
+/// @dev Recipient that always reverts on ETH.
 contract RejectingReceiver {
     receive() external payable {
         revert("no thanks");

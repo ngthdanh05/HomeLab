@@ -3,13 +3,17 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
   DEFAULT_SHARES,
+  ORDER_STATUS,
+  buildUploadMessage,
   decodeDataJsonUri,
   detectImageType,
   encodeDataJsonUri,
   formatBps,
+  getOrderActions,
   getProductType,
   getRecentListingIds,
   getTxErrorMessage,
+  isFreshUploadTimestamp,
   normalizeMetadata,
   resolveImageUri,
   resolveUri,
@@ -19,6 +23,48 @@ import {
 } from "../src/lib/marketplace.ts";
 
 const GATEWAY = "https://gw.test/ipfs/";
+
+describe("escrow order actions", () => {
+  const BUYER = "0x1111111111111111111111111111111111111111";
+  const SELLER = "0x2222222222222222222222222222222222222222";
+  const ARBITER = "0x3333333333333333333333333333333333333333";
+  const order = (status) => ({ buyer: BUYER, paidAt: 1_000n, disputedAt: 0n, status, price: 1n });
+  const actions = (status, user, now = 1_500) =>
+    getOrderActions({ order: order(status), seller: SELLER, arbiter: ARBITER, user, now, escrowPeriod: 1_000n });
+
+  test("buyer confirms or disputes a paid order", () => {
+    const a = actions(ORDER_STATUS.paid, BUYER);
+    assert.equal(a.canConfirm, true);
+    assert.equal(a.canDispute, true);
+    assert.equal(a.canRefund, false);
+    assert.equal(a.canRelease, false);
+  });
+  test("anyone can release after the escrow period", () => {
+    assert.equal(actions(ORDER_STATUS.paid, undefined, 2_000).canRelease, true);
+  });
+  test("seller refunds paid and disputed orders only", () => {
+    assert.equal(actions(ORDER_STATUS.paid, SELLER).canRefund, true);
+    assert.equal(actions(ORDER_STATUS.disputed, SELLER).canRefund, true);
+    assert.equal(actions(ORDER_STATUS.released, SELLER).canRefund, false);
+  });
+  test("only the arbiter resolves a dispute", () => {
+    assert.equal(actions(ORDER_STATUS.disputed, ARBITER).canResolve, true);
+    assert.equal(actions(ORDER_STATUS.disputed, BUYER).canResolve, false);
+  });
+});
+
+describe("upload signature", () => {
+  test("rejects old, future and malformed timestamps", () => {
+    assert.equal(isFreshUploadTimestamp(1_000_000, 1_000_000 + 60_000), true);
+    assert.equal(isFreshUploadTimestamp(1_000_000, 1_000_000 + 6 * 60_000), false);
+    assert.equal(isFreshUploadTimestamp(1_000_000 + 6 * 60_000, 1_000_000), false);
+    assert.equal(isFreshUploadTimestamp(Number.NaN), false);
+  });
+  test("message binds the wallet and the time", () => {
+    assert.notEqual(buildUploadMessage("0xAB", 1), buildUploadMessage("0xAB", 2));
+    assert.equal(buildUploadMessage("0xAB", 1), buildUploadMessage("0xab", 1));
+  });
+});
 
 describe("getRecentListingIds", () => {
   test("returns newest IDs first, stopping at 1", () => {

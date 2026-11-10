@@ -1,4 +1,4 @@
-import { isAddress, type Abi, type Address } from "viem";
+import type { Abi, Address } from "viem";
 import { anvil, sepolia } from "wagmi/chains";
 import EcoTokenJson from "../abis/EcoToken.json";
 import ImpactBadgeJson from "../abis/ImpactBadge.json";
@@ -23,12 +23,12 @@ export type ContractAddresses = Readonly<Record<ContractName, Address>>;
 // the deterministic addresses produced by `make deploy-local` from account #0.
 export const DEPLOYMENTS = {
   [sepolia.id]: {
-    ecoToken: "0xacB3267dBBeA4924cEE9e5631618DB8342f39a24",
-    impactBadge: "0xba5404682DB9feb35fBB1cbC18b97f1A59b7a9C9",
-    communityTreasury: "0x10E83c02C8667485EDd78ce57E0f6553D33296e6",
-    governance: "0x1e0404A2EDC3BB2139A82d2e8372631A11697998",
-    paymentSplitter: "0x5d574343A7e162Be9f3eA9Da676169d7Df874a66",
-    marketplace: "0x92e554039D39014A5Fc55b31B1308f9DFe1098D5",
+    ecoToken: "0xfB72749A4e02e51E9350249AAC58a78a54b972Ed",
+    impactBadge: "0xf36F3835343A56832D2f7401f7434ECFf9186568",
+    communityTreasury: "0xA0627F599c7937518F16327FD05f906326178e16",
+    governance: "0x43c32746284cE1294Df74128eE53adbB8e464Ebf",
+    paymentSplitter: "0xD227c3535d07E2c91B254138e05cB30C7fc3534D",
+    marketplace: "0xa1BFdb605e28524147dac98925b15809a4b2aa17",
   },
   [anvil.id]: {
     ecoToken: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
@@ -58,11 +58,12 @@ export const LOGS_FROM_BLOCK: Record<
   }
 > = {
   [sepolia.id]: {
-    impactBadge: 12_032_000n,
-    paymentSplitter: 12_067_900n,
-    marketplace: 12_067_900n,
-    carbonOffset: 12_068_939n,
-    questRewards: 12_069_700n,
+    impactBadge: 12_103_904n,
+    paymentSplitter: 12_103_904n,
+    marketplace: 12_103_904n,
+    carbonOffset: 12_103_904n,
+    governance: 12_103_904n,
+    questRewards: 12_103_904n,
   },
   [anvil.id]: {
     impactBadge: 0n,
@@ -89,15 +90,11 @@ const CHAIN_NAMES: Record<number, string> = {
 };
 
 /**
- * CarbonOffset (Task 4.3) is deployed separately from the six core contracts
- * (`make deploy-carbon-sepolia`), so it is optional per chain.
- * NEXT_PUBLIC_SEPOLIA_CARBON_OFFSET_ADDRESS overrides the Sepolia default.
+ * CarbonOffset is listed apart from the six core contracts, so it is optional per chain.
  */
-const SEPOLIA_CARBON_OFFSET: Address = "0x4d51Ea6E0ACeBeBa0b96a72655B10457d769DFF5";
-const sepoliaCarbonOffset = process.env.NEXT_PUBLIC_SEPOLIA_CARBON_OFFSET_ADDRESS?.trim();
+const SEPOLIA_CARBON_OFFSET: Address = "0x181292372a2f4481543a80243F647241e731f956";
 export const CARBON_OFFSET_ADDRESSES: Readonly<Partial<Record<SupportedChainId, Address>>> = {
-  [sepolia.id]:
-    sepoliaCarbonOffset && isAddress(sepoliaCarbonOffset) ? sepoliaCarbonOffset : SEPOLIA_CARBON_OFFSET,
+  [sepolia.id]: SEPOLIA_CARBON_OFFSET,
   // Nonce 6 of Anvil account #0 in `make deploy-local`.
   [anvil.id]: "0x0165878A594ca255338adfa4d48449f69242Eb8F",
 };
@@ -107,14 +104,11 @@ export function getCarbonOffsetAddress(chainId?: number): Address | undefined {
 }
 
 /**
- * QuestRewards (Task 4.4), deployed separately (`make deploy-quests-sepolia`).
- * NEXT_PUBLIC_SEPOLIA_QUEST_REWARDS_ADDRESS overrides the Sepolia default.
+ * QuestRewards, optional per chain like CarbonOffset.
  */
-const SEPOLIA_QUEST_REWARDS: Address = "0x562845c0bd4F75e1d90207357A57f8aFA8f06F05";
-const sepoliaQuestRewards = process.env.NEXT_PUBLIC_SEPOLIA_QUEST_REWARDS_ADDRESS?.trim();
+const SEPOLIA_QUEST_REWARDS: Address = "0xc55095db8b878dee92168865Dc2C7EEB31C222b3";
 export const QUEST_REWARDS_ADDRESSES: Readonly<Partial<Record<SupportedChainId, Address>>> = {
-  [sepolia.id]:
-    sepoliaQuestRewards && isAddress(sepoliaQuestRewards) ? sepoliaQuestRewards : SEPOLIA_QUEST_REWARDS,
+  [sepolia.id]: SEPOLIA_QUEST_REWARDS,
   // Nonce 7 of Anvil account #0 in `make deploy-local`.
   [anvil.id]: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
 };

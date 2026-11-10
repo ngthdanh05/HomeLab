@@ -22,6 +22,53 @@ export interface Listing {
   isActive: boolean;
 }
 
+/** Mirrors `enum OrderStatus` in contracts/src/Marketplace.sol. */
+export const ORDER_STATUS = { none: 0, paid: 1, disputed: 2, released: 3, refunded: 4 } as const;
+
+export interface Order {
+  buyer: `0x${string}`;
+  paidAt: bigint;
+  disputedAt: bigint;
+  status: number;
+  price: bigint;
+}
+
+/** What `user` can do with an order right now (the contract enforces the same rules). */
+export function getOrderActions(input: {
+  order: Order;
+  seller: string;
+  arbiter: string | undefined;
+  user: string | undefined;
+  now: number;
+  escrowPeriod: bigint | undefined;
+}) {
+  const { order, seller, arbiter, now, escrowPeriod } = input;
+  const user = input.user?.toLowerCase();
+  const isBuyer = Boolean(user) && user === order.buyer.toLowerCase();
+  const isSeller = Boolean(user) && user === seller.toLowerCase();
+  const isArbiter = Boolean(user) && user === arbiter?.toLowerCase();
+  const paid = order.status === ORDER_STATUS.paid;
+  const disputed = order.status === ORDER_STATUS.disputed;
+  return {
+    canConfirm: paid && isBuyer,
+    canDispute: paid && isBuyer,
+    canRefund: (paid || disputed) && isSeller,
+    canRelease: paid && escrowPeriod !== undefined && BigInt(Math.floor(now)) >= order.paidAt + escrowPeriod,
+    canResolve: disputed && isArbiter,
+  };
+}
+
+/** Message the seller signs to upload listing data to IPFS. */
+export function buildUploadMessage(address: string, timestampMs: number): string {
+  return `MyHomeLab: tải dữ liệu sản phẩm lên IPFS\nVí: ${address.toLowerCase()}\nThời điểm: ${timestampMs}`;
+}
+
+export const UPLOAD_SIGNATURE_MAX_AGE_MS = 5 * 60 * 1000;
+
+export function isFreshUploadTimestamp(timestampMs: number, now = Date.now()): boolean {
+  return Number.isSafeInteger(timestampMs) && Math.abs(now - timestampMs) <= UPLOAD_SIGNATURE_MAX_AGE_MS;
+}
+
 export interface ListingMetadata {
   name: string;
   description: string;
@@ -116,6 +163,9 @@ export function decodeDataJsonUri(uri: string): unknown {
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 
+/** Metadata comes from seller-chosen URIs, so an oversized response is refused. */
+const MAX_METADATA_CHARS = 256 * 1024;
+
 /** Fetches JSON metadata from an inline data: URI, ipfs:// or https:// URI. */
 export async function fetchJsonUri(
   uri: string,
@@ -127,7 +177,9 @@ export async function fetchJsonUri(
   if (!url) return null;
   const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   if (!response.ok) throw new Error(`Metadata request failed: ${response.status}`);
-  return response.json();
+  const text = await response.text();
+  if (text.length > MAX_METADATA_CHARS) throw new Error("Metadata is too large");
+  return JSON.parse(text);
 }
 
 export function encodeDataJsonUri(value: unknown): string {
@@ -175,10 +227,20 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   InsufficientPayment: "Số ETH gửi không đủ để thanh toán.",
   NotSellerOrOwner: "Chỉ người bán mới có thể huỷ sản phẩm này.",
   ZeroPrice: "Giá phải lớn hơn 0.",
+  PriceBelowMinimum: "Giá thấp hơn mức tối thiểu của Marketplace.",
+  ArtisanNotVerified: "Ví của bạn chưa được xác thực là nghệ nhân nên chưa thể đăng bán.",
+  SelfPurchase: "Bạn không thể mua sản phẩm của chính mình.",
+  InvalidOrderStatus: "Đơn hàng không ở trạng thái cho phép thao tác này.",
+  NotBuyer: "Chỉ người mua mới thực hiện được thao tác này.",
+  NotSeller: "Chỉ người bán mới hoàn tiền được đơn hàng này.",
+  NotArbiter: "Chỉ trọng tài mới xử lý được tranh chấp.",
+  EscrowNotExpired: "Chưa hết thời hạn escrow của đơn hàng.",
+  DisputeNotStale: "Tranh chấp chưa quá hạn xử lý.",
+  EnforcedPause: "Nền tảng đang tạm dừng tính năng này để bảo trì an toàn.",
   EmptyMetadataURI: "Thiếu thông tin sản phẩm (metadata).",
   RefundFailed: "Không hoàn lại được tiền thừa cho ví của bạn.",
   // CarbonOffset
-  InvalidCarbonAmount: "Lượng CO₂ bù đắp không hợp lệ (tối đa 100 tấn mỗi lần).",
+  InvalidCarbonAmount: "Lượng CO₂ bù đắp không hợp lệ (từ 1 kg đến 100 tấn mỗi lần).",
   MetadataTooLong: "Thông tin badge quá dài.",
   AlreadyCompleted: "Bạn đã nhận thưởng quest này rồi.",
   RequirementNotMet: "Chưa đạt điều kiện của quest (dữ liệu on-chain có thể chưa cập nhật, hãy thử lại sau ít giây).",
@@ -190,6 +252,11 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   NoVotingPower:
     "Ví không có quyền biểu quyết tại thời điểm tạo đề xuất (cần nắm ECO và kích hoạt quyền vote trước khi đề xuất được tạo).",
   VotingClosed: "Đề xuất đã hết hạn bỏ phiếu.",
+  VotingNotStarted: "Đề xuất chưa mở bỏ phiếu, vui lòng quay lại sau.",
+  TimelockNotElapsed: "Đề xuất đang trong thời gian chờ an toàn, chưa thể giải ngân.",
+  ProposalExpired: "Đề xuất đã quá thời hạn giải ngân.",
+  ExceedsDisbursementCap: "Số ETH yêu cầu vượt trần giải ngân cho mỗi đề xuất so với số dư Quỹ hiện tại.",
+  NotGuardian: "Chỉ guardian mới được huỷ đề xuất.",
   VotingNotEnded: "Chưa hết thời gian bỏ phiếu, chưa thể thực thi đề xuất.",
   QuorumNotReached: "Đề xuất không đạt quorum (không đủ số phiếu tối thiểu) nên không thể thực thi.",
   AlreadyFinalized: "Đề xuất đã được thực thi hoặc chốt kết quả rồi.",

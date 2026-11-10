@@ -30,6 +30,8 @@ export const CARBON_LIMITS = {
   maxKmPerLeg: 20_000,
   maxPassengers: 9,
   descriptionLength: 1000,
+  /** Matches CarbonOffset.MIN_OFFSET_GRAMS (1 kg). */
+  minOffsetKg: 1,
   /** Matches CarbonOffset.MAX_OFFSET_GRAMS (100 tonnes). */
   maxOffsetKg: 100_000,
 } as const;

@@ -7,9 +7,11 @@ import { MarketplaceABI } from "@/config/contracts";
 import {
   fetchJsonUri,
   getRecentListingIds,
+  LISTINGS_PAGE_SIZE,
   normalizeMetadata,
   type Listing,
   type ListingMetadata,
+  type Order,
 } from "@/lib/marketplace";
 import { useActiveChain } from "./useActiveChain";
 
@@ -20,7 +22,7 @@ import { useActiveChain } from "./useActiveChain";
 const LISTINGS_REFRESH_MS = 30_000;
 
 /** Newest listings first. `nextListingId` drives which IDs are fetched. */
-export function useListings() {
+export function useListings(limit = LISTINGS_PAGE_SIZE) {
   const { chainId, addresses } = useActiveChain();
 
   const nextId = useReadContract({
@@ -32,8 +34,8 @@ export function useListings() {
   });
 
   const ids = useMemo(
-    () => (typeof nextId.data === "bigint" ? getRecentListingIds(nextId.data) : []),
-    [nextId.data],
+    () => (typeof nextId.data === "bigint" ? getRecentListingIds(nextId.data, limit) : []),
+    [nextId.data, limit],
   );
 
   const listingsQuery = useReadContracts({
@@ -57,6 +59,7 @@ export function useListings() {
 
   return {
     listings,
+    hasMore: typeof nextId.data === "bigint" && BigInt(ids.length) < nextId.data - 1n,
     isLoading: nextId.isLoading || (ids.length > 0 && listingsQuery.isLoading),
     error: nextId.error ?? listingsQuery.error,
     refetch: async () => {
@@ -86,6 +89,27 @@ export function useListing(listingId: bigint | null) {
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
+  };
+}
+
+/** Escrow state of a sold listing plus the rules needed to show its actions. */
+export function useOrder(listingId: bigint) {
+  const { chainId, addresses } = useActiveChain();
+  const market = { address: addresses.marketplace, abi: MarketplaceABI, chainId } as const;
+  const query = useReadContracts({
+    contracts: [
+      { ...market, functionName: "getOrder", args: [listingId] },
+      { ...market, functionName: "escrowPeriod" },
+      { ...market, functionName: "arbiter" },
+    ],
+    query: { refetchInterval: LISTINGS_REFRESH_MS },
+  });
+  const [order, escrowPeriod, arbiter] = query.data ?? [];
+  return {
+    // Reads fail on a Marketplace deployed before escrow: the panel then stays hidden.
+    order: order?.status === "success" ? (order.result as Order) : undefined,
+    escrowPeriod: escrowPeriod?.status === "success" ? (escrowPeriod.result as bigint) : undefined,
+    arbiter: arbiter?.status === "success" ? (arbiter.result as `0x${string}`) : undefined,
   };
 }
 

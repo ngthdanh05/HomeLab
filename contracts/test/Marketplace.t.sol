@@ -7,7 +7,7 @@ import {Marketplace} from "../src/Marketplace.sol";
 import {ProductType, IPaymentSplitter, IImpactBadge} from "../src/interfaces/IMarketPlaceDeps.sol";
 
 // ───────────────────────────── Mocks ─────────────────────────────
-// Thay bằng PaymentSplitter / ImpactBadge thật khi đã có (xem ghi chú cuối file).
+// Mock dependencies; real contracts are covered by the integration tests.
 
 contract MockPaymentSplitter is IPaymentSplitter {
     address public immutable treasury;
@@ -40,7 +40,7 @@ contract MockImpactBadge is IImpactBadge {
     }
 }
 
-/// Buyer là contract không có receive() → không nhận được tiền hoàn.
+/// Buyer contract without receive(), so refunds fail.
 contract NoReceiveBuyer {
     function buy(Marketplace m, uint256 id) external payable {
         m.purchaseListing{value: msg.value}(id);
@@ -73,6 +73,11 @@ contract MarketplaceTest is Test {
         splitter = new MockPaymentSplitter(treasury);
         badge = new MockImpactBadge();
         market = new Marketplace(address(splitter), address(badge), owner);
+        // Verification and minimum price are covered in SecurityRegressions.t.sol.
+        vm.startPrank(owner);
+        market.setArtisanVerificationRequired(false);
+        market.setMinListingPrice(1);
+        vm.stopPrank();
         vm.deal(buyer, 100 ether);
     }
 
@@ -148,6 +153,10 @@ contract MarketplaceTest is Test {
         emit ListingPurchased(id, buyer, seller, PRICE);
         vm.prank(buyer);
         market.purchaseListing{value: PRICE}(id);
+        assertEq(address(market).balance, PRICE, "funds held in escrow");
+        assertEq(seller.balance, sellerBefore, "seller unpaid before confirmation");
+        vm.prank(buyer);
+        market.confirmDelivery(id);
 
         assertEq(seller.balance - sellerBefore, 0.9 ether);
         assertEq(treasury.balance - treasuryBefore, 0.1 ether);
@@ -161,6 +170,8 @@ contract MarketplaceTest is Test {
         uint256 id = _create();
         vm.prank(buyer);
         market.purchaseListing{value: PRICE}(id);
+        vm.prank(buyer);
+        market.confirmDelivery(id);
         assertEq(splitter.lastBuyer(), buyer, "ECO reward must target the buyer, not the market");
     }
 
@@ -170,6 +181,9 @@ contract MarketplaceTest is Test {
 
         vm.prank(buyer);
         market.purchaseListing{value: PRICE}(id);
+        assertEq(badge.balanceOf(buyer), 0, "no badge before confirmation");
+        vm.prank(buyer);
+        market.confirmDelivery(id);
 
         assertEq(badge.balanceOf(buyer), 1);
         assertEq(badge.totalMinted(), 1);
@@ -184,7 +198,7 @@ contract MarketplaceTest is Test {
         market.purchaseListing{value: 3 ether}(id);
 
         assertEq(buyerBefore - buyer.balance, PRICE, "only price is charged");
-        assertEq(address(market).balance, 0);
+        assertEq(address(market).balance, PRICE, "only the price stays in escrow");
     }
 
     function test_purchase_revertsIfRefundFails() public {
@@ -195,7 +209,7 @@ contract MarketplaceTest is Test {
         vm.expectRevert(Marketplace.RefundFailed.selector);
         b.buy{value: 2 ether}(market, id);
 
-        // revert toàn bộ → listing vẫn active, không mint badge
+        // full revert: listing stays active, no badge
         assertTrue(market.getListing(id).isActive);
         assertEq(badge.totalMinted(), 0);
     }
@@ -249,6 +263,8 @@ contract MarketplaceTest is Test {
         vm.deal(buyer, uint256(price) + extra);
         vm.prank(buyer);
         market.purchaseListing{value: uint256(price) + extra}(id);
+        vm.prank(buyer);
+        market.confirmDelivery(id);
 
         assertEq((seller.balance - sellerBefore) + (treasury.balance - treasuryBefore), price);
         assertEq(address(market).balance, 0);
@@ -306,6 +322,3 @@ contract MarketplaceTest is Test {
     }
 }
 
-// Ghi chú tích hợp: khi PaymentSplitter/ImpactBadge thật đã sẵn sàng, thêm một
-// test integration (deploy contract thật, grant MINTER_ROLE cho Marketplace,
-// kiểm tra số dư theo tỉ lệ chia thật) bên cạnh các test dùng mock ở trên.

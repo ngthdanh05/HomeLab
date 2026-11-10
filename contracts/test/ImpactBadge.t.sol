@@ -42,7 +42,7 @@ function setUp() public {
         assertEq(badge.name(), "Impact Badge");
         assertEq(badge.symbol(), "IMPACT");
         assertTrue(badge.hasRole(badge.DEFAULT_ADMIN_ROLE(), admin));
-        // Admin quản lý role nhưng mặc định không tự gán MINTER_ROLE cho mình
+        // Admin manages roles
         assertTrue(badge.hasRole(badge.MINTER_ROLE(), admin));
         assertTrue(badge.hasRole(badge.MINTER_ROLE(), minter));
         assertEq(badge.totalMinted(), 0);

@@ -849,6 +849,23 @@ function getActiveProposals() external view returns (uint256[] memory)
 
 ---
 
+## 4b. Vá bảo mật contract (Cập nhật 2026-11-10)
+
+Review so với PLAN phát hiện farm ECO, rút cạn Quỹ bằng phiếu farm được, badge `ZERO_CARBON` giá vài wei và quyền owner quá rộng.
+Đã vá (test: `contracts/test/SecurityRegressions.t.sol`, `MarketplaceEscrow.t.sol`) và deploy lại Sepolia ngày 2026-11-10; địa chỉ ở `docs/DEPLOYMENTS.md`. Khác với thiết kế ban đầu:
+
+- Chỉ quest mua hàng thưởng ECO; quest carbon và DAO chỉ thưởng badge (§4.4 cũ thưởng ECO cho cả hai).
+- `splitPayment(artisan)` gọi trực tiếp không còn thưởng ECO (Task 1.4).
+- Mua đặc sản nhận `CULTURE_GUARDIAN`, không còn `ZERO_CARBON`.
+- Đăng bán cần nghệ nhân đã xác thực; DAO có voting delay, timelock, trần giải ngân, hạn thực thi và guardian (Task 1.6).
+
+- Thanh toán đi qua escrow thay vì chia tức thời: nghệ nhân nhận tiền, người mua nhận ECO và badge khi xác nhận đã nhận hàng hoặc hết hạn 14 ngày; có hoàn tiền và tranh chấp.
+- `CommunityTreasury` có `totalDeposited` / `totalDisbursed` on-chain như thiết kế §3.4.
+
+Còn mở: phí bù đắp chưa gắn với tín chỉ carbon được kiểm chứng; chưa có thông tin giao hàng off-chain; chưa có indexer; chưa kiểm toán độc lập; `Terms` / `Privacy` là bản nháp chờ luật sư.
+
+---
+
 ## 5. Tech Stack Reference
 
 | Layer              | Technology                           | Version             | Purpose                       |

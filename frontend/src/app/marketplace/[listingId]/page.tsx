@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { formatEther } from "viem";
 import { ListingImage } from "@/components/marketplace/ListingCard";
+import { OrderPanel } from "@/components/marketplace/OrderPanel";
 import { CancelListingButton, PurchaseButton } from "@/components/marketplace/PurchaseButton";
 import { SplitBreakdown } from "@/components/marketplace/SplitBreakdown";
 import { useActiveChain } from "@/hooks/useActiveChain";
@@ -146,8 +147,9 @@ export default function ListingDetailPage() {
           <div className="space-y-3">
             <PurchaseButton listing={listing} />
             <CancelListingButton listing={listing} />
+            <OrderPanel listing={listing} />
             <p className="text-center text-xs text-slate-400">
-              🏅 Người mua nhận NFT ImpactBadge (Proof of Action) sau khi giao dịch thành công.
+              🛡️ Tiền được giữ trong escrow. Bạn nhận ECO và ImpactBadge khi xác nhận đã nhận hàng.
             </p>
           </div>
         </div>

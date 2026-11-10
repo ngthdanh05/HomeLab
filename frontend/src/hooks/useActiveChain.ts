@@ -16,8 +16,9 @@ import {
 export function useActiveChain() {
   const config = useConfig();
   const { chainId: walletChainId, isConnected } = useAccount();
-  const chainId: SupportedChainId =
-    isConnected && isSupportedChain(walletChainId) ? walletChainId : DEFAULT_CHAIN_ID;
+  // Only the chain this build targets: a production build must not talk to a wallet's local node.
+  const onAppChain = isConnected && walletChainId === DEFAULT_CHAIN_ID;
+  const chainId: SupportedChainId = onAppChain && isSupportedChain(walletChainId) ? walletChainId : DEFAULT_CHAIN_ID;
 
   return {
     chainId,
@@ -25,6 +26,6 @@ export function useActiveChain() {
     /** Block explorer base URL, e.g. https://sepolia.etherscan.io (none on Anvil). */
     explorerUrl: config.chains.find((c) => c.id === chainId)?.blockExplorers?.default.url,
     walletChainId: isConnected ? walletChainId : undefined,
-    isWrongNetwork: isConnected && !isSupportedChain(walletChainId),
+    isWrongNetwork: isConnected && !onAppChain,
   };
 }

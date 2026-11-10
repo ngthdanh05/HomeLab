@@ -30,6 +30,33 @@ jobs:
       - run: forge build --sizes
       - run: forge test
 
+  # Báo cáo, chưa chặn deploy: bật chặn sau khi đã xử lý các cảnh báo hiện có.
+  security:
+    name: Security scan (Slither, npm audit)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+      - name: Slither
+        uses: crytic/slither-action@v0.4.1
+        with:
+          target: contracts
+          fail-on: high
+          # Bỏ thư viện ngoài. arbitrary-send-eth chỉ báo Marketplace._release gửi ETH tới
+          # PaymentSplitter do owner đặt, với đúng số tiền người mua đã trả.
+          slither-args: --filter-paths lib/ --exclude arbitrary-send-eth
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: npm audit (production dependencies)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=critical
+
   frontend:
     name: Frontend (typecheck, lint, unit tests)
     runs-on: ubuntu-latest

@@ -149,6 +149,18 @@ export async function withGeminiRetry<T>(
   }
 }
 
+/** Whole-request time limit, retries included, inside the 25 s Edge budget. */
+export const GEMINI_REQUEST_BUDGET_MS = 22_000;
+
+/**
+ * Retries fast transient failures while each attempt only gets the time left, so
+ * a retry after a slow 503 still answers before Vercel cuts the request.
+ */
+export function withGeminiBudget<T>(call: () => Promise<T>, budgetMs = GEMINI_REQUEST_BUDGET_MS): Promise<T> {
+  const start = Date.now();
+  return withGeminiRetry(() => withGeminiTimeout(call(), Math.max(1_000, budgetMs - (Date.now() - start))));
+}
+
 export function isGeminiConfigured(): boolean {
   return Boolean(process.env.GEMINI_API_KEY);
 }

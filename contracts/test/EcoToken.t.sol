@@ -267,6 +267,8 @@ contract EcoTokenTest is Test {
 
         vm.prank(owner);
         token.transferOwnership(bob);
+        vm.prank(bob);
+        token.acceptOwnership();
 
         assertEq(token.owner(), bob);
         assertTrue(token.hasRole(adminRole, bob));

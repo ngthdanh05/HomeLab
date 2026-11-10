@@ -12,8 +12,8 @@ import { useActiveChain } from "./useActiveChain";
 import { ACTIVITY_QUERY_KEY } from "./useActivityFeed";
 import { PROPOSAL_VOTES_QUERY_KEY } from "./useGovernance";
 
-/** Off-chain (react-query) caches derived from events, refreshed after every tx. */
-const EVENT_QUERY_KEYS = new Set<unknown>([ACTIVITY_QUERY_KEY, PROPOSAL_VOTES_QUERY_KEY]);
+/** Caches derived from events, plus the block number proposal status depends on; refreshed after every tx. */
+const EVENT_QUERY_KEYS = new Set<unknown>([ACTIVITY_QUERY_KEY, PROPOSAL_VOTES_QUERY_KEY, "blockNumber"]);
 
 export type TxStatus =
   | "idle"

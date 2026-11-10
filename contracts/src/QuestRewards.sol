@@ -2,7 +2,9 @@
 pragma solidity ^0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ImpactBadge} from "./ImpactBadge.sol";
 
 interface IEcoTokenMint {
@@ -19,20 +21,14 @@ interface IGovernanceVotes {
 }
 
 /// @title QuestRewards
-/// @notice Eco Quest (Task 4.4): du khách hoàn thành nhiệm vụ để nhận thêm ECO và badge hiếm.
-///         Điều kiện của quest được kiểm tra on-chain ngay trong `claim`, mỗi ví chỉ nhận
-///         thưởng một lần cho mỗi quest (trạng thái hoàn thành lưu on-chain).
-/// @dev Cần MINTER_ROLE trên EcoToken (thưởng ECO) và ImpactBadge (thưởng badge).
-///      Các loại điều kiện:
-///      - BADGES_OF_TYPE: sở hữu bằng chứng `target` badge loại `proofBadgeType` mà ví này là
-///        người nhận gốc (`Badge.recipient`, không đổi khi chuyển NFT → không mượn badge được).
-///        Badge ECO_CHECKIN chỉ được Marketplace mint khi mua sản phẩm thủ công, nên đây là
-///        bằng chứng mua hàng. Quest không bao giờ thưởng badge loại dùng làm bằng chứng.
-///      - OFFSET_COUNT / OFFSET_GRAMS: số lần / tổng gram CO₂ đã bù đắp qua CarbonOffset.
-///      - DAO_VOTE: đã vote proposal `proofIds[0]` trong Governance.
-///      - SELF_ATTESTED: hành động off-chain (vd xem di sản 360°) không kiểm chứng được →
-///        chỉ được thưởng badge, không thưởng ECO (ECO là quyền biểu quyết DAO).
-contract QuestRewards is Ownable, ReentrancyGuard {
+/// @notice Eco Quests: conditions are checked on-chain and each wallet claims once per quest.
+/// @dev Needs MINTER_ROLE on EcoToken and ImpactBadge. Requirements:
+///      - BADGES_OF_TYPE: `target` badges of `proofBadgeType` originally issued to the wallet.
+///      - OFFSET_COUNT / OFFSET_GRAMS: offsets made through CarbonOffset.
+///      - DAO_VOTE: voted on proposal `proofIds[0]`.
+///      - SELF_ATTESTED: unverifiable off-chain action.
+///      Only BADGES_OF_TYPE may reward ECO: it is voting power and the others are nearly free to farm.
+contract QuestRewards is Ownable2Step, ReentrancyGuard, Pausable {
     enum Requirement {
         BADGES_OF_TYPE,
         OFFSET_COUNT,
@@ -43,11 +39,11 @@ contract QuestRewards is Ownable, ReentrancyGuard {
 
     struct Quest {
         Requirement requirement;
-        /// @dev Loại badge làm bằng chứng (chỉ dùng cho BADGES_OF_TYPE).
+        /// @dev Proof badge type (BADGES_OF_TYPE only).
         ImpactBadge.BadgeType proofBadgeType;
-        /// @dev Số lượng cần đạt: số badge / số lần offset / số gram CO₂. Bỏ qua với DAO_VOTE, SELF_ATTESTED.
+        /// @dev Badge count, offset count or CO2 grams; unused for DAO_VOTE and SELF_ATTESTED.
         uint256 target;
-        /// @dev ECO thưởng (đơn vị nhỏ nhất, 18 decimals).
+        /// @dev ECO reward in wei.
         uint256 ecoReward;
         bool rewardsBadge;
         ImpactBadge.BadgeType rewardBadgeType;
@@ -99,16 +95,16 @@ contract QuestRewards is Ownable, ReentrancyGuard {
 
     // ───────────────────────────── Admin ─────────────────────────────
 
-    /// @notice Thêm quest mới; questId = vị trí trong danh sách (bắt đầu từ 0).
+    /// @notice Adds a quest; questId is its index.
     function addQuest(Quest calldata quest) external onlyOwner returns (uint256 questId) {
         bool countBased = quest.requirement == Requirement.BADGES_OF_TYPE
             || quest.requirement == Requirement.OFFSET_COUNT || quest.requirement == Requirement.OFFSET_GRAMS;
         if (countBased && quest.target == 0) revert InvalidQuest();
         if (quest.requirement == Requirement.BADGES_OF_TYPE && quest.target > MAX_PROOF_IDS) revert InvalidQuest();
-        if (quest.requirement == Requirement.SELF_ATTESTED && quest.ecoReward > 0) revert InvalidQuest();
+        if (quest.requirement != Requirement.BADGES_OF_TYPE && quest.ecoReward > 0) revert InvalidQuest();
         if (quest.ecoReward == 0 && !quest.rewardsBadge) revert InvalidQuest();
         if (quest.rewardsBadge && bytes(quest.badgeURI).length == 0) revert InvalidQuest();
-        // Thưởng đúng loại badge dùng làm bằng chứng sẽ cho phép tự tạo bằng chứng.
+        // Rewarding the proof badge type would let users create their own proof.
         if (
             quest.rewardsBadge && quest.requirement == Requirement.BADGES_OF_TYPE
                 && quest.rewardBadgeType == quest.proofBadgeType
@@ -125,15 +121,25 @@ contract QuestRewards is Ownable, ReentrancyGuard {
         emit QuestActiveSet(questId, active);
     }
 
+    /// @notice Emergency stop for all claims.
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
     // ───────────────────────────── Core ──────────────────────────────
 
-    /// @notice Nhận thưởng quest `questId` nếu đã đạt điều kiện.
-    /// @param proofIds BADGES_OF_TYPE: tokenId các badge bằng chứng, tăng dần (không trùng);
-    ///                 DAO_VOTE: [proposalId]; các loại khác: để trống.
-    /// @return badgeTokenId Badge thưởng (0 nếu quest không thưởng badge).
+    /// @notice Claims a quest whose requirement is met.
+    /// @param proofIds BADGES_OF_TYPE: proof token ids, strictly ascending;
+    ///                 DAO_VOTE: [proposalId]; otherwise empty.
+    /// @return badgeTokenId Reward badge, or 0 if none.
     function claim(uint256 questId, uint256[] calldata proofIds)
         external
         nonReentrant
+        whenNotPaused
         returns (uint256 badgeTokenId)
     {
         Quest storage quest = _getQuest(questId);
@@ -147,7 +153,7 @@ contract QuestRewards is Ownable, ReentrancyGuard {
         isCompleted[msg.sender][questId] = true;
         completedCountOf[msg.sender] += 1;
 
-        // Interactions (contract tin cậy của dự án)
+        // Interactions (trusted project contracts)
         uint256 ecoReward = quest.ecoReward;
         if (ecoReward > 0) ecoToken.mint(msg.sender, ecoReward);
         if (quest.rewardsBadge) {
@@ -171,7 +177,7 @@ contract QuestRewards is Ownable, ReentrancyGuard {
         return _quests;
     }
 
-    /// @notice Trạng thái hoàn thành của `user` cho mọi quest (theo questId).
+    /// @notice Completion state of every quest for `user`.
     function completedOf(address user) external view returns (bool[] memory done) {
         done = new bool[](_quests.length);
         for (uint256 i; i < done.length; ++i) {
@@ -179,8 +185,8 @@ contract QuestRewards is Ownable, ReentrancyGuard {
         }
     }
 
-    /// @notice Kiểm tra trước (không tốn gas) xem `user` có claim được với `proofIds` hay không.
-    /// @dev Không bao giờ revert; bằng chứng sai → false.
+    /// @notice Checks whether `user` could claim with `proofIds`.
+    /// @dev Never reverts; invalid proof returns false.
     function canClaim(address user, uint256 questId, uint256[] calldata proofIds) external view returns (bool) {
         if (questId >= _quests.length) return false;
         Quest storage quest = _quests[questId];
@@ -213,13 +219,13 @@ contract QuestRewards is Ownable, ReentrancyGuard {
         uint256 previous;
         for (uint256 i; i < proofIds.length; ++i) {
             uint256 id = proofIds[i];
-            // Tăng dần nghiêm ngặt → không dùng một badge hai lần (tokenId bắt đầu từ 1).
+            // Strictly ascending, so no badge counts twice.
             if (id <= previous) return false;
             previous = id;
             try impactBadge.getBadge(id) returns (ImpactBadge.Badge memory badge) {
                 if (badge.recipient != user || badge.badgeType != quest.proofBadgeType) return false;
             } catch {
-                return false; // badge không tồn tại
+                return false; // badge does not exist
             }
         }
         return true;

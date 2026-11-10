@@ -41,6 +41,7 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
   const grams = kgToGrams(offsetKg);
   const fee = pricePerKgWei !== undefined ? quoteOffsetWei(grams, pricePerKgWei) : undefined;
   const done = status === "success" || status === "unconfirmed";
+  const belowMinimum = grams > 0n && offsetKg < CARBON_LIMITS.minOffsetKg;
 
   if (!address) {
     return (
@@ -53,6 +54,8 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
   const label =
     grams === 0n
       ? "Nhập hành trình để bù đắp"
+      : belowMinimum
+        ? `Tối thiểu ${formatKg(CARBON_LIMITS.minOffsetKg)} mỗi lần bù đắp`
       : isBusy
         ? status === "awaiting-wallet"
           ? "Xác nhận trong ví…"
@@ -67,7 +70,7 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
     <div className="space-y-2">
       <button
         type="button"
-        disabled={grams === 0n || isBusy || (isConnected && fee === undefined) || isLoading}
+        disabled={grams === 0n || belowMinimum || isBusy || (isConnected && fee === undefined) || isLoading}
         aria-busy={isBusy}
         onClick={() =>
           send({
@@ -85,7 +88,7 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
       </button>
       <p className="text-[11px] leading-relaxed text-slate-400">
         Toàn bộ phí được chuyển vào Quỹ Cộng đồng (DAO) để tài trợ dự án bảo tồn; bạn nhận NFT
-        ImpactBadge loại ZERO_CARBON làm bằng chứng.
+        ImpactBadge loại ZERO_CARBON ghi nhận đóng góp. Khoản này chưa phải tín chỉ carbon đã được kiểm định.
         {kg > CARBON_LIMITS.maxOffsetKg && ` Mỗi lần bù đắp tối đa ${formatKg(CARBON_LIMITS.maxOffsetKg)}.`}
       </p>
       {done && (
