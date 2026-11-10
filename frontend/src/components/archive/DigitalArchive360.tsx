@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import { useThreeScene } from "@/hooks/useThreeScene";
 import type { HotspotData } from "@/lib/three-utils";
+import { useI18n } from "@/providers/LocaleProvider";
 import { HotspotOverlay } from "./HotspotOverlay";
 
 export interface DigitalArchive360Props {
@@ -23,10 +24,15 @@ export function DigitalArchive360({
   hotspots = NO_HOTSPOTS,
   onBack,
 }: DigitalArchive360Props) {
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedHotspot, setSelectedHotspot] = useState<HotspotData | null>(
     null
   );
+  // Looked up by id so an open popup follows a language change.
+  const shownHotspot = selectedHotspot
+    ? (hotspots.find((h) => h.id === selectedHotspot.id) ?? selectedHotspot)
+    : null;
 
   const { isLoading } = useThreeScene(containerRef, {
     imageUrl,
@@ -40,14 +46,14 @@ export function DigitalArchive360({
       <div
         ref={containerRef}
         className="w-full h-full cursor-grab active:cursor-grabbing"
-        aria-label={`Không gian 360° của ${title}`}
+        aria-label={t(`Không gian 360° của ${title}`, `360° view of ${title}`)}
         role="img"
       />
 
       {isLoading && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-950/80 text-slate-400">
           <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-          <p className="text-sm">Đang tải ảnh 360°...</p>
+          <p className="text-sm">{t("Đang tải ảnh 360°...", "Loading 360° image...")}</p>
         </div>
       )}
 
@@ -69,7 +75,7 @@ export function DigitalArchive360({
               onClick={onBack}
               className="px-3.5 py-2 bg-slate-800/85 hover:bg-slate-700 text-white rounded-xl backdrop-blur-md border border-slate-700 text-xs font-medium transition-colors shadow-lg"
             >
-              ← Quay lại danh mục
+              {t("← Quay lại danh mục", "← Back to list")}
             </button>
           )}
         </div>
@@ -78,21 +84,21 @@ export function DigitalArchive360({
       {/* Bottom Controls / Help Overlay */}
       <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col md:flex-row items-center justify-between gap-2 pointer-events-none">
         <div className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-lg border border-slate-800 text-xs text-slate-300 pointer-events-auto flex items-center gap-2">
-          <span>🔄 Kéo chuột hoặc vuốt tay để xoay 360°</span>
+          <span>🔄 {t("Kéo chuột hoặc vuốt tay để xoay 360°", "Drag or swipe to rotate 360°")}</span>
           <span className="text-slate-400 hidden sm:inline">|</span>
           <span className="text-emerald-400 hidden sm:inline">
-            ✨ Nhấp vào các điểm ngọc lục bảo để xem thuyết minh di sản
+            ✨ {t("Nhấp vào các điểm ngọc lục bảo để xem thuyết minh di sản", "Click the emerald points for heritage notes")}
           </span>
         </div>
 
         <div className="bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-800 text-xs text-slate-400 pointer-events-auto">
-          {hotspots.length} điểm thuyết minh
+          {hotspots.length} {t("điểm thuyết minh", "guide points")}
         </div>
       </div>
 
       {/* Hotspot detail popup */}
       <HotspotOverlay
-        hotspot={selectedHotspot}
+        hotspot={shownHotspot}
         onClose={() => setSelectedHotspot(null)}
       />
     </div>

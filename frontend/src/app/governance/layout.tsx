@@ -1,13 +1,22 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { pick } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
 import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = pageMetadata({
-  title: "Community DAO",
-  description:
-    "Cộng đồng đề xuất và bỏ phiếu bằng EcoToken để giải ngân Quỹ Cộng đồng cho các dự án bảo tồn, minh bạch on-chain.",
-  path: "/governance",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  return pageMetadata({
+    title: "Community DAO",
+    description: pick(
+      locale,
+      "Cộng đồng đề xuất và bỏ phiếu bằng EcoToken để giải ngân Quỹ Cộng đồng cho các dự án bảo tồn, minh bạch on-chain.",
+      "The community proposes and votes with EcoToken to disburse the Community Treasury to conservation projects, transparently on-chain.",
+    ),
+    path: "/governance",
+    locale,
+  });
+}
 
 export default function GovernanceLayout({ children }: { children: React.ReactNode }) {
   return (

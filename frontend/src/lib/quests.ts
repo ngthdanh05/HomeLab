@@ -1,5 +1,6 @@
 // Framework-free Eco Quest helpers (unit-tested with plain Node).
 import { HERITAGE_IDS } from "../data/heritage.ts";
+import { intlLocale, type Locale } from "./i18n.ts";
 import type { QuestDefinition } from "../data/quests.ts";
 
 /** ImpactBadge.BadgeType.ECO_CHECKIN: minted by the Marketplace for handicraft purchases. */
@@ -108,11 +109,11 @@ export function computeQuestProgress(
 }
 
 /** Human-readable "current / target" for a quest kind. */
-export function formatQuestCount(quest: QuestDefinition, value: number): string {
+export function formatQuestCount(quest: QuestDefinition, value: number, locale: Locale = "vi"): string {
   if (quest.kind === "carbon-grams") {
-    return `${(value / 1000).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} kg`;
+    return `${(value / 1000).toLocaleString(intlLocale(locale), { maximumFractionDigits: 1 })} kg`;
   }
-  return value.toLocaleString("vi-VN");
+  return value.toLocaleString(intlLocale(locale));
 }
 
 // ─────────────────────── Heritage views (localStorage) ───────────────────────

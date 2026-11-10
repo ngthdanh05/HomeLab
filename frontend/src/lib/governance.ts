@@ -1,6 +1,8 @@
 // Framework-free helpers for the Community DAO (unit-tested with plain Node).
 // Mirrors contracts/src/Governance.sol and CommunityTreasury.sol.
 
+import { intlLocale, pick, type Locale } from "./i18n.ts";
+
 /** Governance.Proposal as returned by `getProposal()` (viem decodes the struct to an object). */
 export interface OnChainProposal {
   proposer: `0x${string}`;
@@ -48,18 +50,18 @@ export type ProposalStatus =
 
 export const PROPOSAL_STATUS_INFO: Record<
   ProposalStatus,
-  { label: string; icon: string; tone: "sky" | "emerald" | "amber" | "slate" | "red" }
+  { label: string; labelEn: string; icon: string; tone: "sky" | "emerald" | "amber" | "slate" | "red" }
 > = {
-  pending: { label: "Sắp mở bỏ phiếu", icon: "⏳", tone: "slate" },
-  active: { label: "Đang bỏ phiếu", icon: "🗳️", tone: "sky" },
-  queued: { label: "Đã thông qua · đang chờ timelock", icon: "🔒", tone: "amber" },
-  expired: { label: "Quá hạn giải ngân", icon: "⌛", tone: "slate" },
-  cancelled: { label: "Đã bị huỷ", icon: "🚫", tone: "red" },
-  passed: { label: "Đã thông qua · chờ giải ngân", icon: "✅", tone: "amber" },
-  defeated: { label: "Không thông qua · chờ chốt", icon: "👎", tone: "red" },
-  "no-quorum": { label: "Không đủ quorum", icon: "⏸️", tone: "slate" },
-  executed: { label: "Đã giải ngân", icon: "💸", tone: "emerald" },
-  rejected: { label: "Đã bị từ chối", icon: "❌", tone: "red" },
+  pending: { label: "Sắp mở bỏ phiếu", labelEn: "Voting opens soon", icon: "⏳", tone: "slate" },
+  active: { label: "Đang bỏ phiếu", labelEn: "Voting open", icon: "🗳️", tone: "sky" },
+  queued: { label: "Đã thông qua · đang chờ timelock", labelEn: "Passed · in timelock", icon: "🔒", tone: "amber" },
+  expired: { label: "Quá hạn giải ngân", labelEn: "Disbursement expired", icon: "⌛", tone: "slate" },
+  cancelled: { label: "Đã bị huỷ", labelEn: "Cancelled", icon: "🚫", tone: "red" },
+  passed: { label: "Đã thông qua · chờ giải ngân", labelEn: "Passed · awaiting disbursement", icon: "✅", tone: "amber" },
+  defeated: { label: "Không thông qua · chờ chốt", labelEn: "Not passed · awaiting finalization", icon: "👎", tone: "red" },
+  "no-quorum": { label: "Không đủ quorum", labelEn: "Quorum not reached", icon: "⏸️", tone: "slate" },
+  executed: { label: "Đã giải ngân", labelEn: "Disbursed", icon: "💸", tone: "emerald" },
+  rejected: { label: "Đã bị từ chối", labelEn: "Rejected", icon: "❌", tone: "red" },
 };
 
 /** `blockNumber` detects the voting delay; without it a delayed proposal reads as active. */
@@ -93,13 +95,20 @@ export function encodeProposalDescription(title: string, body: string): string {
   return b ? `${t}\n\n${b}` : t;
 }
 
+/** Fallback title; stored in cached proposal data, so it is translated at display time. */
+export const UNTITLED_PROPOSAL = "Đề xuất không có tiêu đề";
+
+export function displayProposalTitle(title: string, locale: Locale): string {
+  return title === UNTITLED_PROPOSAL ? pick(locale, title, "Untitled proposal") : title;
+}
+
 export function parseProposalDescription(description: string): { title: string; body: string } {
   const text = description.replace(/\r\n/g, "\n").trim();
   const newline = text.indexOf("\n");
   const title = (newline === -1 ? text : text.slice(0, newline)).trim();
   const body = newline === -1 ? "" : text.slice(newline + 1).trim();
   return {
-    title: (title || "Đề xuất không có tiêu đề").slice(0, PROPOSAL_LIMITS.title),
+    title: (title || UNTITLED_PROPOSAL).slice(0, PROPOSAL_LIMITS.title),
     body: body.slice(0, PROPOSAL_LIMITS.body * 2),
   };
 }
@@ -126,15 +135,26 @@ export interface ProposalForm {
 }
 
 /** Validates the create-proposal form; returns an error message or null. */
-export function validateProposalForm(form: ProposalForm): string | null {
-  if (!form.title.trim()) return "Vui lòng nhập tên dự án bảo tồn.";
-  if (form.title.trim().length > PROPOSAL_LIMITS.title) return `Tên dự án tối đa ${PROPOSAL_LIMITS.title} ký tự.`;
-  if (form.body.trim().length < 20) return "Mô tả cần ít nhất 20 ký tự để cộng đồng hiểu dự án.";
-  if (form.body.length > PROPOSAL_LIMITS.body) return `Mô tả tối đa ${PROPOSAL_LIMITS.body} ký tự.`;
-  if (!parseEthAmount(form.amount)) return "Số ETH yêu cầu không hợp lệ (ví dụ: 0.05).";
+export function validateProposalForm(form: ProposalForm, locale: Locale = "vi"): string | null {
+  const t = (vi: string, en: string) => pick(locale, vi, en);
+  if (!form.title.trim()) return t("Vui lòng nhập tên dự án bảo tồn.", "Please enter the conservation project name.");
+  if (form.title.trim().length > PROPOSAL_LIMITS.title) {
+    return t(`Tên dự án tối đa ${PROPOSAL_LIMITS.title} ký tự.`, `Project name can be at most ${PROPOSAL_LIMITS.title} characters.`);
+  }
+  if (form.body.trim().length < 20) {
+    return t("Mô tả cần ít nhất 20 ký tự để cộng đồng hiểu dự án.", "The description needs at least 20 characters so the community can understand the project.");
+  }
+  if (form.body.length > PROPOSAL_LIMITS.body) {
+    return t(`Mô tả tối đa ${PROPOSAL_LIMITS.body} ký tự.`, `Description can be at most ${PROPOSAL_LIMITS.body} characters.`);
+  }
+  if (!parseEthAmount(form.amount)) return t("Số ETH yêu cầu không hợp lệ (ví dụ: 0.05).", "Invalid ETH amount (example: 0.05).");
   const recipient = form.recipient.trim();
-  if (!ADDRESS_RE.test(recipient)) return "Địa chỉ ví nhận không hợp lệ (0x… gồm 40 ký tự hex).";
-  if (recipient.toLowerCase() === ZERO_ADDRESS) return "Địa chỉ ví nhận không được là địa chỉ 0.";
+  if (!ADDRESS_RE.test(recipient)) {
+    return t("Địa chỉ ví nhận không hợp lệ (0x… gồm 40 ký tự hex).", "Invalid recipient address (0x… followed by 40 hex characters).");
+  }
+  if (recipient.toLowerCase() === ZERO_ADDRESS) {
+    return t("Địa chỉ ví nhận không được là địa chỉ 0.", "The recipient cannot be the zero address.");
+  }
   return null;
 }
 
@@ -176,32 +196,47 @@ export function getVoteBreakdown(p: Pick<OnChainProposal, "votesFor" | "votesAga
   };
 }
 
+const TIME_UNITS = {
+  day: { vi: "ngày", en: "day" },
+  hour: { vi: "giờ", en: "hour" },
+  minute: { vi: "phút", en: "minute" },
+  second: { vi: "giây", en: "second" },
+} as const;
+
+/** "3 ngày" / "3 days" / "1 day". */
+function timeUnit(value: number, unit: keyof typeof TIME_UNITS, locale: Locale): string {
+  const names = TIME_UNITS[unit];
+  return locale === "en" ? `${value} ${names.en}${value === 1 ? "" : "s"}` : `${value} ${names.vi}`;
+}
+
 /** "2 ngày 4 giờ", "35 phút 10 giây"…; "Đã kết thúc" when not positive. */
-export function formatCountdown(secondsLeft: number): string {
-  if (secondsLeft <= 0) return "Đã kết thúc";
+export function formatCountdown(secondsLeft: number, locale: Locale = "vi"): string {
+  if (secondsLeft <= 0) return pick(locale, "Đã kết thúc", "Ended");
   const s = Math.floor(secondsLeft);
   const days = Math.floor(s / 86_400);
   const hours = Math.floor((s % 86_400) / 3_600);
   const minutes = Math.floor((s % 3_600) / 60);
   const seconds = s % 60;
-  if (days > 0) return `${days} ngày ${hours} giờ`;
-  if (hours > 0) return `${hours} giờ ${minutes} phút`;
-  if (minutes > 0) return `${minutes} phút ${seconds} giây`;
-  return `${seconds} giây`;
+  const unit = (value: number, name: keyof typeof TIME_UNITS) => timeUnit(value, name, locale);
+  if (days > 0) return `${unit(days, "day")} ${unit(hours, "hour")}`;
+  if (hours > 0) return `${unit(hours, "hour")} ${unit(minutes, "minute")}`;
+  if (minutes > 0) return `${unit(minutes, "minute")} ${unit(seconds, "second")}`;
+  return unit(seconds, "second");
 }
 
 /** "3 ngày", "1 giờ", "1 ngày 12 giờ" for a voting period in seconds. */
-export function formatDuration(seconds: number): string {
-  if (seconds <= 0) return "0 giây";
+export function formatDuration(seconds: number, locale: Locale = "vi"): string {
+  const unit = (value: number, name: keyof typeof TIME_UNITS) => timeUnit(value, name, locale);
+  if (seconds <= 0) return unit(0, "second");
   const days = Math.floor(seconds / 86_400);
   const hours = Math.floor((seconds % 86_400) / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);
-  const parts = [days && `${days} ngày`, hours && `${hours} giờ`, minutes && `${minutes} phút`].filter(Boolean);
-  return parts.length ? parts.join(" ") : `${seconds} giây`;
+  const parts = [days && unit(days, "day"), hours && unit(hours, "hour"), minutes && unit(minutes, "minute")].filter(Boolean);
+  return parts.length ? parts.join(" ") : unit(seconds, "second");
 }
 
-export function formatBpsPercent(bps: bigint | number): string {
-  return `${(Number(bps) / 100).toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%`;
+export function formatBpsPercent(bps: bigint | number, locale: Locale = "vi"): string {
+  return `${(Number(bps) / 100).toLocaleString(intlLocale(locale), { maximumFractionDigits: 2 })}%`;
 }
 
 /** Max proposals fetched in one page, newest first. */

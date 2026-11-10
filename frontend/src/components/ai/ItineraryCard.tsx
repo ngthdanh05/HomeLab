@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { ActivityType, Itinerary } from "@/types/ai";
+import { useI18n } from "@/providers/LocaleProvider";
 
 interface ItineraryCardProps {
   itinerary: Itinerary;
@@ -22,13 +23,18 @@ const ecoScoreColor = (score: number) => {
 };
 
 export function ItineraryCard({ itinerary }: ItineraryCardProps) {
+  const { t } = useI18n();
   return (
     <div className="bg-slate-800 rounded-2xl p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-start gap-4">
         <div>
           <h2 className="text-xl font-bold text-white">
-            🗺️ Lịch trình {itinerary.days} ngày tại {itinerary.destination}
+            🗺️{" "}
+            {t(
+              `Lịch trình ${itinerary.days} ngày tại ${itinerary.destination}`,
+              `${itinerary.days}-day itinerary in ${itinerary.destination}`,
+            )}
           </h2>
           <p className="text-slate-400 mt-1 text-sm">{itinerary.summary}</p>
         </div>
@@ -43,7 +49,7 @@ export function ItineraryCard({ itinerary }: ItineraryCardProps) {
       {/* Carbon Summary */}
       <div className="bg-slate-700 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <div>
-          <p className="text-slate-300 text-sm">Tổng phát thải ước tính</p>
+          <p className="text-slate-300 text-sm">{t("Tổng phát thải ước tính", "Estimated total emissions")}</p>
           <p className="text-white font-bold text-lg">
             🌿 {itinerary.totalCarbonKg.toFixed(1)} kg CO₂
           </p>
@@ -58,7 +64,7 @@ export function ItineraryCard({ itinerary }: ItineraryCardProps) {
         {itinerary.itinerary.map((day) => (
           <div key={day.day} className="border border-slate-700 rounded-xl overflow-hidden">
             <div className="bg-slate-700 px-4 py-2 flex justify-between items-center">
-              <h3 className="font-semibold text-white">Ngày {day.day}</h3>
+              <h3 className="font-semibold text-white">{t("Ngày", "Day")} {day.day}</h3>
               <div className="flex items-center gap-3 text-sm">
                 <span className="text-slate-300">
                   🌿 {day.totalCarbonKg.toFixed(1)} kg CO₂
@@ -99,7 +105,7 @@ export function ItineraryCard({ itinerary }: ItineraryCardProps) {
       {/* Packing Tips */}
       {itinerary.packingTips && itinerary.packingTips.length > 0 && (
         <div className="bg-emerald-900/30 border border-emerald-700/50 rounded-xl p-4">
-          <h4 className="text-emerald-400 font-semibold mb-2">🎒 Mẹo đóng gói thân thiện môi trường</h4>
+          <h4 className="text-emerald-400 font-semibold mb-2">🎒 {t("Mẹo đóng gói thân thiện môi trường", "Eco-friendly packing tips")}</h4>
           <ul className="space-y-1">
             {itinerary.packingTips.map((tip, idx) => (
               <li key={idx} className="text-slate-300 text-sm flex gap-2">

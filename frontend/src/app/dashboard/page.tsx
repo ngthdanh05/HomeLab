@@ -9,10 +9,12 @@ import { TokenBalance } from "@/components/dashboard/TokenBalance";
 import { getChainName } from "@/config/contracts";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { shortenAddress } from "@/lib/marketplace";
+import { useI18n } from "@/providers/LocaleProvider";
 
 const noopSubscribe = () => () => {};
 
 export default function DashboardPage() {
+  const { t } = useI18n();
   const { address, isConnected, isConnecting, isReconnecting } = useAccount();
   const { chainId, explorerUrl, isWrongNetwork } = useActiveChain();
   const { open: openWalletModal, prefetch } = useWalletModal();
@@ -27,16 +29,19 @@ export default function DashboardPage() {
   // Only the silent auto-reconnect on page load gets a skeleton; while the user
   // is answering a wallet prompt the connect card stays (with a busy button).
   if (!mounted || (isReconnecting && !address)) {
-    return <div className="h-48 animate-pulse rounded-3xl bg-slate-900" aria-label="Đang tải" />;
+    return <div className="h-48 animate-pulse rounded-3xl bg-slate-900" aria-label={t("Đang tải", "Loading")} />;
   }
 
   if (!isConnected || !address) {
     return (
       <section className="mx-auto max-w-xl rounded-3xl border border-slate-800 bg-slate-900/70 p-8 text-center">
         <p className="text-5xl">🔐</p>
-        <h1 className="mt-3 text-2xl font-bold text-white">Kết nối ví để xem Dashboard</h1>
+        <h1 className="mt-3 text-2xl font-bold text-white">{t("Kết nối ví để xem Dashboard", "Connect your wallet to view the Dashboard")}</h1>
         <p className="mt-2 text-sm text-slate-400">
-          Dashboard hiển thị số dư EcoToken, NFT ImpactBadge và lịch sử giao dịch của ví đang kết nối.
+          {t(
+            "Dashboard hiển thị số dư EcoToken, NFT ImpactBadge và lịch sử giao dịch của ví đang kết nối.",
+            "The Dashboard shows the EcoToken balance, ImpactBadge NFTs and transaction history of the connected wallet.",
+          )}
         </p>
         <button
           type="button"
@@ -45,7 +50,7 @@ export default function DashboardPage() {
           onFocus={prefetch}
           className="mt-5 rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-600"
         >
-          {isConnecting ? "Đang chờ xác nhận trong ví…" : "Kết nối ví"}
+          {isConnecting ? t("Đang chờ xác nhận trong ví…", "Waiting for wallet confirmation…") : t("Kết nối ví", "Connect wallet")}
         </button>
       </section>
     );
@@ -56,10 +61,10 @@ export default function DashboardPage() {
       <section className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <span className="inline-flex rounded-full border border-emerald-800/80 bg-emerald-950/80 px-3 py-1 text-xs font-semibold text-emerald-400">
-            👤 Dashboard cá nhân · {getChainName(chainId)}
+            👤 {t("Dashboard cá nhân", "Personal Dashboard")} · {getChainName(chainId)}
           </span>
           <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-            Tác động của bạn
+            {t("Tác động của bạn", "Your impact")}
           </h1>
         </div>
         {explorerUrl ? (
@@ -78,8 +83,10 @@ export default function DashboardPage() {
 
       {isWrongNetwork && (
         <p className="rounded-2xl border border-amber-800/60 bg-amber-950/40 p-4 text-sm text-amber-200">
-          Ví đang ở mạng chưa được hỗ trợ — dữ liệu dưới đây được đọc từ {getChainName(chainId)}. Hãy
-          chuyển ví sang {getChainName(chainId)}.
+          {t(
+            `Ví đang ở mạng chưa được hỗ trợ — dữ liệu dưới đây được đọc từ ${getChainName(chainId)}. Hãy chuyển ví sang ${getChainName(chainId)}.`,
+            `Your wallet is on an unsupported network. The data below is read from ${getChainName(chainId)}. Please switch your wallet to ${getChainName(chainId)}.`,
+          )}
         </p>
       )}
 

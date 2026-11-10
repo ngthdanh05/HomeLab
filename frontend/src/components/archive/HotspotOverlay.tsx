@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { HotspotData } from "@/lib/three-utils";
+import { useI18n } from "@/providers/LocaleProvider";
 
 interface HotspotOverlayProps {
   hotspot: HotspotData | null;
@@ -9,6 +10,7 @@ interface HotspotOverlayProps {
 }
 
 export function HotspotOverlay({ hotspot, onClose }: HotspotOverlayProps) {
+  const { t } = useI18n();
   if (!hotspot) return null;
 
   return (
@@ -17,7 +19,7 @@ export function HotspotOverlay({ hotspot, onClose }: HotspotOverlayProps) {
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-          aria-label="Đóng popup"
+          aria-label={t("Đóng popup", "Close popup")}
         >
           ✕
         </button>
@@ -25,7 +27,7 @@ export function HotspotOverlay({ hotspot, onClose }: HotspotOverlayProps) {
         <div className="flex items-center gap-3 mb-3">
           <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
           <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-800">
-            Điểm Di Sản Số Hóa 360°
+            {t("Điểm Di Sản Số Hóa 360°", "360° Digital Heritage Point")}
           </span>
         </div>
 
@@ -36,14 +38,14 @@ export function HotspotOverlay({ hotspot, onClose }: HotspotOverlayProps) {
 
         <div className="flex items-center justify-between pt-4 border-t border-slate-800">
           <div className="text-xs text-slate-400">
-            📍 Tọa độ 3D: Φ {hotspot.position.phi.toFixed(2)} rad | Θ{" "}
+            📍 {t("Tọa độ 3D", "3D position")}: Φ {hotspot.position.phi.toFixed(2)} rad | Θ{" "}
             {hotspot.position.theta.toFixed(2)} rad
           </div>
           <button
             onClick={onClose}
             className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-colors"
           >
-            Tiếp tục khám phá
+            {t("Tiếp tục khám phá", "Keep exploring")}
           </button>
         </div>
       </div>

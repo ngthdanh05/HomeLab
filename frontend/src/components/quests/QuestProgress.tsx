@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { intlLocale } from "@/lib/i18n";
+import { useI18n } from "@/providers/LocaleProvider";
 
 interface ProgressBarProps {
   /** 0–1 */
@@ -44,6 +46,7 @@ interface QuestSummaryProps {
 
 /** Overall quest completion: X / N quests, ECO earned from quests. */
 export function QuestSummary({ completed, total, ecoEarned, ecoAvailable }: QuestSummaryProps) {
+  const { locale, t } = useI18n();
   return (
     <section
       aria-labelledby="quest-summary-title"
@@ -51,21 +54,21 @@ export function QuestSummary({ completed, total, ecoEarned, ecoAvailable }: Ques
     >
       <div className="sm:col-span-2">
         <h2 id="quest-summary-title" className="text-sm font-semibold text-slate-300">
-          🎯 Tiến độ Eco Quest
+          🎯 {t("Tiến độ Eco Quest", "Eco Quest progress")}
         </h2>
         <p className="mt-1 text-2xl font-extrabold text-white">
           {completed}
-          <span className="text-base font-medium text-slate-400"> / {total} quest hoàn thành</span>
+          <span className="text-base font-medium text-slate-400"> / {total} {t("quest hoàn thành", "quests completed")}</span>
         </p>
         <div className="mt-3">
-          <QuestProgressBar ratio={total ? completed / total : 0} label="Tỉ lệ quest đã hoàn thành" />
+          <QuestProgressBar ratio={total ? completed / total : 0} label={t("Tỉ lệ quest đã hoàn thành", "Share of quests completed")} />
         </div>
       </div>
       <div className="rounded-2xl border border-emerald-900/60 bg-emerald-950/30 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">ECO từ quest</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">{t("ECO từ quest", "ECO from quests")}</p>
         <p className="mt-1 font-mono text-2xl font-bold text-white">
-          {ecoEarned.toLocaleString("vi-VN")}
-          <span className="text-sm font-medium text-slate-400"> / {ecoAvailable.toLocaleString("vi-VN")} ECO</span>
+          {ecoEarned.toLocaleString(intlLocale(locale))}
+          <span className="text-sm font-medium text-slate-400"> / {ecoAvailable.toLocaleString(intlLocale(locale))} ECO</span>
         </p>
       </div>
     </section>

@@ -2,20 +2,26 @@
 
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
-import { sampleHeritageItems, type HeritageItem } from "@/data/heritage";
+import { getHeritageItems, type HeritageItem } from "@/data/heritage";
 import { markHeritageViewed } from "@/lib/quests";
+import { useI18n } from "@/providers/LocaleProvider";
+
+function ViewerLoading() {
+  const { t } = useI18n();
+  return (
+    <div className="w-full h-[600px] bg-slate-950 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-slate-400 gap-3">
+      <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+      <p className="text-sm">{t("Đang tải không gian 3D Three.js...", "Loading the Three.js 3D space...")}</p>
+    </div>
+  );
+}
 
 // Lazy load Three.js component để không làm nặng First Contentful Paint
 const DigitalArchive360 = dynamic(
   () => import("./DigitalArchive360").then((mod) => mod.DigitalArchive360),
   {
     ssr: false,
-    loading: () => (
-      <div className="w-full h-[600px] bg-slate-950 rounded-2xl border border-slate-800 flex flex-col items-center justify-center text-slate-400 gap-3">
-        <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-        <p className="text-sm">Đang tải không gian 3D Three.js...</p>
-      </div>
-    ),
+    loading: () => <ViewerLoading />,
   }
 );
 
@@ -24,15 +30,21 @@ export { sampleHeritageItems, type HeritageItem } from "@/data/heritage";
 const ALL_CATEGORIES = "Tất cả";
 type CategoryFilter = HeritageItem["category"] | typeof ALL_CATEGORIES;
 const categories: CategoryFilter[] = [ALL_CATEGORIES, "Kiến trúc", "Thiên nhiên", "Làng nghề"];
+const CATEGORY_LABELS_EN: Record<CategoryFilter, string> = {
+  [ALL_CATEGORIES]: "All",
+  "Kiến trúc": "Architecture",
+  "Thiên nhiên": "Nature",
+  "Làng nghề": "Craft village",
+};
 
 export function ArchiveGallery() {
-  const [activeItem, setActiveItem] = useState<HeritageItem | null>(null);
+  const { locale, t } = useI18n();
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [filter, setFilter] = useState<CategoryFilter>(ALL_CATEGORIES);
 
-  const filteredItems =
-    filter === ALL_CATEGORIES
-      ? sampleHeritageItems
-      : sampleHeritageItems.filter((item) => item.category === filter);
+  const items = getHeritageItems(locale);
+  const activeItem = items.find((item) => item.id === activeId) ?? null;
+  const filteredItems = filter === ALL_CATEGORIES ? items : items.filter((item) => item.category === filter);
 
   return (
     <div className="space-y-6">
@@ -43,7 +55,7 @@ export function ArchiveGallery() {
           title={activeItem.title}
           location={activeItem.location}
           hotspots={activeItem.hotspots}
-          onBack={() => setActiveItem(null)}
+          onBack={() => setActiveId(null)}
         />
       ) : (
         <>
@@ -51,11 +63,13 @@ export function ArchiveGallery() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800">
             <div>
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                🏛️ Bảo Tồn Di Sản Số Hóa 360°
+                🏛️ {t("Bảo Tồn Di Sản Số Hóa 360°", "360° Digital Heritage Preservation")}
               </h2>
               <p className="text-slate-400 text-sm mt-1">
-                Khám phá không gian thực tế ảo tương tác với ảnh minh hoạ, kèm chú giải
-                về từng di sản.
+                {t(
+                  "Khám phá không gian thực tế ảo tương tác với ảnh minh hoạ, kèm chú giải về từng di sản.",
+                  "Explore interactive virtual spaces with illustrative images and notes on each heritage site.",
+                )}
               </p>
             </div>
 
@@ -71,7 +85,7 @@ export function ArchiveGallery() {
                       : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                   }`}
                 >
-                  {cat}
+                  {t(cat, CATEGORY_LABELS_EN[cat])}
                 </button>
               ))}
             </div>
@@ -84,10 +98,10 @@ export function ArchiveGallery() {
                 type="button"
                 key={item.id}
                 onClick={() => {
-                  setActiveItem(item);
+                  setActiveId(item.id);
                   markHeritageViewed(item.id);
                 }}
-                aria-label={`Mở không gian 360° của ${item.title}`}
+                aria-label={t(`Mở không gian 360° của ${item.title}`, `Open the 360° view of ${item.title}`)}
                 className="group text-left bg-slate-900 border border-slate-800 hover:border-emerald-500/60 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-950/40 flex flex-col"
               >
                 {/* Visual Preview */}
@@ -101,7 +115,7 @@ export function ArchiveGallery() {
 
                   {/* Category tag */}
                   <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-sm border border-slate-700 text-emerald-400 text-[10px] font-medium px-2 py-0.5 rounded-md">
-                    {item.category}
+                    {t(item.category, CATEGORY_LABELS_EN[item.category])}
                   </div>
 
                   <div className="text-center z-10 space-y-1">
@@ -113,7 +127,7 @@ export function ArchiveGallery() {
                           : "🏺"}
                     </span>
                     <p className="text-xs text-emerald-300 font-mono">
-                      [Chạm để mở không gian 360°]
+                      {t("[Chạm để mở không gian 360°]", "[Tap to open the 360° view]")}
                     </p>
                   </div>
                 </div>
@@ -134,10 +148,10 @@ export function ArchiveGallery() {
 
                   <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs">
                     <span className="text-slate-400">
-                      {item.hotspots.length} điểm chú giải
+                      {item.hotspots.length} {t("điểm chú giải", "notes")}
                     </span>
                     <span className="text-emerald-400 font-semibold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
-                      Xem di sản ➔
+                      {t("Xem di sản ➔", "View heritage ➔")}
                     </span>
                   </div>
                 </div>

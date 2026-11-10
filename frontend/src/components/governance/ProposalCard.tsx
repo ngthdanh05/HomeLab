@@ -5,13 +5,16 @@ import Link from "next/link";
 import type { Proposal } from "@/hooks/useGovernance";
 import { formatTokenAmount } from "@/lib/dashboard";
 import {
+  displayProposalTitle,
   formatCountdown,
   getVoteBreakdown,
   PROPOSAL_STATUS_INFO,
   type OnChainProposal,
   type ProposalStatus,
 } from "@/lib/governance";
+import { intlLocale } from "@/lib/i18n";
 import { shortenAddress } from "@/lib/marketplace";
+import { useI18n } from "@/providers/LocaleProvider";
 import { formatEth } from "./TreasuryStats";
 
 const TONE_CLASSES = {
@@ -23,35 +26,37 @@ const TONE_CLASSES = {
 } as const;
 
 export function ProposalStatusBadge({ status }: { status: ProposalStatus }) {
+  const { t } = useI18n();
   const info = PROPOSAL_STATUS_INFO[status];
   return (
     <span
       className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${TONE_CLASSES[info.tone]}`}
     >
       <span aria-hidden>{info.icon}</span>
-      {info.label}
+      {t(info.label, info.labelEn)}
     </span>
   );
 }
 
 /** For/Against progress bar plus quorum progress. */
 export function VoteBar({ proposal }: { proposal: Pick<OnChainProposal, "votesFor" | "votesAgainst" | "quorumVotes"> }) {
+  const { locale, t } = useI18n();
   const b = getVoteBreakdown(proposal);
-  const pct = (value: number) => `${value.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`;
+  const pct = (value: number) => `${value.toLocaleString(intlLocale(locale), { maximumFractionDigits: 1 })}%`;
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-xs">
         <span className="font-semibold text-emerald-300">
-          👍 {formatTokenAmount(proposal.votesFor, 18, 2)} ECO ({pct(b.forPct)})
+          👍 {formatTokenAmount(proposal.votesFor, 18, 2, locale)} ECO ({pct(b.forPct)})
         </span>
         <span className="font-semibold text-red-300">
-          👎 {formatTokenAmount(proposal.votesAgainst, 18, 2)} ECO ({pct(b.againstPct)})
+          👎 {formatTokenAmount(proposal.votesAgainst, 18, 2, locale)} ECO ({pct(b.againstPct)})
         </span>
       </div>
       <div
         className="flex h-2.5 overflow-hidden rounded-full bg-slate-800"
         role="img"
-        aria-label={`Đồng ý ${pct(b.forPct)}, phản đối ${pct(b.againstPct)}`}
+        aria-label={t(`Đồng ý ${pct(b.forPct)}, phản đối ${pct(b.againstPct)}`, `For ${pct(b.forPct)}, against ${pct(b.againstPct)}`)}
       >
         {b.total > 0n && (
           <>
@@ -68,7 +73,7 @@ export function VoteBar({ proposal }: { proposal: Pick<OnChainProposal, "votesFo
           />
         </div>
         <span className="whitespace-nowrap">
-          Quorum {b.quorumReached ? "✓ đã đạt" : pct(b.quorumPct)} ({formatTokenAmount(proposal.quorumVotes, 18, 2)}{" "}
+          Quorum {b.quorumReached ? t("✓ đã đạt", "✓ reached") : pct(b.quorumPct)} ({formatTokenAmount(proposal.quorumVotes, 18, 2, locale)}{" "}
           ECO)
         </span>
       </div>
@@ -83,6 +88,7 @@ interface ProposalCardProps {
 
 /** Summary of one DAO proposal in the list; links to its detail page. */
 export function ProposalCard({ proposal, now }: ProposalCardProps) {
+  const { locale, t } = useI18n();
   const secondsLeft = Number(proposal.deadline) - now;
   const href = `/governance/${proposal.id.toString()}`;
 
@@ -99,7 +105,7 @@ export function ProposalCard({ proposal, now }: ProposalCardProps) {
       <div className="min-w-0">
         <h2 id={`proposal-${proposal.id}-title`} className="line-clamp-2 text-lg font-bold text-white">
           <Link href={href} className="hover:text-emerald-300 focus:outline-none focus-visible:underline">
-            {proposal.title}
+            {displayProposalTitle(proposal.title, locale)}
           </Link>
         </h2>
         {proposal.body && <p className="mt-1 line-clamp-2 text-sm text-slate-400">{proposal.body}</p>}
@@ -107,15 +113,15 @@ export function ProposalCard({ proposal, now }: ProposalCardProps) {
 
       <dl className="grid grid-cols-2 gap-3 text-xs">
         <div className="rounded-xl bg-slate-800/60 p-2.5">
-          <dt className="text-slate-400">Số ETH yêu cầu</dt>
-          <dd className="mt-0.5 font-mono text-sm font-bold text-amber-300">{formatEth(proposal.amount)}</dd>
+          <dt className="text-slate-400">{t("Số ETH yêu cầu", "ETH requested")}</dt>
+          <dd className="mt-0.5 font-mono text-sm font-bold text-amber-300">{formatEth(proposal.amount, locale)}</dd>
         </div>
         <div className="rounded-xl bg-slate-800/60 p-2.5">
-          <dt className="text-slate-400">{proposal.status === "active" ? "Còn lại" : "Hạn bỏ phiếu"}</dt>
+          <dt className="text-slate-400">{proposal.status === "active" ? t("Còn lại", "Time left") : t("Hạn bỏ phiếu", "Voting deadline")}</dt>
           <dd className="mt-0.5 text-sm font-semibold text-slate-200" suppressHydrationWarning>
             {proposal.status === "active"
-              ? `⏳ ${formatCountdown(secondsLeft)}`
-              : new Date(Number(proposal.deadline) * 1000).toLocaleDateString("vi-VN")}
+              ? `⏳ ${formatCountdown(secondsLeft, locale)}`
+              : new Date(Number(proposal.deadline) * 1000).toLocaleDateString(intlLocale(locale))}
           </dd>
         </div>
       </dl>
@@ -124,10 +130,10 @@ export function ProposalCard({ proposal, now }: ProposalCardProps) {
 
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-800 pt-3 text-xs text-slate-400">
         <span>
-          Nhận: <span className="font-mono text-slate-300">{shortenAddress(proposal.recipient)}</span>
+          {t("Nhận:", "Recipient:")} <span className="font-mono text-slate-300">{shortenAddress(proposal.recipient)}</span>
         </span>
         <Link href={href} className="font-semibold text-emerald-400 hover:text-emerald-300">
-          {proposal.status === "active" ? "Bỏ phiếu →" : "Chi tiết →"}
+          {proposal.status === "active" ? t("Bỏ phiếu →", "Vote →") : t("Chi tiết →", "Details →")}
         </Link>
       </div>
     </article>

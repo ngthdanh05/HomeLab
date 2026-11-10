@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useRef, useState } from "react";
+import { useI18n } from "@/providers/LocaleProvider";
 
 type ToastVariant = "success" | "error" | "info";
 
@@ -31,6 +32,7 @@ const VARIANT_STYLES: Record<ToastVariant, { box: string; icon: string }> = {
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const { t: translate } = useI18n();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
 
@@ -85,7 +87,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   onClick={() => dismiss(t.id)}
-                  aria-label="Đóng thông báo"
+                  aria-label={translate("Đóng thông báo", "Close notification")}
                   className="text-slate-400 hover:text-white"
                 >
                   ✕

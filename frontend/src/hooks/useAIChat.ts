@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { createSSEParser } from "@/lib/sse";
+import { useI18n } from "@/providers/LocaleProvider";
 import type { ChatContext } from "@/types/ai";
 
 export type { ChatContext };
@@ -13,20 +14,21 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
-async function readErrorMessage(response: Response): Promise<string> {
+async function readErrorMessage(response: Response, fallback: string): Promise<string> {
   try {
     const data = await response.json();
     if (typeof data?.error === "string") return data.error;
   } catch {
     // Non-JSON error body (e.g. proxy HTML page).
   }
-  return "Không thể kết nối tới AI. Vui lòng thử lại.";
+  return fallback;
 }
 
 const HISTORY_MESSAGES = 8;
 const HISTORY_CHARS = 1000;
 
 export function useAIChat() {
+  const { t } = useI18n();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,8 +82,10 @@ export function useAIChat() {
           signal: controller.signal,
         });
 
-        if (!response.ok) throw new Error(await readErrorMessage(response));
-        if (!response.body) throw new Error("Không nhận được phản hồi từ AI.");
+        if (!response.ok) {
+          throw new Error(await readErrorMessage(response, t("Không thể kết nối tới AI. Vui lòng thử lại.", "Could not connect to the AI. Please try again.")));
+        }
+        if (!response.body) throw new Error(t("Không nhận được phản hồi từ AI.", "No response from the AI."));
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -107,11 +111,11 @@ export function useAIChat() {
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
 
-        const errorMsg = err instanceof Error ? err.message : "Đã xảy ra lỗi";
+        const errorMsg = err instanceof Error ? err.message : t("Đã xảy ra lỗi", "Something went wrong");
         setError(errorMsg);
         updateMessage(
           assistantMessageId,
-          (c) => `${c ? `${c}\n\n` : ""}⚠️ Xin lỗi, đã xảy ra lỗi: ${errorMsg}`,
+          (c) => `${c ? `${c}\n\n` : ""}⚠️ ${t("Xin lỗi, đã xảy ra lỗi", "Sorry, an error occurred")}: ${errorMsg}`,
         );
       } finally {
         if (abortControllerRef.current === controller) {
@@ -120,7 +124,7 @@ export function useAIChat() {
         }
       }
     },
-    [updateMessage],
+    [updateMessage, t],
   );
 
   const clearChat = useCallback(() => {

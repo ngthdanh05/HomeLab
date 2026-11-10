@@ -6,6 +6,7 @@ import { GovernanceABI } from "@/config/contracts";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useContractTx } from "@/hooks/useContractTx";
 import type { ProposalStatus } from "@/lib/governance";
+import { useI18n } from "@/providers/LocaleProvider";
 import { formatEth } from "./TreasuryStats";
 
 interface ExecuteProposalButtonProps {
@@ -27,11 +28,12 @@ export function ExecuteProposalButton({
   treasuryBalance,
   onExecuted,
 }: ExecuteProposalButtonProps) {
+  const { locale, t } = useI18n();
   const { addresses } = useActiveChain();
   const passed = status === "passed";
   const { send, status: txStatus, isBusy } = useContractTx({
-    pending: passed ? "Đang thực thi giải ngân" : "Đang chốt kết quả đề xuất",
-    success: passed ? "Đã giải ngân từ Quỹ Cộng đồng! 💸" : "Đã chốt: đề xuất bị từ chối",
+    pending: passed ? t("Đang thực thi giải ngân", "Executing disbursement") : t("Đang chốt kết quả đề xuất", "Finalizing the proposal result"),
+    success: passed ? t("Đã giải ngân từ Quỹ Cộng đồng! 💸", "Disbursed from the Community Treasury! 💸") : t("Đã chốt: đề xuất bị từ chối", "Finalized: the proposal was rejected"),
   });
 
   if (status !== "passed" && status !== "defeated") return null;
@@ -52,13 +54,22 @@ export function ExecuteProposalButton({
     <div className="space-y-2">
       <p className="text-sm text-slate-300">
         {passed
-          ? `Đề xuất đã được thông qua. Bất kỳ ai cũng có thể thực thi để Quỹ chuyển ${formatEth(amount)} tới ví nhận.`
-          : "Đề xuất không được thông qua. Thực thi để ghi nhận kết quả từ chối on-chain (không giải ngân)."}
+          ? t(
+              `Đề xuất đã được thông qua. Bất kỳ ai cũng có thể thực thi để Quỹ chuyển ${formatEth(amount, locale)} tới ví nhận.`,
+              `The proposal passed. Anyone can execute it so the Treasury sends ${formatEth(amount, locale)} to the recipient wallet.`,
+            )
+          : t(
+              "Đề xuất không được thông qua. Thực thi để ghi nhận kết quả từ chối on-chain (không giải ngân).",
+              "The proposal did not pass. Execute it to record the rejection on-chain (no disbursement).",
+            )}
       </p>
       {underfunded && (
         <p role="alert" className="rounded-xl border border-amber-800/60 bg-amber-950/40 p-3 text-sm text-amber-200">
-          ⚠️ Quỹ hiện chỉ có {formatEth(treasuryBalance)}, chưa đủ để giải ngân. Giao dịch sẽ bị từ chối cho tới khi Quỹ
-          nhận thêm ETH.
+          ⚠️{" "}
+          {t(
+            `Quỹ hiện chỉ có ${formatEth(treasuryBalance, locale)}, chưa đủ để giải ngân. Giao dịch sẽ bị từ chối cho tới khi Quỹ nhận thêm ETH.`,
+            `The Treasury only holds ${formatEth(treasuryBalance, locale)}, which is not enough to disburse. The transaction will be rejected until the Treasury receives more ETH.`,
+          )}
         </p>
       )}
       <button
@@ -71,12 +82,12 @@ export function ExecuteProposalButton({
       >
         {isBusy && <Spinner />}
         {txStatus === "awaiting-wallet"
-          ? "Xác nhận trong ví…"
+          ? t("Xác nhận trong ví…", "Confirm in wallet…")
           : txStatus === "pending"
-            ? "Đang chờ xác nhận on-chain…"
+            ? t("Đang chờ xác nhận on-chain…", "Waiting for on-chain confirmation…")
             : passed
-              ? "💸 Thực thi giải ngân"
-              : "Chốt kết quả: từ chối"}
+              ? t("💸 Thực thi giải ngân", "💸 Execute disbursement")
+              : t("Chốt kết quả: từ chối", "Finalize result: rejected")}
       </button>
     </div>
   );

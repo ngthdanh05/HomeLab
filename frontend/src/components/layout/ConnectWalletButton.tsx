@@ -2,6 +2,7 @@
 
 import React, { useSyncExternalStore } from "react";
 import { useAccount } from "wagmi";
+import { useI18n } from "@/providers/LocaleProvider";
 import { useWalletModal } from "@/providers/WalletModal";
 
 const noopSubscribe = () => () => {};
@@ -27,7 +28,8 @@ export function addressGradient(address: string): string {
 export function ConnectWalletButton({ className = "" }: { className?: string }) {
   const { address, isConnecting } = useAccount();
   const { open, prefetch } = useWalletModal();
-  // Wallet state exists only in the browser; render "Connect Wallet" on the server
+  const { t } = useI18n();
+  // Wallet state exists only in the browser; render the connect label on the server
   // and in the first client render so hydration matches.
   const mounted = useSyncExternalStore(
     noopSubscribe,
@@ -51,7 +53,7 @@ export function ConnectWalletButton({ className = "" }: { className?: string }) 
           <span className="font-mono">{formatWalletAddress(shown)}</span>
         </>
       ) : (
-        "Connect Wallet"
+        t("Kết nối ví", "Connect Wallet")
       )}
     </button>
   );

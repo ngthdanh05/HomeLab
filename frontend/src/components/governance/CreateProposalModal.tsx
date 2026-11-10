@@ -17,6 +17,7 @@ import {
   validateProposalForm,
   type ProposalForm,
 } from "@/lib/governance";
+import { useI18n } from "@/providers/LocaleProvider";
 import { formatEth } from "./TreasuryStats";
 
 interface CreateProposalModalProps {
@@ -39,14 +40,15 @@ export function CreateProposalModal({
   votingPeriod,
   treasuryBalance,
 }: CreateProposalModalProps) {
+  const { locale, t } = useI18n();
   const formId = useId();
   const { addresses } = useActiveChain();
   const { address: user, isConnected } = useAccount();
   const { open: openWalletModal } = useWalletModal();
   const { balance } = useVotingPower(user);
   const { send, status, isBusy } = useContractTx({
-    pending: "Đang tạo đề xuất",
-    success: "Tạo đề xuất thành công! 🎉",
+    pending: t("Đang tạo đề xuất", "Creating proposal"),
+    success: t("Tạo đề xuất thành công! 🎉", "Proposal created! 🎉"),
   });
 
   const [form, setForm] = useState<ProposalForm>(EMPTY_FORM);
@@ -71,9 +73,9 @@ export function CreateProposalModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isConnected) return openWalletModal();
-    const formError = validateProposalForm(form);
+    const formError = validateProposalForm(form, locale);
     if (formError) return setError(formError);
-    if (belowThreshold) return setError("Số dư ECO chưa đạt ngưỡng tối thiểu để tạo đề xuất.");
+    if (belowThreshold) return setError(t("Số dư ECO chưa đạt ngưỡng tối thiểu để tạo đề xuất.", "Your ECO balance is below the minimum required to create a proposal."));
     setError(null);
 
     const result = await send({
@@ -108,19 +110,19 @@ export function CreateProposalModal({
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 id={`${formId}-title`} className="text-lg font-bold text-white">
-              🌱 Đề xuất dự án bảo tồn
+              🌱 {t("Đề xuất dự án bảo tồn", "Propose a conservation project")}
             </h2>
             <p className="text-xs text-slate-400">
-              Cộng đồng bỏ phiếu bằng ECO
-              {votingPeriod !== undefined ? ` trong ${formatDuration(Number(votingPeriod))}` : ""}. Nếu được thông qua,
-              Quỹ Cộng đồng giải ngân ETH cho ví nhận.
+              {t("Cộng đồng bỏ phiếu bằng ECO", "The community votes with ECO")}
+              {votingPeriod !== undefined ? ` ${t("trong", "for")} ${formatDuration(Number(votingPeriod), locale)}` : ""}.{" "}
+              {t("Nếu được thông qua, Quỹ Cộng đồng giải ngân ETH cho ví nhận.", "If it passes, the Community Treasury disburses ETH to the recipient wallet.")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={isBusy}
-            aria-label="Đóng"
+            aria-label={t("Đóng", "Close")}
             className="text-slate-400 hover:text-white disabled:opacity-40"
           >
             ✕
@@ -129,16 +131,16 @@ export function CreateProposalModal({
 
         {belowThreshold && (
           <p role="alert" className="mb-4 rounded-xl border border-amber-800/60 bg-amber-950/40 p-3 text-sm text-amber-200">
-            🔒 Cần tối thiểu <strong>{formatTokenAmount(proposalThreshold ?? 0n)} ECO</strong> để tạo đề xuất; ví của bạn
-            có {formatTokenAmount(balance ?? 0n, 18, 2)} ECO. Mua sản phẩm thủ công hoặc hoàn thành quest để nhận thêm
-            ECO.
+            🔒 {t("Cần tối thiểu", "You need at least")} <strong>{formatTokenAmount(proposalThreshold ?? 0n, 18, 4, locale)} ECO</strong>{" "}
+            {t("để tạo đề xuất; ví của bạn có", "to create a proposal; your wallet has")} {formatTokenAmount(balance ?? 0n, 18, 2, locale)} ECO.{" "}
+            {t("Mua sản phẩm thủ công hoặc hoàn thành quest để nhận thêm ECO.", "Buy handicrafts or complete quests to earn more ECO.")}
           </p>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor={`${formId}-name`} className="mb-1 block text-xs font-medium text-slate-300">
-              Tên dự án *
+              {t("Tên dự án *", "Project name *")}
             </label>
             <input
               id={`${formId}-name`}
@@ -146,14 +148,14 @@ export function CreateProposalModal({
               value={form.title}
               maxLength={PROPOSAL_LIMITS.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="VD: Phục hồi rừng ngập mặn Cẩm Thanh"
+              placeholder={t("VD: Phục hồi rừng ngập mặn Cẩm Thanh", "E.g. Restoring the Cam Thanh mangrove forest")}
               required
             />
           </div>
 
           <div>
             <label htmlFor={`${formId}-desc`} className="mb-1 block text-xs font-medium text-slate-300">
-              Mô tả * <span className="text-slate-400">(mục tiêu, kế hoạch sử dụng quỹ, người thực hiện)</span>
+              {t("Mô tả *", "Description *")} <span className="text-slate-400">{t("(mục tiêu, kế hoạch sử dụng quỹ, người thực hiện)", "(goals, how the funds will be used, who will do it)")}</span>
             </label>
             <textarea
               id={`${formId}-desc`}
@@ -162,7 +164,7 @@ export function CreateProposalModal({
               value={form.body}
               maxLength={PROPOSAL_LIMITS.body}
               onChange={(e) => setForm({ ...form, body: e.target.value })}
-              placeholder="Trồng 2.000 cây đước cùng 30 hộ dân địa phương…"
+              placeholder={t("Trồng 2.000 cây đước cùng 30 hộ dân địa phương…", "Plant 2,000 mangrove trees with 30 local households…")}
               required
             />
             <p className="mt-1 text-right text-[11px] text-slate-400">
@@ -172,7 +174,7 @@ export function CreateProposalModal({
 
           <div>
             <label htmlFor={`${formId}-amount`} className="mb-1 block text-xs font-medium text-slate-300">
-              Số ETH yêu cầu *
+              {t("Số ETH yêu cầu *", "ETH requested *")}
             </label>
             <input
               id={`${formId}-amount`}
@@ -185,8 +187,8 @@ export function CreateProposalModal({
             />
             {treasuryBalance !== undefined && (
               <p className={`mt-1 text-[11px] ${exceedsTreasury ? "text-amber-300" : "text-slate-400"}`}>
-                Quỹ hiện có {formatEth(treasuryBalance)}
-                {exceedsTreasury && " — số yêu cầu lớn hơn số dư, đề xuất chỉ giải ngân được khi Quỹ đủ tiền."}
+                {t("Quỹ hiện có", "The Treasury currently holds")} {formatEth(treasuryBalance, locale)}
+                {exceedsTreasury && t(" — số yêu cầu lớn hơn số dư, đề xuất chỉ giải ngân được khi Quỹ đủ tiền.", ". The amount exceeds the balance, so the proposal can only be disbursed once the Treasury has enough funds.")}
               </p>
             )}
           </div>
@@ -194,7 +196,7 @@ export function CreateProposalModal({
           <div>
             <div className="mb-1 flex items-center justify-between gap-2">
               <label htmlFor={`${formId}-recipient`} className="block text-xs font-medium text-slate-300">
-                Địa chỉ ví nhận *
+                {t("Địa chỉ ví nhận *", "Recipient wallet address *")}
               </label>
               {user && (
                 <button
@@ -202,7 +204,7 @@ export function CreateProposalModal({
                   onClick={() => setForm({ ...form, recipient: user })}
                   className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300"
                 >
-                  Dùng ví của tôi
+                  {t("Dùng ví của tôi", "Use my wallet")}
                 </button>
               )}
             </div>
@@ -231,12 +233,12 @@ export function CreateProposalModal({
           >
             {isBusy && <Spinner />}
             {!isConnected
-              ? "Kết nối ví để tạo đề xuất"
+              ? t("Kết nối ví để tạo đề xuất", "Connect wallet to create a proposal")
               : status === "awaiting-wallet"
-                ? "Xác nhận trong ví…"
+                ? t("Xác nhận trong ví…", "Confirm in wallet…")
                 : status === "pending"
-                  ? "Đang chờ xác nhận on-chain…"
-                  : "Gửi đề xuất"}
+                  ? t("Đang chờ xác nhận on-chain…", "Waiting for on-chain confirmation…")
+                  : t("Gửi đề xuất", "Submit proposal")}
           </button>
         </form>
       </div>

@@ -16,6 +16,7 @@ import {
   kgToGrams,
   quoteOffsetWei,
 } from "@/lib/carbon-utils";
+import { useI18n } from "@/providers/LocaleProvider";
 
 interface CarbonOffsetButtonProps {
   kg: number;
@@ -29,12 +30,13 @@ interface CarbonOffsetButtonProps {
  * and mints a ZERO_CARBON ImpactBadge to the connected wallet.
  */
 export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButtonProps) {
+  const { locale, t } = useI18n();
   const { isConnected } = useAccount();
   const { chainId } = useActiveChain();
   const { address, pricePerKgWei, isLoading } = useCarbonOffset(undefined);
   const { send, status, isBusy } = useContractTx({
-    pending: "Đang bù đắp carbon",
-    success: "Đã bù đắp carbon! 🌍 Badge ZERO_CARBON đã được mint",
+    pending: t("Đang bù đắp carbon", "Offsetting carbon"),
+    success: t("Đã bù đắp carbon! 🌍 Badge ZERO_CARBON đã được mint", "Carbon offset! 🌍 Your ZERO_CARBON badge has been minted"),
   });
 
   const offsetKg = Math.min(kg, CARBON_LIMITS.maxOffsetKg);
@@ -46,25 +48,28 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
   if (!address) {
     return (
       <p className="rounded-xl border border-amber-800/60 bg-amber-950/40 p-3 text-sm text-amber-200">
-        Contract CarbonOffset chưa được deploy trên {getChainName(chainId)}, nên chưa thể bù đắp on-chain.
+        {t(
+          `Contract CarbonOffset chưa được deploy trên ${getChainName(chainId)}, nên chưa thể bù đắp on-chain.`,
+          `The CarbonOffset contract is not deployed on ${getChainName(chainId)}, so on-chain offsetting is not available yet.`,
+        )}
       </p>
     );
   }
 
   const label =
     grams === 0n
-      ? "Nhập hành trình để bù đắp"
+      ? t("Nhập hành trình để bù đắp", "Enter a trip to offset")
       : belowMinimum
-        ? `Tối thiểu ${formatKg(CARBON_LIMITS.minOffsetKg)} mỗi lần bù đắp`
+        ? t(`Tối thiểu ${formatKg(CARBON_LIMITS.minOffsetKg, locale)} mỗi lần bù đắp`, `Minimum ${formatKg(CARBON_LIMITS.minOffsetKg, locale)} per offset`)
       : isBusy
         ? status === "awaiting-wallet"
-          ? "Xác nhận trong ví…"
-          : "Đang chờ xác nhận on-chain…"
+          ? t("Xác nhận trong ví…", "Confirm in wallet…")
+          : t("Đang chờ xác nhận on-chain…", "Waiting for on-chain confirmation…")
         : !isConnected
-          ? "Kết nối ví để bù đắp"
+          ? t("Kết nối ví để bù đắp", "Connect wallet to offset")
           : fee === undefined
-            ? "Đang tải phí bù đắp…"
-            : `🌍 Bù đắp ${formatKg(offsetKg)} · ${formatEther(fee)} ETH`;
+            ? t("Đang tải phí bù đắp…", "Loading offset fee…")
+            : t(`🌍 Bù đắp ${formatKg(offsetKg, locale)} · ${formatEther(fee)} ETH`, `🌍 Offset ${formatKg(offsetKg, locale)} · ${formatEther(fee)} ETH`);
 
   return (
     <div className="space-y-2">
@@ -77,7 +82,7 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
             address,
             abi: CarbonOffsetABI,
             functionName: "offset",
-            args: [grams, buildOffsetMetadataUri({ kg: offsetKg, summary, location })],
+            args: [grams, buildOffsetMetadataUri({ kg: offsetKg, summary, location, locale })],
             value: fee,
           })
         }
@@ -87,13 +92,16 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
         {label}
       </button>
       <p className="text-[11px] leading-relaxed text-slate-400">
-        Toàn bộ phí được chuyển vào Quỹ Cộng đồng (DAO) để tài trợ dự án bảo tồn; bạn nhận NFT
-        ImpactBadge loại ZERO_CARBON ghi nhận đóng góp. Khoản này chưa phải tín chỉ carbon đã được kiểm định.
-        {kg > CARBON_LIMITS.maxOffsetKg && ` Mỗi lần bù đắp tối đa ${formatKg(CARBON_LIMITS.maxOffsetKg)}.`}
+        {t(
+          "Toàn bộ phí được chuyển vào Quỹ Cộng đồng (DAO) để tài trợ dự án bảo tồn; bạn nhận NFT ImpactBadge loại ZERO_CARBON ghi nhận đóng góp. Khoản này chưa phải tín chỉ carbon đã được kiểm định.",
+          "The whole fee goes to the Community Treasury (DAO) to fund conservation projects, and you receive a ZERO_CARBON ImpactBadge NFT recording your contribution. This is not a verified carbon credit.",
+        )}
+        {kg > CARBON_LIMITS.maxOffsetKg &&
+          t(` Mỗi lần bù đắp tối đa ${formatKg(CARBON_LIMITS.maxOffsetKg, locale)}.`, ` Each offset is limited to ${formatKg(CARBON_LIMITS.maxOffsetKg, locale)}.`)}
       </p>
       {done && (
         <Link href="/dashboard" className="block text-center text-sm font-medium text-emerald-400 hover:underline">
-          🏅 Xem badge ZERO_CARBON trong Dashboard →
+          🏅 {t("Xem badge ZERO_CARBON trong Dashboard →", "View your ZERO_CARBON badge in the Dashboard →")}
         </Link>
       )}
     </div>

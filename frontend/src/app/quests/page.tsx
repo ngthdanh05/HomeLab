@@ -10,8 +10,10 @@ import { getChainName } from "@/config/contracts";
 import type { QuestDefinition } from "@/data/quests";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useQuestProgress, type QuestWithProgress } from "@/hooks/useQuestProgress";
+import { useI18n } from "@/providers/LocaleProvider";
 
 export default function QuestsPage() {
+  const { t } = useI18n();
   const { chainId } = useActiveChain();
   const { address: user, isConnected } = useAccount();
   const { address, quests, completedCount, isError, refetch } = useQuestProgress(user);
@@ -38,21 +40,26 @@ export default function QuestsPage() {
           🎯 Eco Quests · {getChainName(chainId)}
         </span>
         <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-          Du lịch tử tế, nhận thưởng xứng đáng
+          {t("Du lịch tử tế, nhận thưởng xứng đáng", "Travel kindly, earn what you deserve")}
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
-          Hoàn thành nhiệm vụ để nhận thêm EcoToken và mở khoá ImpactBadge hiếm. Điều kiện được smart contract
-          kiểm tra on-chain khi bạn nhận thưởng, và mỗi quest chỉ nhận được một lần.
+          {t(
+            "Hoàn thành nhiệm vụ để nhận thêm EcoToken và mở khoá ImpactBadge hiếm. Điều kiện được smart contract kiểm tra on-chain khi bạn nhận thưởng, và mỗi quest chỉ nhận được một lần.",
+            "Complete quests to earn extra EcoToken and unlock rare ImpactBadges. The smart contract checks the requirements on-chain when you claim, and each quest can be claimed only once.",
+          )}
         </p>
       </section>
 
       {!address ? (
         <p className="rounded-2xl border border-amber-800/60 bg-amber-950/40 p-4 text-sm text-amber-200">
-          Contract QuestRewards chưa được deploy trên {getChainName(chainId)}, nên chưa thể nhận thưởng quest.
+          {t(
+            `Contract QuestRewards chưa được deploy trên ${getChainName(chainId)}, nên chưa thể nhận thưởng quest.`,
+            `The QuestRewards contract is not deployed on ${getChainName(chainId)}, so quest rewards cannot be claimed yet.`,
+          )}
         </p>
       ) : !isConnected ? (
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-slate-800 bg-slate-900/60 p-8 text-center">
-          <p className="text-slate-300">Kết nối ví để xem tiến độ và nhận thưởng quest của bạn.</p>
+          <p className="text-slate-300">{t("Kết nối ví để xem tiến độ và nhận thưởng quest của bạn.", "Connect your wallet to see your progress and claim quest rewards.")}</p>
           <ConnectWalletButton />
         </div>
       ) : (
@@ -65,9 +72,12 @@ export default function QuestsPage() {
           />
           {isError && (
             <p className="rounded-xl border border-red-900/60 bg-red-950/30 p-3 text-sm text-red-200">
-              Không tải đủ dữ liệu on-chain (RPC có thể đang quá tải); một số tiến độ có thể chưa chính xác.{" "}
+              {t(
+                "Không tải đủ dữ liệu on-chain (RPC có thể đang quá tải); một số tiến độ có thể chưa chính xác.",
+                "Could not load all on-chain data (the RPC may be overloaded); some progress may be inaccurate.",
+              )}{" "}
               <button type="button" onClick={refetch} className="font-semibold underline">
-                Thử lại
+                {t("Thử lại", "Try again")}
               </button>
             </p>
           )}
@@ -75,7 +85,7 @@ export default function QuestsPage() {
       )}
 
       <h2 id="quest-list-title" className="sr-only">
-        Danh sách quest
+        {t("Danh sách quest", "Quest list")}
       </h2>
       <section aria-labelledby="quest-list-title" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {quests.map((quest) =>

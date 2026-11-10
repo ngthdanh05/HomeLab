@@ -1,6 +1,7 @@
 // Carbon footprint helpers for the Carbon Tracker (framework-free, unit-tested with Node).
 
 import { ValidationError } from "./ai-validation.ts";
+import { intlLocale, pick, type Locale } from "./i18n.ts";
 import { encodeDataJsonUri } from "./marketplace.ts";
 
 /**
@@ -10,13 +11,13 @@ import { encodeDataJsonUri } from "./marketplace.ts";
  * vehicle, load and route, so results are estimates.
  */
 export const TRANSPORT_MODES = [
-  { id: "plane", label: "Máy bay (nội địa)", icon: "✈️", factor: 0.246, perVehicle: false },
-  { id: "car", label: "Ô tô (xăng)", icon: "🚗", factor: 0.171, perVehicle: true },
-  { id: "motorbike", label: "Xe máy", icon: "🛵", factor: 0.114, perVehicle: true },
-  { id: "bus", label: "Xe khách / xe buýt", icon: "🚌", factor: 0.027, perVehicle: false },
-  { id: "train", label: "Tàu hoả", icon: "🚆", factor: 0.035, perVehicle: false },
-  { id: "boat", label: "Tàu cao tốc / phà", icon: "⛴️", factor: 0.115, perVehicle: false },
-  { id: "bicycle", label: "Xe đạp / đi bộ", icon: "🚲", factor: 0, perVehicle: false },
+  { id: "plane", label: "Máy bay (nội địa)", labelEn: "Plane (domestic)", icon: "✈️", factor: 0.246, perVehicle: false },
+  { id: "car", label: "Ô tô (xăng)", labelEn: "Car (petrol)", icon: "🚗", factor: 0.171, perVehicle: true },
+  { id: "motorbike", label: "Xe máy", labelEn: "Motorbike", icon: "🛵", factor: 0.114, perVehicle: true },
+  { id: "bus", label: "Xe khách / xe buýt", labelEn: "Coach / bus", icon: "🚌", factor: 0.027, perVehicle: false },
+  { id: "train", label: "Tàu hoả", labelEn: "Train", icon: "🚆", factor: 0.035, perVehicle: false },
+  { id: "boat", label: "Tàu cao tốc / phà", labelEn: "Speedboat / ferry", icon: "⛴️", factor: 0.115, perVehicle: false },
+  { id: "bicycle", label: "Xe đạp / đi bộ", labelEn: "Bicycle / walking", icon: "🚲", factor: 0, perVehicle: false },
 ] as const;
 
 export type TransportModeId = (typeof TRANSPORT_MODES)[number]["id"];
@@ -56,21 +57,27 @@ export const LEVEL_THRESHOLDS = { low: 50, medium: 200 } as const;
 /** Upper end of the meter scale (kg CO₂). */
 export const METER_MAX_KG = 400;
 
-export const LEVEL_INFO: Record<CarbonLevel, { label: string; color: string; hint: string }> = {
+export const LEVEL_INFO: Record<CarbonLevel, { label: string; labelEn: string; color: string; hint: string; hintEn: string }> = {
   low: {
     label: "Thấp",
+    labelEn: "Low",
     color: "#10b981",
     hint: "Hành trình rất xanh — tiếp tục ưu tiên tàu, xe khách và xe đạp nhé!",
+    hintEn: "A very green trip. Keep choosing trains, coaches and bicycles!",
   },
   medium: {
     label: "Trung bình",
+    labelEn: "Medium",
     color: "#f59e0b",
     hint: "Có thể giảm bằng cách thay một chặng bay/ô tô bằng tàu hoặc xe khách.",
+    hintEn: "You could cut this by replacing a flight or car leg with a train or coach.",
   },
   high: {
     label: "Cao",
+    labelEn: "High",
     color: "#ef4444",
     hint: "Phát thải lớn, chủ yếu từ máy bay/ô tô. Hãy cân nhắc bù đắp carbon.",
+    hintEn: "High emissions, mostly from flights or cars. Consider offsetting your carbon.",
   },
 };
 
@@ -94,11 +101,12 @@ export function calculateLegKg(leg: TripLeg): number {
 }
 
 /** Totals for a list of legs, with a per-leg breakdown (kg rounded to 0.01). */
-export function calculateTrip(legs: TripLeg[]): { totalKg: number; breakdown: CarbonBreakdownItem[] } {
+export function calculateTrip(legs: TripLeg[], locale: Locale = "vi"): { totalKg: number; breakdown: CarbonBreakdownItem[] } {
   const breakdown = legs.slice(0, CARBON_LIMITS.maxLegs).map((leg) => {
     const mode = getTransportMode(leg.mode);
+    const label = mode ? pick<string>(locale, mode.label, mode.labelEn) : leg.mode;
     return {
-      activity: `${mode?.icon ?? ""} ${mode?.label ?? leg.mode} · ${leg.km} km`.trim(),
+      activity: `${mode?.icon ?? ""} ${label} · ${leg.km} km`.trim(),
       kgCO2: round(calculateLegKg(leg)),
     };
   });
@@ -112,8 +120,8 @@ export function kgToGrams(kg: number): bigint {
   return BigInt(Math.ceil(round(kg * 1000, 6)));
 }
 
-export function formatKg(kg: number): string {
-  return `${kg.toLocaleString("vi-VN", { maximumFractionDigits: kg < 10 ? 2 : 1 })} kg CO₂`;
+export function formatKg(kg: number, locale: Locale = "vi"): string {
+  return `${kg.toLocaleString(intlLocale(locale), { maximumFractionDigits: kg < 10 ? 2 : 1 })} kg CO₂`;
 }
 
 // ───────────────────────────── AI estimate ─────────────────────────────
@@ -121,16 +129,24 @@ export function formatKg(kg: number): string {
 /** 400-level input error; the AI routes map ValidationError to HTTP 400. */
 export class CarbonValidationError extends ValidationError {}
 
-export function parseCarbonEstimateRequest(body: unknown): { description: string } {
+export function parseCarbonEstimateRequest(body: unknown, locale: Locale = "vi"): { description: string } {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     throw new CarbonValidationError("Invalid request body");
   }
   const raw = (body as Record<string, unknown>).description;
   if (typeof raw !== "string" || raw.trim().length < 10) {
-    throw new CarbonValidationError("Hãy mô tả hành trình (ít nhất 10 ký tự).");
+    throw new CarbonValidationError(
+      pick(locale, "Hãy mô tả hành trình (ít nhất 10 ký tự).", "Please describe your trip (at least 10 characters)."),
+    );
   }
   if (raw.length > CARBON_LIMITS.descriptionLength) {
-    throw new CarbonValidationError(`Mô tả tối đa ${CARBON_LIMITS.descriptionLength} ký tự.`);
+    throw new CarbonValidationError(
+      pick(
+        locale,
+        `Mô tả tối đa ${CARBON_LIMITS.descriptionLength} ký tự.`,
+        `Description can be at most ${CARBON_LIMITS.descriptionLength} characters.`,
+      ),
+    );
   }
   // Same hardening as the other AI routes: no control chars, no """ delimiter breaking.
   const description = raw
@@ -190,9 +206,12 @@ export function normalizeCarbonEstimate(raw: unknown): CarbonEstimate {
 }
 
 /** Factor table given to the AI so its estimates match the calculator. */
-export function describeEmissionFactors(): string {
+export function describeEmissionFactors(locale: Locale = "vi"): string {
   return TRANSPORT_MODES.map(
-    (m) => `- ${m.label}: ${m.factor} kg CO₂/${m.perVehicle ? "xe" : "khách"}-km`,
+    (m) =>
+      locale === "en"
+        ? `- ${m.labelEn}: ${m.factor} kg CO₂/${m.perVehicle ? "vehicle" : "passenger"}-km`
+        : `- ${m.label}: ${m.factor} kg CO₂/${m.perVehicle ? "xe" : "khách"}-km`,
   ).join("\n");
 }
 
@@ -211,15 +230,22 @@ export function buildOffsetMetadataUri(input: {
   summary?: string;
   location?: string;
   timestamp?: number;
+  locale?: Locale;
 }): string {
-  const kgText = formatKg(input.kg);
+  const locale = input.locale ?? "vi";
+  const kgText = formatKg(input.kg, locale);
   let description = (input.summary ?? "").trim().slice(0, 400);
   const build = () =>
     encodeDataJsonUri({
       name: `Zero Carbon · ${kgText}`,
       description:
-        description || `Đã bù đắp ${kgText} cho chuyến đi; phí bù đắp được chuyển vào Quỹ Cộng đồng.`,
-      action: `Bù đắp ${kgText}`,
+        description ||
+        pick(
+          locale,
+          `Đã bù đắp ${kgText} cho chuyến đi; phí bù đắp được chuyển vào Quỹ Cộng đồng.`,
+          `Offset ${kgText} for a trip; the fee went to the Community Treasury.`,
+        ),
+      action: pick(locale, `Bù đắp ${kgText}`, `Offset ${kgText}`),
       carbonOffset: kgText,
       ...(input.location ? { location: input.location.trim().slice(0, 100) } : {}),
       timestamp: input.timestamp ?? Math.floor(Date.now() / 1000),

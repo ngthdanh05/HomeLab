@@ -79,7 +79,7 @@ export const test = base.extend<Fixtures>({
 
   connectWallet: async ({ page, address }, use) => {
     await use(async (target = page) => {
-      await target.getByRole("button", { name: "Connect Wallet" }).first().click();
+      await target.getByRole("button", { name: "Kết nối ví" }).first().click();
       await target.getByRole("button", { name: /^MetaMask/ }).click();
       await expect(connectedButton(target, address)).toBeVisible();
     });

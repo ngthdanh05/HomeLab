@@ -4,6 +4,7 @@ import React from "react";
 import { formatEther } from "viem";
 import { usePaymentSplitter } from "@/hooks/usePaymentSplitter";
 import { formatBps, splitPrice } from "@/lib/marketplace";
+import { useI18n } from "@/providers/LocaleProvider";
 
 /** Shows how a payment is split by PaymentSplitter (optionally for a concrete price). */
 export function SplitBreakdown({
@@ -13,24 +14,25 @@ export function SplitBreakdown({
   price?: bigint;
   compact?: boolean;
 }) {
+  const { locale, t } = useI18n();
   const { shares } = usePaymentSplitter();
   const amounts = price !== undefined ? splitPrice(price, shares) : undefined;
 
   const rows = [
     {
-      label: "Nghệ nhân",
+      label: t("Nghệ nhân", "Artisan"),
       bps: shares.artisanBPS,
       amount: amounts?.artisan,
       color: "bg-emerald-500",
     },
     {
-      label: "Quỹ Cộng đồng",
+      label: t("Quỹ Cộng đồng", "Community Treasury"),
       bps: shares.treasuryBPS,
       amount: amounts?.treasury,
       color: "bg-teal-400",
     },
     {
-      label: "Nền tảng",
+      label: t("Nền tảng", "Platform"),
       bps: shares.platformBPS,
       amount: amounts?.platform,
       color: "bg-slate-500",
@@ -61,7 +63,7 @@ export function SplitBreakdown({
               aria-hidden
             />
             <span>
-              <strong className="text-white">{formatBps(row.bps)}</strong> →{" "}
+              <strong className="text-white">{formatBps(row.bps, locale)}</strong> →{" "}
               {row.label}
               {row.amount !== undefined && (
                 <span className="block text-slate-400 font-mono">

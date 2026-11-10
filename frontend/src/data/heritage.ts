@@ -1,4 +1,5 @@
 // Heritage items shown in the 360° archive (pure data, also used by Eco Quests).
+import { pick, type Locale } from "../lib/i18n.ts";
 import type { HotspotData } from "../lib/three-utils";
 
 export interface HeritageItem {
@@ -95,6 +96,86 @@ export const sampleHeritageItems: HeritageItem[] = [
     ],
   },
 ];
+
+const HERITAGE_EN: Record<
+  string,
+  { title: string; location: string; description: string; hotspots: Record<string, { title: string; description: string }> }
+> = {
+  "chua-cau-hoi-an": {
+    title: "Japanese Covered Bridge & Hoi An Ancient Town",
+    location: "Hoi An, Quang Nam",
+    description:
+      "A 17th-century symbol of blended Vietnamese, Japanese and Chinese architecture, preserved as it stands through 360° digitization.",
+    hotspots: {
+      "cau-mai": {
+        title: "The old tiled bridge roof",
+        description:
+          "A yin-yang tiled roof with finely carved motifs that has withstood hundreds of storm and flood seasons in central Vietnam.",
+      },
+      "tuong-linh-vat": {
+        title: "Monkey and Dog guardian statues",
+        description:
+          "Jackfruit-wood monkeys and dogs stand at the two ends of the bridge, said in East Asian legend to subdue the water monster Cu.",
+      },
+      "song-hoai": {
+        title: "Hoai River boat landing",
+        description:
+          "The river witnessed a once-thriving trading port and now hosts a zero-waste, circular floating-lantern festival.",
+      },
+    },
+  },
+  "ruong-bac-thang-sapa": {
+    title: "Muong Hoa Terraced Rice Fields",
+    location: "Sa Pa, Lao Cai",
+    description:
+      "A masterpiece of sustainable farming on steep mountainsides, created by the H'Mong and Giay peoples.",
+    hotspots: {
+      "he-thong-thuy-loi": {
+        title: "Water carried by natural bamboo pipes",
+        description:
+          "A gravity-fed irrigation system brings water from old-forest streams to every terrace without using any energy.",
+      },
+      "cay-lua-nuoc": {
+        title: "Indigenous upland rice farming",
+        description:
+          "A fragrant sticky rice variety handed down over generations, grown entirely without harmful chemical fertilizers.",
+      },
+    },
+  },
+  "lang-gom-thanh-ha": {
+    title: "Thanh Ha Traditional Pottery Village",
+    location: "Hoi An, Quang Nam",
+    description:
+      "A craft village over 500 years old on the Thu Bon River, keeping alive the technique of shaping natural clay on a foot-turned wheel.",
+    hotspots: {
+      "ban-xoay-gom": {
+        title: "Traditional hand-built potter's wheel",
+        description: "Two people work in rhythm: one shapes the clay while the other turns the wheel with their feet.",
+      },
+      "lo-nung-cui": {
+        title: "Wood-fired pottery kiln",
+        description:
+          "Fired with dry branches pruned from regenerating gardens instead of coal, to reduce greenhouse gas emissions.",
+      },
+    },
+  },
+};
+
+// Built once: the 360° scene is rebuilt whenever the hotspots array changes identity.
+const englishHeritageItems: HeritageItem[] = sampleHeritageItems.map((item) => {
+  const en = HERITAGE_EN[item.id];
+  return {
+    ...item,
+    title: en.title,
+    location: en.location,
+    description: en.description,
+    hotspots: item.hotspots.map((hotspot) => ({ ...hotspot, ...en.hotspots[hotspot.id] })),
+  };
+});
+
+export function getHeritageItems(locale: Locale): HeritageItem[] {
+  return pick(locale, sampleHeritageItems, englishHeritageItems);
+}
 
 /** IDs of every heritage item (the "Nhà thám hiểm di sản" quest needs all of them). */
 export const HERITAGE_IDS: readonly string[] = sampleHeritageItems.map((item) => item.id);

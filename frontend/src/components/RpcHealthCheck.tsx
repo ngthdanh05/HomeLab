@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { DEFAULT_CHAIN_ID } from "@/config/contracts";
 import { SEPOLIA_RPC_URLS } from "@/config/wagmi";
 import { SEPOLIA_CHAIN_ID, redactRpcUrl } from "@/lib/rpc";
+import { useI18n } from "@/providers/LocaleProvider";
 import { useToast } from "./ui/Toast";
 
 /**
@@ -13,6 +14,7 @@ import { useToast } from "./ui/Toast";
  */
 export function RpcHealthCheck() {
   const { toast } = useToast();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (DEFAULT_CHAIN_ID !== SEPOLIA_CHAIN_ID) return;
@@ -31,8 +33,11 @@ export function RpcHealthCheck() {
         if (chainId === SEPOLIA_CHAIN_ID) return;
         console.error(`[rpc] ${redactRpcUrl(url)} returned chainId ${chainId}, expected Sepolia.`);
         toast({
-          title: "RPC đang trỏ sai mạng",
-          description: `Endpoint ${redactRpcUrl(url)} không phải Sepolia. Kiểm tra NEXT_PUBLIC_SEPOLIA_RPC_URL.`,
+          title: t("RPC đang trỏ sai mạng", "RPC points to the wrong network"),
+          description: t(
+            `Endpoint ${redactRpcUrl(url)} không phải Sepolia. Kiểm tra NEXT_PUBLIC_SEPOLIA_RPC_URL.`,
+            `Endpoint ${redactRpcUrl(url)} is not Sepolia. Check NEXT_PUBLIC_SEPOLIA_RPC_URL.`,
+          ),
           variant: "error",
           duration: 0,
         });
@@ -43,7 +48,7 @@ export function RpcHealthCheck() {
       });
 
     return () => controller.abort();
-  }, [toast]);
+  }, [toast, t]);
 
   return null;
 }

@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { isApiKeyError, isGeminiConfigured } from "./gemini";
 import { rateLimit } from "./rate-limit";
 import { ValidationError } from "./ai-validation";
+import { LOCALE_COOKIE, normalizeLocale, pick, type Locale } from "./i18n";
 
 // Chat history can hold several Vietnamese messages (up to 3 bytes per character).
 const MAX_BODY_BYTES = 40 * 1024;
@@ -21,6 +22,11 @@ export function jsonResponse(
   });
 }
 
+/** Language chosen in the header (the cookie is sent with same-origin fetches). */
+export function getRequestLocale(request: NextRequest): Locale {
+  return normalizeLocale(request.cookies.get(LOCALE_COOKIE)?.value);
+}
+
 export function getClientKey(request: NextRequest, route: string): string {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = forwarded || request.headers.get("x-real-ip") || "unknown";
@@ -33,6 +39,7 @@ export async function readAIRequest(
   request: NextRequest,
   route: string,
 ): Promise<{ body: unknown } | { error: Response }> {
+  const locale = getRequestLocale(request);
   const limit = await rateLimit(
     getClientKey(request, route),
     RATE_LIMIT.requests,
@@ -41,7 +48,7 @@ export async function readAIRequest(
   if (!limit.allowed) {
     return {
       error: jsonResponse(
-        { error: "Bạn gửi quá nhiều yêu cầu. Vui lòng thử lại sau ít phút." },
+        { error: pick(locale, "Bạn gửi quá nhiều yêu cầu. Vui lòng thử lại sau ít phút.", "Too many requests. Please try again in a few minutes.") },
         429,
         { "Retry-After": String(limit.retryAfterSeconds) },
       ),
@@ -53,7 +60,7 @@ export async function readAIRequest(
   if (!budget.allowed) {
     return {
       error: jsonResponse(
-        { error: "Dịch vụ AI đã đạt giới hạn trong ngày. Vui lòng quay lại sau." },
+        { error: pick(locale, "Dịch vụ AI đã đạt giới hạn trong ngày. Vui lòng quay lại sau.", "The AI service has reached its daily limit. Please come back later.") },
         503,
         { "Retry-After": String(budget.retryAfterSeconds) },
       ),
@@ -63,7 +70,7 @@ export async function readAIRequest(
   if (!isGeminiConfigured()) {
     return {
       error: jsonResponse(
-        { error: "Dịch vụ AI chưa được cấu hình. Vui lòng liên hệ quản trị viên." },
+        { error: pick(locale, "Dịch vụ AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.", "The AI service is not configured. Please contact the administrator.") },
         503,
       ),
     };
@@ -71,18 +78,18 @@ export async function readAIRequest(
 
   const raw = await request.text();
   if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) {
-    return { error: jsonResponse({ error: "Yêu cầu quá lớn." }, 413) };
+    return { error: jsonResponse({ error: pick(locale, "Yêu cầu quá lớn.", "The request is too large.") }, 413) };
   }
 
   try {
     return { body: JSON.parse(raw) };
   } catch {
-    return { error: jsonResponse({ error: "Body phải là JSON hợp lệ." }, 400) };
+    return { error: jsonResponse({ error: pick(locale, "Body phải là JSON hợp lệ.", "The body must be valid JSON.") }, 400) };
   }
 }
 
 // Maps an error to a friendly response without leaking internal details.
-export function errorResponse(error: unknown, route: string, fallback: string): Response {
+export function errorResponse(error: unknown, route: string, fallback: string, locale: Locale = "vi"): Response {
   if (error instanceof ValidationError) {
     return jsonResponse({ error: error.message }, 400);
   }
@@ -93,7 +100,7 @@ export function errorResponse(error: unknown, route: string, fallback: string): 
   // 504 = GeminiTimeoutError (model hanging under load).
   if (upstreamStatus === 429 || upstreamStatus === 503 || upstreamStatus === 504) {
     return jsonResponse(
-      { error: "Dịch vụ AI đang quá tải. Vui lòng thử lại sau ít phút." },
+      { error: pick(locale, "Dịch vụ AI đang quá tải. Vui lòng thử lại sau ít phút.", "The AI service is overloaded. Please try again in a few minutes.") },
       503,
       { "Retry-After": "30" },
     );
@@ -101,7 +108,7 @@ export function errorResponse(error: unknown, route: string, fallback: string): 
 
   if (isApiKeyError(error)) {
     return jsonResponse(
-      { error: "API key không hợp lệ. Vui lòng kiểm tra cấu hình GEMINI_API_KEY." },
+      { error: pick(locale, "API key không hợp lệ. Vui lòng kiểm tra cấu hình GEMINI_API_KEY.", "Invalid API key. Please check the GEMINI_API_KEY setting.") },
       502,
     );
   }

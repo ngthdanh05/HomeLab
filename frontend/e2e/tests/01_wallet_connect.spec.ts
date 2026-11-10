@@ -8,7 +8,7 @@ test.describe("01 · Kết nối ví", () => {
   }) => {
     await page.goto("/");
     const header = page.getByRole("banner");
-    await expect(header.getByRole("button", { name: "Connect Wallet" })).toBeVisible();
+    await expect(header.getByRole("button", { name: "Kết nối ví" })).toBeVisible();
 
     await connectWallet();
 

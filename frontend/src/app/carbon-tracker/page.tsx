@@ -14,11 +14,15 @@ import { getChainName } from "@/config/contracts";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useCarbonOffset } from "@/hooks/useCarbonOffset";
 import { formatKg } from "@/lib/carbon-utils";
+import { useI18n } from "@/providers/LocaleProvider";
 
 export default function CarbonTrackerPage() {
+  const { locale, t } = useI18n();
   const { chainId } = useActiveChain();
   const { address } = useAccount();
-  const [result, setResult] = useState<TripResult>(() => resultFromLegs(DEFAULT_LEGS));
+  const [stored, setResult] = useState<TripResult>(() => resultFromLegs(DEFAULT_LEGS, locale));
+  // Calculator results are re-labelled when the language changes; AI text stays as generated.
+  const result = stored.legs ? resultFromLegs(stored.legs, locale) : stored;
   const [destination, setDestination] = useState("");
 
   return (
@@ -28,11 +32,13 @@ export default function CarbonTrackerPage() {
           🌍 Carbon Tracker · {getChainName(chainId)}
         </span>
         <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-          Đo, giảm và bù đắp dấu chân carbon của chuyến đi
+          {t("Đo, giảm và bù đắp dấu chân carbon của chuyến đi", "Measure, reduce and offset your trip's carbon footprint")}
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
-          Tính lượng CO₂ theo từng chặng hoặc mô tả hành trình để AI ước tính. Khi bù đắp, phí được chuyển
-          thẳng vào Quỹ Cộng đồng on-chain và bạn nhận NFT ZERO_CARBON — minh bạch, không tẩy xanh.
+          {t(
+            "Tính lượng CO₂ theo từng chặng hoặc mô tả hành trình để AI ước tính. Khi bù đắp, phí được chuyển thẳng vào Quỹ Cộng đồng on-chain và bạn nhận NFT ZERO_CARBON — minh bạch, không tẩy xanh.",
+            "Calculate CO₂ leg by leg, or describe your trip and let AI estimate it. When you offset, the fee goes straight to the on-chain Community Treasury and you receive a ZERO_CARBON NFT: transparent, with no greenwashing.",
+          )}
         </p>
       </section>
 
@@ -46,7 +52,7 @@ export default function CarbonTrackerPage() {
           className="space-y-5 rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6 lg:col-span-2"
         >
           <h2 id="result-title" className="text-lg font-bold text-white">
-            📊 Kết quả {result.source === "ai" && <span className="text-xs font-medium text-sky-300">(AI ước tính)</span>}
+            📊 {t("Kết quả", "Result")} {result.source === "ai" && <span className="text-xs font-medium text-sky-300">{t("(AI ước tính)", "(AI estimate)")}</span>}
           </h2>
           <CarbonMeter kg={result.totalKg} />
 
@@ -55,7 +61,7 @@ export default function CarbonTrackerPage() {
               {result.breakdown.map((item, i) => (
                 <li key={i} className="flex justify-between gap-3 border-b border-slate-800 pb-1.5 last:border-0">
                   <span className="text-slate-300">{item.activity}</span>
-                  <span className="shrink-0 font-mono text-slate-100">{formatKg(item.kgCO2)}</span>
+                  <span className="shrink-0 font-mono text-slate-100">{formatKg(item.kgCO2, locale)}</span>
                 </li>
               ))}
             </ul>
@@ -63,7 +69,7 @@ export default function CarbonTrackerPage() {
 
           {result.suggestions.length > 0 && (
             <div className="rounded-2xl border border-emerald-900/60 bg-emerald-950/30 p-3">
-              <p className="text-xs font-semibold text-emerald-300">💡 Gợi ý giảm phát thải</p>
+              <p className="text-xs font-semibold text-emerald-300">💡 {t("Gợi ý giảm phát thải", "Ways to reduce emissions")}</p>
               <ul className="mt-1.5 list-disc space-y-1 pl-4 text-xs text-slate-300">
                 {result.suggestions.map((s, i) => (
                   <li key={i}>{s}</li>
@@ -73,12 +79,12 @@ export default function CarbonTrackerPage() {
           )}
 
           <label className="block text-xs text-slate-400">
-            Điểm đến (ghi vào badge, tuỳ chọn)
+            {t("Điểm đến (ghi vào badge, tuỳ chọn)", "Destination (recorded on the badge, optional)")}
             <input
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
               maxLength={100}
-              placeholder="Ví dụ: Hội An"
+              placeholder={t("Ví dụ: Hội An", "Example: Hoi An")}
               className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
             />
           </label>
@@ -93,6 +99,7 @@ export default function CarbonTrackerPage() {
 
 /** "Chuyến đi của bạn phát thải X kgCO₂. Đã được bù đắp bởi Y badges." */
 function OffsetSummary({ tripKg, user }: { tripKg: number; user?: `0x${string}` }) {
+  const { locale, t } = useI18n();
   const { address: contract, offsetGrams, offsetCount } = useCarbonOffset(user);
   const offsetKg = offsetGrams !== undefined ? Number(offsetGrams) / 1000 : undefined;
   const covered = offsetKg !== undefined && tripKg > 0 ? Math.min(100, (offsetKg / tripKg) * 100) : 0;
@@ -103,20 +110,21 @@ function OffsetSummary({ tripKg, user }: { tripKg: number; user?: `0x${string}` 
       className="rounded-3xl border border-emerald-800/50 bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-900 p-5 sm:p-6"
     >
       <h2 id="summary-title" className="text-lg font-bold text-white">
-        🌱 Tóm tắt bù đắp
+        🌱 {t("Tóm tắt bù đắp", "Offset summary")}
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-slate-200 sm:text-base">
-        Chuyến đi của bạn phát thải <strong className="text-white">{formatKg(tripKg)}</strong>.{" "}
+        {t("Chuyến đi của bạn phát thải", "Your trip emits")} <strong className="text-white">{formatKg(tripKg, locale)}</strong>.{" "}
         {!contract ? (
-          <span className="text-slate-400">Chưa bù đắp được on-chain trên mạng này.</span>
+          <span className="text-slate-400">{t("Chưa bù đắp được on-chain trên mạng này.", "On-chain offsetting is not available on this network.")}</span>
         ) : !user ? (
-          <span className="text-slate-400">Kết nối ví để xem lượng đã bù đắp.</span>
+          <span className="text-slate-400">{t("Kết nối ví để xem lượng đã bù đắp.", "Connect your wallet to see how much you have offset.")}</span>
         ) : offsetCount === undefined || offsetKg === undefined ? (
-          <span className="text-slate-400">Đang tải…</span>
+          <span className="text-slate-400">{t("Đang tải…", "Loading…")}</span>
         ) : (
           <>
-            Đã được bù đắp bởi <strong className="text-emerald-300">{offsetCount.toString()} badge ZERO_CARBON</strong>{" "}
-            (tổng <strong className="text-emerald-300">{formatKg(offsetKg)}</strong>).
+            {t("Đã được bù đắp bởi", "Offset by")}{" "}
+            <strong className="text-emerald-300">{offsetCount.toString()} badge ZERO_CARBON</strong> ({t("tổng", "total")}{" "}
+            <strong className="text-emerald-300">{formatKg(offsetKg, locale)}</strong>).
           </>
         )}
       </p>
@@ -128,14 +136,17 @@ function OffsetSummary({ tripKg, user }: { tripKg: number; user?: `0x${string}` 
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(covered)}
-            aria-label="Tỉ lệ đã bù đắp so với chuyến đi"
+            aria-label={t("Tỉ lệ đã bù đắp so với chuyến đi", "Share of this trip already offset")}
           >
             <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${covered}%` }} />
           </div>
           <p className="mt-1 text-xs text-slate-400">
             {covered >= 100
-              ? "Lượng đã bù đắp đủ cho chuyến đi này 🎉"
-              : `Đã bù đắp tương đương ${covered.toFixed(0)}% lượng phát thải của chuyến đi này.`}
+              ? t("Lượng đã bù đắp đủ cho chuyến đi này 🎉", "Your offsets fully cover this trip 🎉")
+              : t(
+                  `Đã bù đắp tương đương ${covered.toFixed(0)}% lượng phát thải của chuyến đi này.`,
+                  `Offsets equal ${covered.toFixed(0)}% of this trip's emissions.`,
+                )}
           </p>
         </div>
       )}

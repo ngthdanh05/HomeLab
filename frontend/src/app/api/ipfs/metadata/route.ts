@@ -2,7 +2,8 @@ import { NextRequest } from "next/server";
 import { createPublicClient, fallback, http, isAddress, type Address, type Hex } from "viem";
 import { anvil, sepolia } from "viem/chains";
 import { DEFAULT_CHAIN_ID, MarketplaceABI, getContractAddresses } from "@/config/contracts";
-import { getClientKey, jsonResponse } from "@/lib/api";
+import { getClientKey, getRequestLocale, jsonResponse } from "@/lib/api";
+import { normalizeLocale, pick } from "@/lib/i18n";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSepoliaRpcUrls } from "@/lib/rpc";
 import {
@@ -64,10 +65,11 @@ async function pinata(path: string, body: BodyInit, jwt: string, json = false) {
  * The Pinata JWT stays server-side; the browser only receives the ipfs:// URI.
  */
 export async function POST(request: NextRequest) {
+  const locale = getRequestLocale(request);
   const limit = await rateLimit(getClientKey(request, ROUTE), RATE_LIMIT.requests, RATE_LIMIT.windowMs);
   if (!limit.allowed) {
     return jsonResponse(
-      { error: "Bạn tải lên quá nhiều lần. Vui lòng thử lại sau ít phút." },
+      { error: pick(locale, "Bạn tải lên quá nhiều lần. Vui lòng thử lại sau ít phút.", "Too many uploads. Please try again in a few minutes.") },
       429,
       { "Retry-After": String(limit.retryAfterSeconds) },
     );
@@ -75,50 +77,55 @@ export async function POST(request: NextRequest) {
 
   const jwt = process.env.PINATA_JWT;
   if (!jwt) {
-    return jsonResponse({ error: "IPFS chưa được cấu hình (PINATA_JWT).", code: "IPFS_DISABLED" }, 503);
+    return jsonResponse({ error: pick(locale, "IPFS chưa được cấu hình (PINATA_JWT).", "IPFS is not configured (PINATA_JWT)."), code: "IPFS_DISABLED" }, 503);
   }
 
+  const imageTooLarge = pick(locale, "Ảnh tối đa 2MB.", "Images can be at most 2 MB.");
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > LISTING_LIMITS.imageBytes + 64 * 1024) {
-    return jsonResponse({ error: "Ảnh tối đa 2MB." }, 413);
+    return jsonResponse({ error: imageTooLarge }, 413);
   }
 
   let form: FormData;
   try {
     form = await request.formData();
   } catch {
-    return jsonResponse({ error: "Dữ liệu gửi lên không hợp lệ." }, 400);
+    return jsonResponse({ error: pick(locale, "Dữ liệu gửi lên không hợp lệ.", "The submitted data is invalid.") }, 400);
   }
+
+  const badSignature = pick(locale, "Chữ ký tải lên không hợp lệ hoặc đã hết hạn.", "The upload signature is invalid or has expired.");
 
   const address = String(form.get("address") ?? "");
   const timestamp = Number(form.get("timestamp"));
   const signature = String(form.get("signature") ?? "") as Hex;
   if (!isAddress(address) || !isFreshUploadTimestamp(timestamp)) {
-    return jsonResponse({ error: "Chữ ký tải lên không hợp lệ hoặc đã hết hạn." }, 401);
+    return jsonResponse({ error: badSignature }, 401);
   }
   let signed = false;
   try {
-    signed = await client.verifyMessage({ address, message: buildUploadMessage(address, timestamp), signature });
+    // The signed text is in the language the wallet showed, which the client sends with the form.
+    const message = buildUploadMessage(address, timestamp, normalizeLocale(form.get("locale")));
+    signed = await client.verifyMessage({ address, message, signature });
   } catch {
     signed = false;
   }
-  if (!signed) return jsonResponse({ error: "Chữ ký tải lên không hợp lệ hoặc đã hết hạn." }, 401);
+  if (!signed) return jsonResponse({ error: badSignature }, 401);
 
   const walletLimit = await rateLimit(`${ROUTE}:${address.toLowerCase()}`, WALLET_RATE_LIMIT.requests, WALLET_RATE_LIMIT.windowMs);
   if (!walletLimit.allowed) {
     return jsonResponse(
-      { error: "Ví này tải lên quá nhiều lần. Vui lòng thử lại sau ít phút." },
+      { error: pick(locale, "Ví này tải lên quá nhiều lần. Vui lòng thử lại sau ít phút.", "This wallet has uploaded too many times. Please try again in a few minutes.") },
       429,
       { "Retry-After": String(walletLimit.retryAfterSeconds) },
     );
   }
   if (!(await canList(address))) {
-    return jsonResponse({ error: "Ví của bạn chưa được xác thực là nghệ nhân." }, 403);
+    return jsonResponse({ error: pick(locale, "Ví của bạn chưa được xác thực là nghệ nhân.", "Your wallet has not been verified as an artisan.") }, 403);
   }
 
   const name = String(form.get("name") ?? "").trim();
   const description = String(form.get("description") ?? "").trim();
-  const textError = validateListingText(name, description);
+  const textError = validateListingText(name, description, locale);
   if (textError) return jsonResponse({ error: textError }, 400);
 
   try {
@@ -126,12 +133,12 @@ export async function POST(request: NextRequest) {
     const file = form.get("image");
     if (file instanceof File && file.size > 0) {
       if (file.size > LISTING_LIMITS.imageBytes) {
-        return jsonResponse({ error: "Ảnh tối đa 2MB." }, 413);
+        return jsonResponse({ error: imageTooLarge }, 413);
       }
       const bytes = new Uint8Array(await file.arrayBuffer());
       const type = detectImageType(bytes);
       if (!type) {
-        return jsonResponse({ error: "Chỉ hỗ trợ ảnh PNG, JPEG, GIF hoặc WebP." }, 415);
+        return jsonResponse({ error: pick(locale, "Chỉ hỗ trợ ảnh PNG, JPEG, GIF hoặc WebP.", "Only PNG, JPEG, GIF or WebP images are supported.") }, 415);
       }
       const upload = new FormData();
       upload.append("file", new Blob([bytes], { type }), "product");
@@ -150,6 +157,6 @@ export async function POST(request: NextRequest) {
     return jsonResponse({ uri });
   } catch (error) {
     console.error(`[${ROUTE}]`, error);
-    return jsonResponse({ error: "Không tải được dữ liệu lên IPFS. Vui lòng thử lại." }, 502);
+    return jsonResponse({ error: pick(locale, "Không tải được dữ liệu lên IPFS. Vui lòng thử lại.", "Could not upload the data to IPFS. Please try again.") }, 502);
   }
 }

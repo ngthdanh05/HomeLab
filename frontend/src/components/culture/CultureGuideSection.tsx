@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { culturalDestinations } from "@/data/culturalData";
+import { getCulturalDestinations } from "@/data/culturalData";
+import { useI18n } from "@/providers/LocaleProvider";
 import { CultureGuideCard } from "./CultureGuideCard";
 import { LanguageLearning } from "./LanguageLearning";
 import { DosDonts } from "./DosDonts";
@@ -10,6 +11,8 @@ import type { CultureGuide } from "@/types/ai";
 type Tab = "guide" | "language" | "ai";
 
 export function CultureGuideSection() {
+  const { locale, t } = useI18n();
+  const culturalDestinations = getCulturalDestinations(locale);
   const [selectedId, setSelectedId] = useState(culturalDestinations[0].id);
   const [activeTab, setActiveTab] = useState<Tab>("guide");
   const [aiDestination, setAiDestination] = useState("");
@@ -32,13 +35,13 @@ export function CultureGuideSection() {
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data?.error || "Không thể tạo hướng dẫn văn hóa.");
+        throw new Error(data?.error || t("Không thể tạo hướng dẫn văn hóa.", "Could not create the cultural guide."));
       }
       setAiGuide(data as CultureGuide);
     } catch (err) {
       setAiGuide(null);
       setAiError(
-        err instanceof Error ? err.message : "Không thể tạo hướng dẫn văn hóa.",
+        err instanceof Error ? err.message : t("Không thể tạo hướng dẫn văn hóa.", "Could not create the cultural guide."),
       );
     } finally {
       setAiLoading(false);
@@ -76,9 +79,9 @@ export function CultureGuideSection() {
                 : "text-slate-400 hover:text-slate-300"
             }`}
           >
-            {tab === "guide" && "📖 Hướng dẫn"}
-            {tab === "language" && "💬 Ngôn ngữ"}
-            {tab === "ai" && "🤖 AI Guide"}
+            {tab === "guide" && t("📖 Hướng dẫn", "📖 Guide")}
+            {tab === "language" && t("💬 Ngôn ngữ", "💬 Language")}
+            {tab === "ai" && t("🤖 Hướng dẫn AI", "🤖 AI Guide")}
           </button>
         ))}
       </div>
@@ -95,18 +98,18 @@ export function CultureGuideSection() {
 
       {activeTab === "ai" && (
         <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 space-y-4">
-          <h3 className="text-white font-bold">🤖 AI Culture Guide</h3>
+          <h3 className="text-white font-bold">🤖 {t("Hướng dẫn văn hoá AI", "AI Culture Guide")}</h3>
           <p className="text-slate-400 text-sm">
-            Nhập bất kỳ điểm đến nào ở Việt Nam để nhận hướng dẫn văn hóa từ AI
+            {t("Nhập bất kỳ điểm đến nào ở Việt Nam để nhận hướng dẫn văn hóa từ AI", "Enter any destination in Vietnam to get a cultural guide from AI")}
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
-              aria-label="Điểm đến cho AI Culture Guide"
+              aria-label={t("Điểm đến cho hướng dẫn văn hoá AI", "Destination for the AI Culture Guide")}
               maxLength={100}
               value={aiDestination}
               onChange={(e) => setAiDestination(e.target.value)}
-              placeholder="VD: Huế, Đà Lạt, Hà Nội..."
+              placeholder={t("VD: Huế, Đà Lạt, Hà Nội...", "E.g. Hue, Da Lat, Hanoi...")}
               className="flex-1 bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-2 focus:outline-none focus:border-emerald-500"
               onKeyDown={(e) => e.key === "Enter" && handleAIGuide()}
             />
@@ -115,7 +118,7 @@ export function CultureGuideSection() {
               disabled={!aiDestination.trim() || aiLoading}
               className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400 text-white rounded-xl transition-colors"
             >
-              {aiLoading ? "Đang tạo..." : "Tạo Guide"}
+              {aiLoading ? t("Đang tạo...", "Creating...") : t("Tạo hướng dẫn", "Create guide")}
             </button>
           </div>
 
@@ -134,7 +137,7 @@ export function CultureGuideSection() {
 
               {aiGuide.phrases && aiGuide.phrases.length > 0 && (
                 <div>
-                  <h4 className="text-white font-semibold mb-2">💬 Câu giao tiếp cơ bản</h4>
+                  <h4 className="text-white font-semibold mb-2">💬 {t("Câu giao tiếp cơ bản", "Basic phrases")}</h4>
                   <div className="space-y-2">
                     {aiGuide.phrases.map((p, idx) => (
                       <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 bg-slate-700 rounded-lg px-4 py-2">
@@ -148,7 +151,7 @@ export function CultureGuideSection() {
 
               {aiGuide.customs.length > 0 && (
                 <div>
-                  <h4 className="text-white font-semibold mb-2">🎭 Phong tục & Truyền thống</h4>
+                  <h4 className="text-white font-semibold mb-2">🎭 {t("Phong tục & Truyền thống", "Customs & Traditions")}</h4>
                   <ul className="space-y-1">
                     {aiGuide.customs.map((custom, idx) => (
                       <li key={idx} className="flex items-start gap-2 text-slate-300 text-sm">
@@ -162,7 +165,7 @@ export function CultureGuideSection() {
 
               {aiGuide.localFood && aiGuide.localFood.length > 0 && (
                 <div>
-                  <h4 className="text-white font-semibold mb-2">🍜 Ẩm thực địa phương</h4>
+                  <h4 className="text-white font-semibold mb-2">🍜 {t("Ẩm thực địa phương", "Local food")}</h4>
                   <div className="flex flex-wrap gap-2">
                     {aiGuide.localFood.map((food, idx) => (
                       <span key={idx} className="px-3 py-1 bg-amber-900/40 border border-amber-700/40 rounded-full text-amber-300 text-sm">

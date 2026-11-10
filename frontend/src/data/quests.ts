@@ -1,5 +1,6 @@
 // Eco Quest definitions (Task 4.4). Index = on-chain questId: keep in sync with
 // contracts/script/QuestSetup.sol (rewards and targets are enforced on-chain).
+import type { Locale } from "../lib/i18n.ts";
 import { HERITAGE_IDS } from "./heritage.ts";
 
 /** Mirrors `enum Requirement` in contracts/src/QuestRewards.sol. */
@@ -106,9 +107,49 @@ export const QUESTS: readonly QuestDefinition[] = [
     // ECO is DAO voting power: only purchase quests mint it (QuestRewards.addQuest).
     ecoReward: 0,
     rewardBadgeType: 2, // CULTURE_GUARDIAN
-    action: { href: "/", label: "Trang chủ → tab 360° Digital Archive" },
+    action: { href: "/", label: "Trang chủ → tab Di sản số 360°" },
   },
 ];
+
+const QUESTS_EN: Record<string, { title: string; description: string; actionLabel: string }> = {
+  "first-handicraft": {
+    title: "First artisan support",
+    description: "Buy one handicraft on the D2C Marketplace.",
+    actionLabel: "Go to Marketplace",
+  },
+  "artisan-patron": {
+    title: "Artisan patron",
+    description: "Buy 3 handicrafts directly from local artisans.",
+    actionLabel: "Go to Marketplace",
+  },
+  "first-offset": {
+    title: "First carbon offset",
+    description: "Offset the CO₂ emissions of a trip on the Carbon Tracker.",
+    actionLabel: "Go to Carbon Tracker",
+  },
+  "climate-hero": {
+    title: "Climate hero",
+    description: "Offset 100 kg of CO₂ or more in total.",
+    actionLabel: "Go to Carbon Tracker",
+  },
+  "dao-voter": {
+    title: "Community voice",
+    description: "Vote on a disbursement proposal of the Community Treasury DAO.",
+    actionLabel: "View ECO balance",
+  },
+  "heritage-explorer": {
+    title: "Heritage explorer",
+    description: `Open and explore all ${HERITAGE_IDS.length} digitized 360° heritage sites.`,
+    actionLabel: "Home → 360° Heritage tab",
+  },
+};
+
+/** The quest with its text in `locale`. */
+export function localizeQuest<T extends QuestDefinition>(quest: T, locale: Locale): T {
+  const en = QUESTS_EN[quest.key];
+  if (locale !== "en" || !en) return quest;
+  return { ...quest, title: en.title, description: en.description, action: { ...quest.action, label: en.actionLabel } };
+}
 
 export function getQuest(id: number): QuestDefinition | undefined {
   return QUESTS.find((q) => q.id === id);

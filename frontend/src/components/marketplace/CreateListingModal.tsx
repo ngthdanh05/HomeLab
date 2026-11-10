@@ -15,6 +15,8 @@ import {
   validateListingText,
   type ProductTypeValue,
 } from "@/lib/marketplace";
+import type { Locale } from "@/lib/i18n";
+import { useI18n } from "@/providers/LocaleProvider";
 import { Spinner } from "./PurchaseButton";
 import { SplitBreakdown } from "./SplitBreakdown";
 
@@ -39,12 +41,14 @@ async function uploadMetadata(
   name: string,
   description: string,
   image: File | null,
-  auth: { address: string; timestamp: number; signature: string },
+  auth: { address: string; timestamp: number; signature: string; locale: Locale },
+  messages: { ipfsDisabled: string; uploadFailed: string },
 ) {
   const body = new FormData();
   body.append("address", auth.address);
   body.append("timestamp", String(auth.timestamp));
   body.append("signature", auth.signature);
+  body.append("locale", auth.locale);
   body.append("name", name);
   body.append("description", description);
   if (image) body.append("image", image);
@@ -59,21 +63,20 @@ async function uploadMetadata(
   if (response.ok && data.uri) return data.uri;
   if (data.code === "IPFS_DISABLED" && !image) return encodeDataJsonUri({ name, description });
   throw new Error(
-    data.code === "IPFS_DISABLED"
-      ? "IPFS chưa được cấu hình nên chưa tải được ảnh. Hãy bỏ ảnh hoặc cấu hình PINATA_JWT."
-      : data.error || "Không tải được dữ liệu sản phẩm lên IPFS.",
+    data.code === "IPFS_DISABLED" ? messages.ipfsDisabled : data.error || messages.uploadFailed,
   );
 }
 
 export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
+  const { locale, t } = useI18n();
   const formId = useId();
   const { addresses, chainId } = useActiveChain();
   const { address: account, isConnected } = useAccount();
   const { open: openWalletModal } = useWalletModal();
   const { signMessageAsync } = useSignMessage();
   const { send, status, isBusy } = useContractTx({
-    pending: "Đang đăng bán sản phẩm",
-    success: "Đăng bán thành công! 🎉",
+    pending: t("Đang đăng bán sản phẩm", "Listing your product"),
+    success: t("Đăng bán thành công! 🎉", "Product listed! 🎉"),
   });
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -110,7 +113,7 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
   const handleImage = (file: File | null) => {
     setError(null);
     if (file && file.size > LISTING_LIMITS.imageBytes) {
-      setError("Ảnh tối đa 2MB.");
+      setError(t("Ảnh tối đa 2MB.", "Images can be at most 2 MB."));
       setImage(null);
       return;
     }
@@ -119,13 +122,13 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const textError = validateListingText(form.name, form.description);
+    const textError = validateListingText(form.name, form.description, locale);
     if (textError) return setError(textError);
-    if (!price) return setError("Giá không hợp lệ (ví dụ: 0.01).");
+    if (!price) return setError(t("Giá không hợp lệ (ví dụ: 0.01).", "Invalid price (example: 0.01)."));
     if (minPrice !== undefined && price < minPrice) {
-      return setError(`Giá tối thiểu là ${formatEther(minPrice)} ETH.`);
+      return setError(t(`Giá tối thiểu là ${formatEther(minPrice)} ETH.`, `The minimum price is ${formatEther(minPrice)} ETH.`));
     }
-    if (notVerified) return setError("Ví của bạn chưa được xác thực là nghệ nhân nên chưa thể đăng bán.");
+    if (notVerified) return setError(t("Ví của bạn chưa được xác thực là nghệ nhân nên chưa thể đăng bán.", "Your wallet has not been verified as an artisan, so it cannot list products yet."));
     setError(null);
     // Connect before uploading so we don't pin metadata for a listing never created.
     if (!isConnected) return openWalletModal();
@@ -134,14 +137,22 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
     try {
       setUploading(true);
       const timestamp = Date.now();
-      const signature = await signMessageAsync({ message: buildUploadMessage(account as string, timestamp) });
-      metadataURI = await uploadMetadata(form.name.trim(), form.description.trim(), image, {
-        address: account as string,
-        timestamp,
-        signature,
-      });
+      const signature = await signMessageAsync({ message: buildUploadMessage(account as string, timestamp, locale) });
+      metadataURI = await uploadMetadata(
+        form.name.trim(),
+        form.description.trim(),
+        image,
+        { address: account as string, timestamp, signature, locale },
+        {
+          ipfsDisabled: t(
+            "IPFS chưa được cấu hình nên chưa tải được ảnh. Hãy bỏ ảnh hoặc cấu hình PINATA_JWT.",
+            "IPFS is not configured, so the image cannot be uploaded. Remove the image or configure PINATA_JWT.",
+          ),
+          uploadFailed: t("Không tải được dữ liệu sản phẩm lên IPFS.", "Could not upload the product data to IPFS."),
+        },
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không tải được dữ liệu sản phẩm.");
+      setError(err instanceof Error ? err.message : t("Không tải được dữ liệu sản phẩm.", "Could not upload the product data."));
       return;
     } finally {
       setUploading(false);
@@ -179,17 +190,17 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
         <div className="mb-5 flex items-start justify-between">
           <div>
             <h2 id={`${formId}-title`} className="text-lg font-bold text-white">
-              🧺 Đăng bán sản phẩm
+              🧺 {t("Đăng bán sản phẩm", "List a product")}
             </h2>
             <p className="text-xs text-slate-400">
-              Sản phẩm được ghi on-chain, tiền bán hàng tự động chia qua Smart Contract.
+              {t("Sản phẩm được ghi on-chain, tiền bán hàng tự động chia qua Smart Contract.", "Products are recorded on-chain, and sales are split automatically by the smart contract.")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={busy}
-            aria-label="Đóng"
+            aria-label={t("Đóng", "Close")}
             className="text-slate-400 hover:text-white disabled:opacity-40"
           >
             ✕
@@ -199,7 +210,7 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor={`${formId}-name`} className="mb-1 block text-xs font-medium text-slate-300">
-              Tên sản phẩm *
+              {t("Tên sản phẩm *", "Product name *")}
             </label>
             <input
               id={`${formId}-name`}
@@ -207,14 +218,14 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
               value={form.name}
               maxLength={LISTING_LIMITS.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="VD: Đèn lồng lụa Hội An làm thủ công"
+              placeholder={t("VD: Đèn lồng lụa Hội An làm thủ công", "E.g. Handmade Hoi An silk lantern")}
               required
             />
           </div>
 
           <div>
             <label htmlFor={`${formId}-desc`} className="mb-1 block text-xs font-medium text-slate-300">
-              Mô tả
+              {t("Mô tả", "Description")}
             </label>
             <textarea
               id={`${formId}-desc`}
@@ -223,14 +234,14 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
               value={form.description}
               maxLength={LISTING_LIMITS.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Chất liệu, nguồn gốc, câu chuyện của nghệ nhân…"
+              placeholder={t("Chất liệu, nguồn gốc, câu chuyện của nghệ nhân…", "Materials, origin, the artisan's story…")}
             />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor={`${formId}-price`} className="mb-1 block text-xs font-medium text-slate-300">
-                Giá (ETH) *
+                {t("Giá (ETH) *", "Price (ETH) *")}
               </label>
               <input
                 id={`${formId}-price`}
@@ -244,7 +255,7 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
             </div>
             <div>
               <label htmlFor={`${formId}-type`} className="mb-1 block text-xs font-medium text-slate-300">
-                Loại sản phẩm
+                {t("Loại sản phẩm", "Product type")}
               </label>
               <select
                 id={`${formId}-type`}
@@ -254,9 +265,9 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
                   setForm({ ...form, pType: Number(e.target.value) as ProductTypeValue })
                 }
               >
-                {PRODUCT_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.icon} {t.label}
+                {PRODUCT_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.icon} {t<string>(type.label, type.labelEn)}
                   </option>
                 ))}
               </select>
@@ -265,7 +276,7 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
 
           <div>
             <label htmlFor={`${formId}-image`} className="mb-1 block text-xs font-medium text-slate-300">
-              Ảnh sản phẩm (PNG/JPEG/WebP/GIF, tối đa 2MB)
+              {t("Ảnh sản phẩm (PNG/JPEG/WebP/GIF, tối đa 2MB)", "Product image (PNG/JPEG/WebP/GIF, up to 2 MB)")}
             </label>
             <input
               id={`${formId}-image`}
@@ -278,7 +289,7 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
 
           {price && (
             <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-3">
-              <p className="mb-2 text-xs font-medium text-slate-300">Khi có người mua, bạn nhận:</p>
+              <p className="mb-2 text-xs font-medium text-slate-300">{t("Khi có người mua, bạn nhận:", "When someone buys, the payment is split:")}</p>
               <SplitBreakdown price={price} compact />
             </div>
           )}
@@ -296,12 +307,12 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
           >
             {busy && <Spinner />}
             {uploading
-              ? "Đang tải lên IPFS…"
+              ? t("Đang tải lên IPFS…", "Uploading to IPFS…")
               : status === "awaiting-wallet"
-                ? "Xác nhận trong ví…"
+                ? t("Xác nhận trong ví…", "Confirm in wallet…")
                 : status === "pending"
-                  ? "Đang chờ xác nhận on-chain…"
-                  : "Đăng bán"}
+                  ? t("Đang chờ xác nhận on-chain…", "Waiting for on-chain confirmation…")
+                  : t("Đăng bán", "List product")}
           </button>
         </form>
       </div>

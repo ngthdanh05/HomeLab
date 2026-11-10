@@ -4,18 +4,28 @@ import React, { useState, useRef, useEffect } from "react";
 import { useAIChat, ChatContext } from "@/hooks/useAIChat";
 import { ChatBubble } from "./ChatBubble";
 import { ItineraryCard } from "./ItineraryCard";
+import { useI18n } from "@/providers/LocaleProvider";
 import type { Itinerary } from "@/types/ai";
 
 const CHAT_CONTEXT: ChatContext = { carbonPreference: "low" };
 
-const SUGGESTED_QUESTIONS = [
-  "Gợi ý 5 hoạt động eco-friendly tại Hội An",
-  "Carbon footprint khi đi từ HCM đến Sa Pa là bao nhiêu?",
-  "Cách mua sắm có trách nhiệm tại chợ thủ công?",
-  "Homestay bền vững ở Sapa là gì?",
-];
+const SUGGESTED_QUESTIONS = {
+  vi: [
+    "Gợi ý 5 hoạt động eco-friendly tại Hội An",
+    "Carbon footprint khi đi từ HCM đến Sa Pa là bao nhiêu?",
+    "Cách mua sắm có trách nhiệm tại chợ thủ công?",
+    "Homestay bền vững ở Sapa là gì?",
+  ],
+  en: [
+    "Suggest 5 eco-friendly activities in Hoi An",
+    "What is the carbon footprint of travelling from Ho Chi Minh City to Sa Pa?",
+    "How can I shop responsibly at a handicraft market?",
+    "What makes a homestay in Sa Pa sustainable?",
+  ],
+};
 
 export function TravelAssistant() {
+  const { locale, t } = useI18n();
   const { messages, isLoading, error, sendMessage, clearChat, stopGenerating } =
     useAIChat();
   const [input, setInput] = useState("");
@@ -66,19 +76,19 @@ export function TravelAssistant() {
         body: JSON.stringify({
           destination,
           days,
-          interests: ["văn hóa", "thiên nhiên", "ẩm thực địa phương"],
+          interests: t(["văn hóa", "thiên nhiên", "ẩm thực địa phương"], ["culture", "nature", "local food"]),
         }),
       });
 
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data?.error || "Không thể tạo lịch trình. Vui lòng thử lại.");
+        throw new Error(data?.error || t("Không thể tạo lịch trình. Vui lòng thử lại.", "Could not create the itinerary. Please try again."));
       }
       setItinerary(data as Itinerary);
     } catch (err) {
       setItinerary(null);
       setItineraryError(
-        err instanceof Error ? err.message : "Không thể tạo lịch trình. Vui lòng thử lại.",
+        err instanceof Error ? err.message : t("Không thể tạo lịch trình. Vui lòng thử lại.", "Could not create the itinerary. Please try again."),
       );
     } finally {
       setItineraryLoading(false);
@@ -91,10 +101,10 @@ export function TravelAssistant() {
       <div className="bg-slate-800 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
         <div>
           <h2 className="text-white font-bold text-lg">
-            🌿 AI Travel Assistant
+            🌿 {t("Trợ lý du lịch AI", "AI Travel Assistant")}
           </h2>
           <p className="text-slate-400 text-sm">
-            Hỗ trợ du lịch sinh thái bền vững tại Việt Nam
+            {t("Hỗ trợ du lịch sinh thái bền vững tại Việt Nam", "Your guide to sustainable eco-tourism in Vietnam")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -102,13 +112,13 @@ export function TravelAssistant() {
             onClick={() => setShowItinerary(!showItinerary)}
             className="px-3 py-1.5 text-sm bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg transition-colors"
           >
-            {showItinerary ? "💬 Chat" : "🗺️ Lịch trình"}
+            {showItinerary ? t("💬 Trò chuyện", "💬 Chat") : t("🗺️ Lịch trình", "🗺️ Itinerary")}
           </button>
           <button
             onClick={clearChat}
             className="px-3 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors"
           >
-            Xóa
+            {t("Xóa", "Clear")}
           </button>
         </div>
       </div>
@@ -119,22 +129,22 @@ export function TravelAssistant() {
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
-              aria-label="Điểm đến"
+              aria-label={t("Điểm đến", "Destination")}
               maxLength={100}
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
-              placeholder="Nhập điểm đến (VD: Hội An, Sa Pa...)"
+              placeholder={t("Nhập điểm đến (VD: Hội An, Sa Pa...)", "Enter a destination (e.g. Hoi An, Sa Pa...)")}
               className="flex-1 bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"
             />
             <select
-              aria-label="Số ngày"
+              aria-label={t("Số ngày", "Number of days")}
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
               className="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500"
             >
               {[2, 3, 4, 5, 7].map((d) => (
                 <option key={d} value={d}>
-                  {d} ngày
+                  {d} {t("ngày", "days")}
                 </option>
               ))}
             </select>
@@ -143,7 +153,7 @@ export function TravelAssistant() {
               disabled={!destination.trim() || itineraryLoading}
               className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400 text-white rounded-lg transition-colors font-medium"
             >
-              {itineraryLoading ? "Đang tạo..." : "Tạo lịch trình"}
+              {itineraryLoading ? t("Đang tạo...", "Creating...") : t("Tạo lịch trình", "Create itinerary")}
             </button>
           </div>
 
@@ -167,15 +177,17 @@ export function TravelAssistant() {
                 <div className="text-4xl">🌿</div>
                 <div>
                   <p className="text-slate-300 font-medium mb-1">
-                    Xin chào! Tôi là AI Travel Assistant
+                    {t("Xin chào! Tôi là Trợ lý du lịch AI", "Hello! I'm your AI Travel Assistant")}
                   </p>
                   <p className="text-slate-400 text-sm">
-                    Hỏi tôi về du lịch sinh thái, văn hóa địa phương, và cách
-                    giảm carbon footprint
+                    {t(
+                      "Hỏi tôi về du lịch sinh thái, văn hóa địa phương, và cách giảm carbon footprint",
+                      "Ask me about eco-tourism, local culture and how to reduce your carbon footprint",
+                    )}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-lg mx-auto">
-                  {SUGGESTED_QUESTIONS.map((q, idx) => (
+                  {SUGGESTED_QUESTIONS[locale].map((q, idx) => (
                     <button
                       key={idx}
                       onClick={() => sendMessage(q, CHAT_CONTEXT)}
@@ -204,12 +216,12 @@ export function TravelAssistant() {
           <div className="p-4 border-t border-slate-700">
             <form onSubmit={handleSubmit} className="flex gap-3 items-end">
               <textarea
-                aria-label="Câu hỏi cho AI Travel Assistant"
+                aria-label={t("Câu hỏi cho Trợ lý du lịch AI", "Question for the AI Travel Assistant")}
                 maxLength={2000}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Hỏi về du lịch sinh thái, văn hóa địa phương... (Enter để gửi)"
+                placeholder={t("Hỏi về du lịch sinh thái, văn hóa địa phương... (Enter để gửi)", "Ask about eco-tourism, local culture... (Enter to send)")}
                 rows={1}
                 className="flex-1 bg-slate-800 border border-slate-600 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 resize-none text-sm"
                 style={{ maxHeight: "120px" }}
@@ -218,7 +230,7 @@ export function TravelAssistant() {
                 <button
                   type="button"
                   onClick={stopGenerating}
-                  aria-label="Dừng tạo câu trả lời"
+                  aria-label={t("Dừng tạo câu trả lời", "Stop generating")}
                   className="px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-colors"
                 >
                   ⏹️
@@ -227,7 +239,7 @@ export function TravelAssistant() {
                 <button
                   type="submit"
                   disabled={!input.trim()}
-                  aria-label="Gửi câu hỏi"
+                  aria-label={t("Gửi câu hỏi", "Send question")}
                   className="px-4 py-3 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400 text-white rounded-xl transition-colors"
                 >
                   ➤

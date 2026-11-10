@@ -15,34 +15,39 @@ import {
   type ActivityKind,
 } from "@/lib/dashboard";
 import { shortenAddress } from "@/lib/marketplace";
-import { getQuest } from "@/data/quests";
+import { getQuest, localizeQuest } from "@/data/quests";
+import { intlLocale } from "@/lib/i18n";
+import { useI18n } from "@/providers/LocaleProvider";
 
-const KIND_INFO: Record<ActivityKind, { icon: string; title: string; tone: string }> = {
-  purchase: { icon: "🛍️", title: "Mua sản phẩm", tone: "bg-emerald-500/15 text-emerald-300" },
-  sale: { icon: "💰", title: "Bán được sản phẩm", tone: "bg-amber-500/15 text-amber-300" },
-  listing: { icon: "📦", title: "Đăng bán sản phẩm", tone: "bg-sky-500/15 text-sky-300" },
-  cancel: { icon: "✖️", title: "Huỷ đăng bán", tone: "bg-slate-500/15 text-slate-300" },
-  income: { icon: "💸", title: "Nhận thanh toán D2C", tone: "bg-amber-500/15 text-amber-300" },
-  refund: { icon: "↩️", title: "Được hoàn tiền", tone: "bg-sky-500/15 text-sky-300" },
-  reward: { icon: "🌱", title: "Nhận thưởng ECO", tone: "bg-emerald-500/15 text-emerald-300" },
-  offset: { icon: "🌍", title: "Bù đắp carbon", tone: "bg-sky-500/15 text-sky-300" },
-  quest: { icon: "🎯", title: "Hoàn thành quest", tone: "bg-amber-500/15 text-amber-300" },
-  badge: { icon: "🏅", title: "Nhận ImpactBadge", tone: "bg-violet-500/15 text-violet-300" },
+const KIND_INFO: Record<ActivityKind, { icon: string; title: string; titleEn: string; tone: string }> = {
+  purchase: { icon: "🛍️", title: "Mua sản phẩm", titleEn: "Bought a product", tone: "bg-emerald-500/15 text-emerald-300" },
+  sale: { icon: "💰", title: "Bán được sản phẩm", titleEn: "Sold a product", tone: "bg-amber-500/15 text-amber-300" },
+  listing: { icon: "📦", title: "Đăng bán sản phẩm", titleEn: "Listed a product", tone: "bg-sky-500/15 text-sky-300" },
+  cancel: { icon: "✖️", title: "Huỷ đăng bán", titleEn: "Cancelled a listing", tone: "bg-slate-500/15 text-slate-300" },
+  income: { icon: "💸", title: "Nhận thanh toán D2C", titleEn: "Received a D2C payment", tone: "bg-amber-500/15 text-amber-300" },
+  refund: { icon: "↩️", title: "Được hoàn tiền", titleEn: "Refunded", tone: "bg-sky-500/15 text-sky-300" },
+  reward: { icon: "🌱", title: "Nhận thưởng ECO", titleEn: "Earned ECO", tone: "bg-emerald-500/15 text-emerald-300" },
+  offset: { icon: "🌍", title: "Bù đắp carbon", titleEn: "Carbon offset", tone: "bg-sky-500/15 text-sky-300" },
+  quest: { icon: "🎯", title: "Hoàn thành quest", titleEn: "Completed a quest", tone: "bg-amber-500/15 text-amber-300" },
+  badge: { icon: "🏅", title: "Nhận ImpactBadge", titleEn: "Received an ImpactBadge", tone: "bg-violet-500/15 text-violet-300" },
 };
 
 /** Listing name from its metadata (cached, shared with the marketplace pages). */
 function ListingName({ listingId }: { listingId: bigint }) {
+  const { t } = useI18n();
   const { listing } = useListing(listingId);
   const metadata = useListingMetadata(listing?.metadataURI);
   return (
     <Link href={`/marketplace/${listingId}`} className="font-medium text-white hover:text-emerald-400">
-      {metadata.data?.name ?? `Sản phẩm #${listingId}`}
+      {metadata.data?.name ?? `${t("Sản phẩm", "Product")} #${listingId}`}
     </Link>
   );
 }
 
 function ActivityRow({ item, explorerUrl }: { item: ActivityItem; explorerUrl?: string }) {
+  const { locale, t } = useI18n();
   const info = KIND_INFO[item.kind];
+  const quest = item.questId !== undefined ? getQuest(item.questId) : undefined;
   const sign = item.kind === "purchase" || item.kind === "offset" ? "−" : item.kind === "sale" || item.kind === "income" || item.kind === "refund" ? "+" : "";
 
   return (
@@ -53,18 +58,18 @@ function ActivityRow({ item, explorerUrl }: { item: ActivityItem; explorerUrl?: 
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3">
           <p className="text-sm text-slate-300">
-            {info.title}
+            {t(info.title, info.titleEn)}
             {item.carbonGrams !== undefined && (
               <span className="font-medium text-white">
                 {" "}
-                {(Number(item.carbonGrams) / 1000).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} kg CO₂
+                {(Number(item.carbonGrams) / 1000).toLocaleString(intlLocale(locale), { maximumFractionDigits: 2 })} kg CO₂
               </span>
             )}
             {item.questId !== undefined && (
               <>
                 {": "}
                 <Link href="/quests" className="font-medium text-white hover:text-emerald-400">
-                  {getQuest(item.questId)?.title ?? `Quest #${item.questId}`}
+                  {quest ? localizeQuest(quest, locale).title : `Quest #${item.questId}`}
                 </Link>
               </>
             )}
@@ -86,7 +91,7 @@ function ActivityRow({ item, explorerUrl }: { item: ActivityItem; explorerUrl?: 
         <div className="flex flex-wrap gap-1.5 text-[11px]">
           {item.ecoReward !== undefined && item.ecoReward > 0n && (
             <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 font-medium text-emerald-300">
-              +{formatTokenAmount(item.ecoReward, ECO_DECIMALS)} ECO
+              +{formatTokenAmount(item.ecoReward, ECO_DECIMALS, 4, locale)} ECO
             </span>
           )}
           {item.badges.map((b) => {
@@ -99,14 +104,14 @@ function ActivityRow({ item, explorerUrl }: { item: ActivityItem; explorerUrl?: 
           })}
           {item.split && item.kind === "purchase" && (
             <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">
-              Nghệ nhân {formatEther(item.split.artisan)} · Quỹ {formatEther(item.split.treasury)} · Nền tảng{" "}
-              {formatEther(item.split.platform)} ETH
+              {t("Nghệ nhân", "Artisan")} {formatEther(item.split.artisan)} · {t("Quỹ", "Treasury")} {formatEther(item.split.treasury)} ·{" "}
+              {t("Nền tảng", "Platform")} {formatEther(item.split.platform)} ETH
             </span>
           )}
         </div>
 
         <p className="flex flex-wrap gap-x-3 text-[11px] text-slate-400">
-          <span>{item.timestamp ? formatDateTime(item.timestamp) : `Block #${item.blockNumber}`}</span>
+          <span>{item.timestamp ? formatDateTime(item.timestamp, locale) : `Block #${item.blockNumber}`}</span>
           {explorerUrl ? (
             <a
               href={`${explorerUrl}/tx/${item.txHash}`}
@@ -126,6 +131,7 @@ function ActivityRow({ item, explorerUrl }: { item: ActivityItem; explorerUrl?: 
 }
 
 export function ActivityFeed({ user }: { user: Address }) {
+  const { t } = useI18n();
   const { explorerUrl } = useActiveChain();
   const { data: items, isLoading, error, refetch, isFetching } = useActivityFeed(user);
 
@@ -133,7 +139,7 @@ export function ActivityFeed({ user }: { user: Address }) {
     <section aria-labelledby="activity-title" className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <h2 id="activity-title" className="text-xl font-bold text-white">
-          📜 Lịch sử hoạt động
+          📜 {t("Lịch sử hoạt động", "Activity history")}
         </h2>
         <button
           type="button"
@@ -141,12 +147,12 @@ export function ActivityFeed({ user }: { user: Address }) {
           disabled={isFetching}
           className="rounded-lg px-2.5 py-1 text-xs text-slate-400 hover:bg-slate-800 hover:text-slate-200 disabled:opacity-50"
         >
-          {isFetching ? "Đang tải…" : "↻ Làm mới"}
+          {isFetching ? t("Đang tải…", "Loading…") : t("↻ Làm mới", "↻ Refresh")}
         </button>
       </div>
 
       {isLoading ? (
-        <ul className="mt-2 divide-y divide-slate-800" aria-label="Đang tải lịch sử">
+        <ul className="mt-2 divide-y divide-slate-800" aria-label={t("Đang tải lịch sử", "Loading history")}>
           {Array.from({ length: 3 }, (_, i) => (
             <li key={i} className="flex gap-3 py-4" aria-hidden>
               <div className="h-10 w-10 animate-pulse rounded-xl bg-slate-800" />
@@ -159,18 +165,18 @@ export function ActivityFeed({ user }: { user: Address }) {
         </ul>
       ) : error && !items ? (
         <p className="mt-4 rounded-xl border border-red-900/60 bg-red-950/30 p-4 text-sm text-red-200">
-          Không tải được lịch sử giao dịch từ blockchain (RPC có thể đang quá tải).{" "}
+          {t("Không tải được lịch sử giao dịch từ blockchain (RPC có thể đang quá tải).", "Could not load transaction history from the blockchain (the RPC may be overloaded).")}{" "}
           <button type="button" onClick={() => void refetch()} className="font-semibold underline">
-            Thử lại
+            {t("Thử lại", "Try again")}
           </button>
         </p>
       ) : !items || items.length === 0 ? (
         <p className="mt-4 text-sm text-slate-400">
-          Chưa có hoạt động nào. Giao dịch mua/bán trên{" "}
+          {t("Chưa có hoạt động nào. Giao dịch mua/bán trên", "No activity yet. Purchases and sales on the")}{" "}
           <Link href="/marketplace" className="text-emerald-400 hover:underline">
             Marketplace
           </Link>{" "}
-          sẽ xuất hiện ở đây.
+          {t("sẽ xuất hiện ở đây.", "will appear here.")}
         </p>
       ) : (
         <ul className="mt-2 divide-y divide-slate-800">

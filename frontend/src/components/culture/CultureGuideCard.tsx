@@ -2,6 +2,7 @@
 
 import React from "react";
 import { CulturalDestination } from "@/data/culturalData";
+import { useI18n } from "@/providers/LocaleProvider";
 import { DosDonts } from "./DosDonts";
 
 interface CultureGuideCardProps {
@@ -9,6 +10,7 @@ interface CultureGuideCardProps {
 }
 
 export function CultureGuideCard({ destination }: CultureGuideCardProps) {
+  const { t } = useI18n();
   return (
     <div className="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700">
       {/* Header */}
@@ -32,7 +34,7 @@ export function CultureGuideCard({ destination }: CultureGuideCardProps) {
         {/* Local Food */}
         <div>
           <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-            🍜 Ẩm thực địa phương
+            🍜 {t("Ẩm thực địa phương", "Local food")}
           </h3>
           <div className="flex flex-wrap gap-2">
             {destination.localFood.map((food, idx) => (
@@ -49,7 +51,7 @@ export function CultureGuideCard({ destination }: CultureGuideCardProps) {
         {/* Customs */}
         <div>
           <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-            🎭 Phong tục & Truyền thống
+            🎭 {t("Phong tục & Truyền thống", "Customs & Traditions")}
           </h3>
           <ul className="space-y-2">
             {destination.customs.map((custom, idx) => (
@@ -67,7 +69,7 @@ export function CultureGuideCard({ destination }: CultureGuideCardProps) {
         {/* Carbon Tip */}
         <div className="bg-emerald-900/30 border border-emerald-700/50 rounded-xl p-4">
           <p className="text-emerald-400 text-sm">
-            <span className="font-semibold">🌿 Mẹo giảm carbon: </span>
+            <span className="font-semibold">🌿 {t("Mẹo giảm carbon", "Carbon-saving tip")}: </span>
             {destination.carbonTip}
           </p>
         </div>

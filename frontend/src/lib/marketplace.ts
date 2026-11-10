@@ -1,10 +1,12 @@
 // Framework-free helpers for the D2C marketplace (unit-tested with plain Node).
 
+import { intlLocale, pick, type Locale } from "./i18n.ts";
+
 /** Mirrors `enum ProductType` in contracts/src/interfaces/IMarketPlaceDeps.sol. */
 export const PRODUCT_TYPES = [
-  { value: 0, label: "Đồ thủ công", icon: "🧺" },
-  { value: 1, label: "Đặc sản địa phương", icon: "🍯" },
-  { value: 2, label: "Tour trải nghiệm", icon: "🧭" },
+  { value: 0, label: "Đồ thủ công", labelEn: "Handicrafts", icon: "🧺" },
+  { value: 1, label: "Đặc sản địa phương", labelEn: "Local specialties", icon: "🍯" },
+  { value: 2, label: "Tour trải nghiệm", labelEn: "Experience tours", icon: "🧭" },
 ] as const;
 
 export type ProductTypeValue = (typeof PRODUCT_TYPES)[number]["value"];
@@ -59,8 +61,13 @@ export function getOrderActions(input: {
 }
 
 /** Message the seller signs to upload listing data to IPFS. */
-export function buildUploadMessage(address: string, timestampMs: number): string {
-  return `MyHomeLab: tải dữ liệu sản phẩm lên IPFS\nVí: ${address.toLowerCase()}\nThời điểm: ${timestampMs}`;
+export function buildUploadMessage(address: string, timestampMs: number, locale: Locale = "vi"): string {
+  const wallet = address.toLowerCase();
+  return pick(
+    locale,
+    `MyHomeLab: tải dữ liệu sản phẩm lên IPFS\nVí: ${wallet}\nThời điểm: ${timestampMs}`,
+    `MyHomeLab: upload listing data to IPFS\nWallet: ${wallet}\nTimestamp: ${timestampMs}`,
+  );
 }
 
 export const UPLOAD_SIGNATURE_MAX_AGE_MS = 5 * 60 * 1000;
@@ -109,8 +116,8 @@ export function splitPrice(price: bigint, shares: SplitShares) {
   return { artisan, treasury, platform: price - artisan - treasury };
 }
 
-export function formatBps(bps: number): string {
-  return `${(bps / 100).toLocaleString("vi-VN", { maximumFractionDigits: 2 })}%`;
+export function formatBps(bps: number, locale: Locale = "vi"): string {
+  return `${(bps / 100).toLocaleString(intlLocale(locale), { maximumFractionDigits: 2 })}%`;
 }
 
 export function shortenAddress(address: string, chars = 4): string {
@@ -196,13 +203,17 @@ export const LISTING_LIMITS = {
 } as const;
 
 /** Validates the listing form; returns an error message or null. */
-export function validateListingText(name: string, description: string): string | null {
-  if (!name.trim()) return "Vui lòng nhập tên sản phẩm.";
+export function validateListingText(name: string, description: string, locale: Locale = "vi"): string | null {
+  if (!name.trim()) return pick(locale, "Vui lòng nhập tên sản phẩm.", "Please enter the product name.");
   if (name.length > LISTING_LIMITS.name) {
-    return `Tên tối đa ${LISTING_LIMITS.name} ký tự.`;
+    return pick(locale, `Tên tối đa ${LISTING_LIMITS.name} ký tự.`, `Name can be at most ${LISTING_LIMITS.name} characters.`);
   }
   if (description.length > LISTING_LIMITS.description) {
-    return `Mô tả tối đa ${LISTING_LIMITS.description} ký tự.`;
+    return pick(
+      locale,
+      `Mô tả tối đa ${LISTING_LIMITS.description} ký tự.`,
+      `Description can be at most ${LISTING_LIMITS.description} characters.`,
+    );
   }
   return null;
 }
@@ -269,12 +280,61 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   ZeroAddress: "Địa chỉ không hợp lệ (địa chỉ 0).",
 };
 
+const CONTRACT_ERROR_MESSAGES_EN: Record<string, string> = {
+  ListingNotActive: "This product has already been sold or cancelled.",
+  ListingNotFound: "Product not found.",
+  InsufficientPayment: "The ETH sent is not enough to pay for this product.",
+  NotSellerOrOwner: "Only the seller can cancel this product.",
+  ZeroPrice: "The price must be greater than 0.",
+  PriceBelowMinimum: "The price is below the Marketplace minimum.",
+  ArtisanNotVerified: "Your wallet has not been verified as an artisan, so it cannot list products yet.",
+  SelfPurchase: "You cannot buy your own product.",
+  InvalidOrderStatus: "The order's status does not allow this action.",
+  NotBuyer: "Only the buyer can do this.",
+  NotSeller: "Only the seller can refund this order.",
+  NotArbiter: "Only the arbiter can resolve disputes.",
+  EscrowNotExpired: "The order's escrow period has not ended yet.",
+  DisputeNotStale: "The dispute has not passed its handling deadline yet.",
+  EnforcedPause: "This feature is temporarily paused for safety maintenance.",
+  EmptyMetadataURI: "Product information (metadata) is missing.",
+  RefundFailed: "The excess payment could not be returned to your wallet.",
+  // CarbonOffset
+  InvalidCarbonAmount: "Invalid CO₂ amount (from 1 kg to 100 tonnes per offset).",
+  MetadataTooLong: "The badge information is too long.",
+  AlreadyCompleted: "You have already claimed this quest's reward.",
+  RequirementNotMet: "The quest requirement is not met yet (on-chain data may be behind, please retry in a few seconds).",
+  QuestInactive: "This quest is currently paused.",
+  QuestNotFound: "Quest not found.",
+  TooManyProofIds: "Too many proof badges in one claim.",
+  // Governance / CommunityTreasury
+  AlreadyVoted: "You have already voted. Each wallet can vote once per proposal.",
+  NoVotingPower:
+    "This wallet had no voting power when the proposal was created (you need ECO and activated voting power before the proposal is created).",
+  VotingClosed: "Voting on this proposal has ended.",
+  VotingNotStarted: "Voting on this proposal has not opened yet, please come back later.",
+  TimelockNotElapsed: "This proposal is still in its safety waiting period and cannot be disbursed yet.",
+  ProposalExpired: "This proposal's disbursement window has expired.",
+  ExceedsDisbursementCap: "The requested ETH exceeds the per-proposal disbursement cap for the current Treasury balance.",
+  NotGuardian: "Only the guardian can cancel proposals.",
+  VotingNotEnded: "Voting has not ended yet, so the proposal cannot be executed.",
+  QuorumNotReached: "The proposal did not reach quorum (too few votes), so it cannot be executed.",
+  AlreadyFinalized: "This proposal has already been executed or finalized.",
+  BelowProposalThreshold: "Your ECO balance is below the minimum required to create a proposal.",
+  ProposalNotFound: "Proposal not found.",
+  InsufficientBalance: "The Community Treasury does not have enough ETH to disburse this proposal.",
+  TransferFailed: "The ETH could not be transferred to the recipient wallet.",
+  NotGovernance: "Only the Governance contract can disburse from the Treasury.",
+  ZeroAmount: "The amount must be greater than 0.",
+  ZeroAddress: "Invalid address (zero address).",
+};
+
 /** viem throws this when a receipt doesn't arrive within the `timeout` option. */
 export function isReceiptTimeoutError(error: unknown): boolean {
   return (error as { name?: string } | null)?.name === "WaitForTransactionReceiptTimeoutError";
 }
 
-export function getTxErrorMessage(error: unknown): string {
+export function getTxErrorMessage(error: unknown, locale: Locale = "vi"): string {
+  const messages = pick(locale, CONTRACT_ERROR_MESSAGES, CONTRACT_ERROR_MESSAGES_EN);
   // viem errors expose a cause chain; walk it looking for something recognisable.
   let current: unknown = error;
   for (let depth = 0; current && depth < 10; depth++) {
@@ -286,17 +346,17 @@ export function getTxErrorMessage(error: unknown): string {
       cause?: unknown;
     };
     if (e.name === "UserRejectedRequestError" || e.code === 4001) {
-      return "Bạn đã huỷ giao dịch trong ví.";
+      return pick(locale, "Bạn đã huỷ giao dịch trong ví.", "You cancelled the transaction in your wallet.");
     }
     const errorName = e.data?.errorName;
-    if (errorName && CONTRACT_ERROR_MESSAGES[errorName]) {
-      return CONTRACT_ERROR_MESSAGES[errorName];
+    if (errorName && messages[errorName]) {
+      return messages[errorName];
     }
     if (e.name === "InsufficientFundsError") {
-      return "Ví không đủ ETH để thanh toán và trả phí gas.";
+      return pick(locale, "Ví không đủ ETH để thanh toán và trả phí gas.", "Your wallet does not have enough ETH for the payment and gas.");
     }
     current = e.cause;
   }
   const short = (error as { shortMessage?: string })?.shortMessage;
-  return short || "Giao dịch thất bại. Vui lòng thử lại.";
+  return short || pick(locale, "Giao dịch thất bại. Vui lòng thử lại.", "Transaction failed. Please try again.");
 }
