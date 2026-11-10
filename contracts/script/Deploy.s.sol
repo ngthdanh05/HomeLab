@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Script, console2} from "forge-std/Script.sol";
+import {VmSafe} from "forge-std/Vm.sol";
 import {EcoToken} from "../src/EcoToken.sol";
 import {ImpactBadge} from "../src/ImpactBadge.sol";
 import {CommunityTreasury} from "../src/CommunityTreasury.sol";
@@ -13,21 +14,21 @@ import {QuestRewards} from "../src/QuestRewards.sol";
 import {QuestSetup} from "./QuestSetup.sol";
 
 // =============================================================================
-// DEPLOY CONFIG — Inline (không dùng `new DeployConfig()` để tránh tạo thêm
-//                          transaction trong broadcast và gây lệch nonce)
+// Config is inlined: `new DeployConfig()` would add a broadcast tx and shift nonces.
 // =============================================================================
 
 /// @title Deploy
 /// @notice Master deploy script for Eco-Tourism & Handicraft D2C platform.
 ///
-/// Chế độ hoạt động (qua biến môi trường):
-///   FULL DEPLOY  : không set ECO_TOKEN_ADDRESS  → deploy tất cả 6 contracts
-///   RESUME DEPLOY: set ECO_TOKEN_ADDRESS=<addr> → bỏ qua EcoToken, deploy 5 contracts còn lại
-///                  (tùy chọn: set IMPACT_BADGE_ADDRESS, TREASURY_ADDRESS để resume thêm)
+/// Modes (env):
+///   Full: ECO_TOKEN_ADDRESS unset or FRESH_DEPLOY=true; deploys all 8 contracts.
+///   Resume: set *_ADDRESS vars to reuse deployed contracts.
 ///
-/// Thứ tự deploy: EcoToken → ImpactBadge → CommunityTreasury → Governance → PaymentSplitter → Marketplace → CarbonOffset → QuestRewards
-/// Post-deploy : grantRole + setGovernance trong broadcast block 2 riêng biệt
+/// Order: EcoToken, ImpactBadge, CommunityTreasury, Governance, PaymentSplitter, Marketplace, CarbonOffset, QuestRewards.
+/// Roles and wiring happen in a second broadcast block.
 contract Deploy is Script {
+    error UnsupportedChain(uint256 chainId);
+
     // ─── Deployed contract references ───────────────────────────────────────
     EcoToken          public ecoToken;
     ImpactBadge       public impactBadge;
@@ -54,13 +55,13 @@ contract Deploy is Script {
     uint256 internal constant VOTING_PERIOD_LOCAL      = 1 hours;
 
     function run() external {
-        // ─── Network config (inline — không khởi tạo contract helper) ─────────
+        // ─── Network config ────────────────────────
         bool isLocal       = block.chainid == 31337;
+        // Defaults target testnet; other networks need their own config.
+        _requireSupportedChain();
 
         // ─── Resolve deployer ─────────────────────────────────────────────────
-        // Forge tự load .env (chứa PRIVATE_KEY và địa chỉ Sepolia). Trên Anvil
-        // phải bỏ qua chúng, nếu không script sẽ "resume" bằng địa chỉ Sepolia
-        // không tồn tại trên local và ký bằng ví không có ETH.
+        // Forge auto-loads .env; ignore it on Anvil or the script would resume from Sepolia addresses.
         uint256 deployerPrivateKey = isLocal ? 0 : vm.envOr("PRIVATE_KEY", uint256(0));
         address deployer = deployerPrivateKey != 0
             ? vm.addr(deployerPrivateKey)
@@ -69,7 +70,7 @@ contract Deploy is Script {
         uint256 quorum_    = isLocal ? QUORUM_BPS_LOCAL         : QUORUM_BPS;
         uint256 period_    = isLocal ? VOTING_PERIOD_LOCAL      : VOTING_PERIOD;
 
-        // ─── Đọc địa chỉ resume từ env ────────────────────────────────────────
+        // ─── Resume addresses from env ────────────────────────
         address existingEcoToken = _resumeAddress("ECO_TOKEN_ADDRESS");
         address existingBadge    = _resumeAddress("IMPACT_BADGE_ADDRESS");
         address existingTreasury = _resumeAddress("TREASURY_ADDRESS");
@@ -88,8 +89,7 @@ contract Deploy is Script {
 
         // =====================================================================
         // BROADCAST BLOCK 1: DEPLOY CONTRACTS
-        // Tất cả CREATE transactions được gom vào 1 broadcast để Foundry có
-        // thể estimate nonce và gas limit chính xác.
+        // All CREATEs share one broadcast so Foundry tracks nonces and gas correctly.
         // =====================================================================
         if (deployerPrivateKey != 0) {
             vm.startBroadcast(deployerPrivateKey);
@@ -194,14 +194,12 @@ contract Deploy is Script {
             );
             console2.log("8. QuestRewards deployed:      ", address(questRewards));
         }
-        // Flush Broadcast 1 — đẩy tất cả CREATE transactions lên node
+        // Flush broadcast 1.
         vm.stopBroadcast();
 
         // =====================================================================
-        // BROADCAST BLOCK 2: POST-DEPLOY — PHÂN QUYỀN & CẤU HÌNH
-        // Tách biệt hoàn toàn với Broadcast 1 để:
-        //   (a) Tránh nonce race condition
-        //   (b) Đảm bảo địa chỉ contracts đã xác nhận trên chain trước khi gọi
+        // BROADCAST BLOCK 2: ROLES AND WIRING
+        // Separate from block 1 so addresses are confirmed before these calls.
         // =====================================================================
         if (deployerPrivateKey != 0) {
             vm.startBroadcast(deployerPrivateKey);
@@ -209,45 +207,69 @@ contract Deploy is Script {
             vm.startBroadcast();
         }
 
-        bytes32 minterRole = keccak256("MINTER_ROLE");
-
-        // Grant MINTER_ROLE trên EcoToken
-        ecoToken.grantRole(minterRole, address(paymentSplitter));
-        ecoToken.grantRole(minterRole, address(marketplace));
-        console2.log("EcoToken: MINTER_ROLE granted to PaymentSplitter & Marketplace");
-
-        // Grant MINTER_ROLE trên ImpactBadge
-        impactBadge.grantRole(minterRole, address(marketplace));
-        impactBadge.grantRole(minterRole, address(paymentSplitter));
-        impactBadge.grantRole(minterRole, address(carbonOffset));
-        console2.log("ImpactBadge: MINTER_ROLE granted to Marketplace, PaymentSplitter & CarbonOffset");
-
-        // QuestRewards: thưởng ECO + badge, và nạp bộ quest mặc định
-        ecoToken.grantRole(minterRole, address(questRewards));
-        impactBadge.grantRole(minterRole, address(questRewards));
-        if (existingQuestRewards == address(0)) QuestSetup.addDefaultQuests(questRewards);
-        console2.log("QuestRewards: MINTER_ROLE on EcoToken & ImpactBadge, quests:", questRewards.questCount());
-
-        // Set Governance trên CommunityTreasury
-        treasury.setGovernance(address(governance));
-        console2.log("CommunityTreasury: Governance set to", address(governance));
+        _configure(deployer, isLocal, existingQuestRewards == address(0));
 
         vm.stopBroadcast();
 
-        // ─── Lưu file deployments ─────────────────────────────────────────────
+        // ─── Save deployment file ────────────────────────
         _saveDeployments();
         console2.log("=== Deployment Finished Successfully ===");
     }
 
+    function _requireSupportedChain() internal view {
+        if (block.chainid != 31337 && block.chainid != 11155111) revert UnsupportedChain(block.chainid);
+    }
+
+    /// @dev Split from run() to avoid stack-too-deep.
+    function _configure(address deployer, bool isLocal, bool addQuests) internal {
+        bytes32 minterRole = keccak256("MINTER_ROLE");
+
+        // EcoToken minters
+        ecoToken.grantRole(minterRole, address(paymentSplitter));
+        console2.log("EcoToken: MINTER_ROLE granted to PaymentSplitter");
+
+        // ImpactBadge minters
+        impactBadge.grantRole(minterRole, address(marketplace));
+        impactBadge.grantRole(minterRole, address(carbonOffset));
+        console2.log("ImpactBadge: MINTER_ROLE granted to Marketplace & CarbonOffset");
+
+        // Purchase rewards only flow through Marketplace.
+        paymentSplitter.setMarketplace(address(marketplace));
+
+        // Local/E2E: disable verification and time locks for fast flows.
+        if (isLocal) {
+            marketplace.setArtisanVerificationRequired(false);
+            governance.setVotingDelayBlocks(0);
+            governance.setExecutionDelay(0);
+            governance.setMaxDisbursementBps(10_000);
+        }
+
+        // QuestRewards: minter roles and default quests.
+        ecoToken.grantRole(minterRole, address(questRewards));
+        impactBadge.grantRole(minterRole, address(questRewards));
+        if (addQuests) QuestSetup.addDefaultQuests(questRewards);
+        console2.log("QuestRewards: MINTER_ROLE on EcoToken & ImpactBadge, quests:", questRewards.questCount());
+
+        // setGovernance is one-shot, so skip it on resume.
+        if (treasury.governance() == address(0)) treasury.setGovernance(address(governance));
+        console2.log("CommunityTreasury: Governance set to", address(governance));
+
+        // Deployer keeps admin only and cannot mint badges.
+        impactBadge.revokeRole(minterRole, deployer);
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
-    /// @dev Địa chỉ contract đã deploy để resume; luôn deploy mới trên Anvil.
+    /// @dev Address to reuse; always zero on Anvil or with FRESH_DEPLOY=true.
     function _resumeAddress(string memory envKey) internal view returns (address) {
-        if (block.chainid == 31337) return address(0);
+        if (block.chainid == 31337 || vm.envOr("FRESH_DEPLOY", false)) return address(0);
         return vm.envOr(envKey, address(0));
     }
 
     function _saveDeployments() internal {
+        // A dry run has predicted addresses; keep the real record.
+        if (vm.isContext(VmSafe.ForgeContext.ScriptDryRun)) return;
+
         string memory net  = _networkName();
         string memory path = string.concat("deployments/", net, ".json");
 

@@ -27,6 +27,11 @@ test.describe("02 · Mua hàng D2C trên Marketplace", () => {
     // "Đã mua ✓" until the listing refetch, then "Sản phẩm đã được bán"; disabled either way.
     await expect(page.getByRole("button", { name: /^(Đã mua ✓|Sản phẩm đã được bán)$/ })).toBeDisabled();
 
+    // Escrow: nothing moves until the buyer confirms delivery.
+    expect(await chain.balanceOf(ACCOUNTS.seller.address)).toBe(sellerBefore);
+    await page.getByRole("button", { name: /Đã nhận hàng/ }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Đã xác nhận nhận hàng!" })).toBeVisible();
+
     // PaymentSplitter: 70% to the artisan, 20% to the Community Treasury.
     expect((await chain.balanceOf(ACCOUNTS.seller.address)) - sellerBefore).toBe(parseEther("0.007"));
     expect((await chain.balanceOf(ADDRESSES.communityTreasury)) - treasuryBefore).toBe(parseEther("0.002"));

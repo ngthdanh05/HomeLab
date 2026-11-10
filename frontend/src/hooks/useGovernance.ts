@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Address, Hash } from "viem";
 import { useQuery } from "@tanstack/react-query";
-import { useBlock, usePublicClient, useReadContract, useReadContracts } from "wagmi";
+import { useBlock, useBlockNumber, usePublicClient, useReadContract, useReadContracts } from "wagmi";
 import { EcoTokenABI, GovernanceABI, LOGS_FROM_BLOCK } from "@/config/contracts";
 import {
   getProposalStatus,
   getRecentProposalIds,
   getVotingPowerState,
+  PROPOSALS_PAGE_SIZE,
   parseProposalDescription,
   type OnChainProposal,
   type ProposalStatus,
@@ -44,9 +45,9 @@ export function useChainNow(tickMs = 1_000): number {
   return Math.max(wall, blockTime);
 }
 
-function toProposal(id: bigint, raw: OnChainProposal, now: number): Proposal {
+function toProposal(id: bigint, raw: OnChainProposal, now: number, blockNumber?: bigint): Proposal {
   const { title, body } = parseProposalDescription(raw.description);
-  return { ...raw, id, title, body, status: getProposalStatus(raw, now) };
+  return { ...raw, id, title, body, status: getProposalStatus(raw, now, blockNumber) };
 }
 
 /** DAO parameters set by the owner: proposal threshold (ECO wei), quorum (bps), voting period (s). */
@@ -78,13 +79,14 @@ export function useGovernanceConfig() {
 }
 
 /** Newest proposals (Governance.getProposal for each ID), with a derived status. */
-export function useProposals() {
+export function useProposals(limit = PROPOSALS_PAGE_SIZE) {
   const { chainId, addresses } = useActiveChain();
   const config = useGovernanceConfig();
   const now = useChainNow(5_000);
+  const { data: blockNumber } = useBlockNumber({ chainId, cacheTime: 0, query: { refetchInterval: REFRESH_MS } });
   const ids = useMemo(
-    () => (config.proposalCount !== undefined ? getRecentProposalIds(config.proposalCount) : []),
-    [config.proposalCount],
+    () => (config.proposalCount !== undefined ? getRecentProposalIds(config.proposalCount, limit) : []),
+    [config.proposalCount, limit],
   );
 
   const query = useReadContracts({
@@ -101,14 +103,15 @@ export function useProposals() {
   const proposals = useMemo<Proposal[]>(
     () =>
       (query.data ?? []).flatMap((row, i) =>
-        row.status === "success" && row.result ? [toProposal(ids[i], row.result as OnChainProposal, now)] : [],
+        row.status === "success" && row.result ? [toProposal(ids[i], row.result as OnChainProposal, now, blockNumber)] : [],
       ),
-    [query.data, ids, now],
+    [query.data, ids, now, blockNumber],
   );
 
   return {
     config,
     proposals,
+    hasMore: config.proposalCount !== undefined && BigInt(ids.length) < config.proposalCount,
     isLoading: config.isLoading || (ids.length > 0 && query.isLoading),
     isError: config.isError || query.isError,
     refetch: () => {
@@ -122,6 +125,7 @@ export function useProposals() {
 export function useProposal(id: bigint | null, user: Address | undefined) {
   const { chainId, addresses } = useActiveChain();
   const now = useChainNow();
+  const { data: blockNumber } = useBlockNumber({ chainId, cacheTime: 0, query: { refetchInterval: REFRESH_MS } });
 
   const proposalQuery = useReadContract({
     address: addresses.governance,
@@ -156,7 +160,7 @@ export function useProposal(id: bigint | null, user: Address | undefined) {
   const powerRow = userQuery.data?.[1];
 
   return {
-    proposal: id !== null && raw ? toProposal(id, raw, now) : undefined,
+    proposal: id !== null && raw ? toProposal(id, raw, now, blockNumber) : undefined,
     now,
     hasVoted: hasVotedRow?.status === "success" ? (hasVotedRow.result as boolean) : undefined,
     /** Voting power of `user` at the proposal's snapshot block (what vote() counts). */

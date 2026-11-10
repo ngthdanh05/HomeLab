@@ -23,6 +23,7 @@ const KIND_INFO: Record<ActivityKind, { icon: string; title: string; tone: strin
   listing: { icon: "📦", title: "Đăng bán sản phẩm", tone: "bg-sky-500/15 text-sky-300" },
   cancel: { icon: "✖️", title: "Huỷ đăng bán", tone: "bg-slate-500/15 text-slate-300" },
   income: { icon: "💸", title: "Nhận thanh toán D2C", tone: "bg-amber-500/15 text-amber-300" },
+  refund: { icon: "↩️", title: "Được hoàn tiền", tone: "bg-sky-500/15 text-sky-300" },
   reward: { icon: "🌱", title: "Nhận thưởng ECO", tone: "bg-emerald-500/15 text-emerald-300" },
   offset: { icon: "🌍", title: "Bù đắp carbon", tone: "bg-sky-500/15 text-sky-300" },
   quest: { icon: "🎯", title: "Hoàn thành quest", tone: "bg-amber-500/15 text-amber-300" },
@@ -42,7 +43,7 @@ function ListingName({ listingId }: { listingId: bigint }) {
 
 function ActivityRow({ item, explorerUrl }: { item: ActivityItem; explorerUrl?: string }) {
   const info = KIND_INFO[item.kind];
-  const sign = item.kind === "purchase" || item.kind === "offset" ? "−" : item.kind === "sale" || item.kind === "income" ? "+" : "";
+  const sign = item.kind === "purchase" || item.kind === "offset" ? "−" : item.kind === "sale" || item.kind === "income" || item.kind === "refund" ? "+" : "";
 
   return (
     <li className="flex gap-3 py-4">

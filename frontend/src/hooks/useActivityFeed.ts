@@ -98,7 +98,7 @@ async function loadActivity(
     fromBlock: fromBlocks.paymentSplitter,
   };
 
-  const [bought, sold, created, cancelled, rewards, badges, offsets, quests] = await Promise.all([
+  const [bought, sold, created, cancelled, rewards, badges, offsets, quests, refunds] = await Promise.all([
     get({ ...market, eventName: "ListingPurchased", args: { buyer: user } }),
     get({ ...market, eventName: "ListingPurchased", args: { seller: user } }),
     get({ ...market, eventName: "ListingCreated", args: { seller: user } }),
@@ -129,6 +129,7 @@ async function loadActivity(
           fromBlock: fromBlocks.questRewards ?? fromBlocks.impactBadge,
         })
       : Promise.resolve([] as ChainEvent[]),
+    get({ ...market, eventName: "OrderRefunded", args: { buyer: user } }),
   ]);
 
   // PaymentSplit is indexed by artisan only: fetch splits paid to the sellers
@@ -147,7 +148,7 @@ async function loadActivity(
   );
 
   const items = buildActivityFeed(
-    [...bought, ...sold, ...created, ...cancelled, ...rewards, ...badges, ...offsets, ...quests, ...relevantSplits],
+    [...bought, ...sold, ...created, ...cancelled, ...rewards, ...badges, ...offsets, ...quests, ...refunds, ...relevantSplits],
     user,
   ).slice(0, ACTIVITY_LIMIT);
 

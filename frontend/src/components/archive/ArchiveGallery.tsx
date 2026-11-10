@@ -54,8 +54,8 @@ export function ArchiveGallery() {
                 🏛️ Bảo Tồn Di Sản Số Hóa 360°
               </h2>
               <p className="text-slate-400 text-sm mt-1">
-                Khám phá không gian thực tế ảo tương tác, lưu trữ vĩnh viễn trên
-                hệ thống phi tập trung.
+                Khám phá không gian thực tế ảo tương tác với ảnh minh hoạ, kèm chú giải
+                về từng di sản.
               </p>
             </div>
 

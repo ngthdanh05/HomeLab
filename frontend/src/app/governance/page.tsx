@@ -12,20 +12,21 @@ import { useActiveChain } from "@/hooks/useActiveChain";
 import { useChainNow, useProposals } from "@/hooks/useGovernance";
 import { useTreasury } from "@/hooks/useTreasury";
 import { formatDateTime } from "@/lib/dashboard";
-import type { ProposalStatus } from "@/lib/governance";
+import { PROPOSALS_PAGE_SIZE, type ProposalStatus } from "@/lib/governance";
 import { shortenAddress } from "@/lib/marketplace";
 
 const FILTERS: { key: string; label: string; statuses: ProposalStatus[] | null }[] = [
   { key: "all", label: "Tất cả", statuses: null },
-  { key: "active", label: "🗳️ Đang bỏ phiếu", statuses: ["active"] },
-  { key: "pending", label: "⏳ Chờ thực thi", statuses: ["passed", "defeated"] },
-  { key: "closed", label: "📁 Đã kết thúc", statuses: ["executed", "rejected", "no-quorum"] },
+  { key: "active", label: "🗳️ Đang bỏ phiếu", statuses: ["pending", "active"] },
+  { key: "pending", label: "⏳ Chờ thực thi", statuses: ["queued", "passed", "defeated"] },
+  { key: "closed", label: "📁 Đã kết thúc", statuses: ["executed", "rejected", "no-quorum", "expired", "cancelled"] },
 ];
 
 export default function GovernancePage() {
   const { chainId, explorerUrl, isWrongNetwork } = useActiveChain();
   const { address: user, isConnected } = useAccount();
-  const { config, proposals, isLoading, isError, refetch } = useProposals();
+  const [limit, setLimit] = useState(PROPOSALS_PAGE_SIZE);
+  const { config, proposals, hasMore, isLoading, isError, refetch } = useProposals(limit);
   const treasury = useTreasury();
   const now = useChainNow();
   const [filter, setFilter] = useState("all");
@@ -138,6 +139,17 @@ export default function GovernancePage() {
             {visible.map((p) => (
               <ProposalCard key={p.id.toString()} proposal={p} now={now} />
             ))}
+          </div>
+        )}
+        {hasMore && !isError && (
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => setLimit((n) => n + PROPOSALS_PAGE_SIZE)}
+              className="rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-700"
+            >
+              Xem thêm đề xuất
+            </button>
           </div>
         )}
       </section>

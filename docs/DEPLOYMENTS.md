@@ -44,14 +44,14 @@ Tài liệu lưu trữ thông tin triển khai, địa chỉ hợp đồng và h
 
 | Contract | Địa chỉ trên Sepolia | Etherscan Link |
 | :--- | :--- | :--- |
-| **EcoToken** | `0xacB3267dBBeA4924cEE9e5631618DB8342f39a24` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0xacB3267dBBeA4924cEE9e5631618DB8342f39a24) |
-| **ImpactBadge** | `0xba5404682DB9feb35fBB1cbC18b97f1A59b7a9C9` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0xba5404682DB9feb35fBB1cbC18b97f1A59b7a9C9) |
-| **CommunityTreasury** | `0x10E83c02C8667485EDd78ce57E0f6553D33296e6` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x10E83c02C8667485EDd78ce57E0f6553D33296e6) |
-| **Governance** | `0x1e0404A2EDC3BB2139A82d2e8372631A11697998` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x1e0404A2EDC3BB2139A82d2e8372631A11697998) |
-| **PaymentSplitter** | `0x5d574343A7e162Be9f3eA9Da676169d7Df874a66` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x5d574343A7e162Be9f3eA9Da676169d7Df874a66) |
-| **Marketplace** | `0x92e554039D39014A5Fc55b31B1308f9DFe1098D5` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x92e554039D39014A5Fc55b31B1308f9DFe1098D5) |
-| **CarbonOffset** | `0x4d51Ea6E0ACeBeBa0b96a72655B10457d769DFF5` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x4d51Ea6E0ACeBeBa0b96a72655B10457d769DFF5) |
-| **QuestRewards** | `0x562845c0bd4F75e1d90207357A57f8aFA8f06F05` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x562845c0bd4F75e1d90207357A57f8aFA8f06F05) |
+| **EcoToken** | `0xfB72749A4e02e51E9350249AAC58a78a54b972Ed` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0xfB72749A4e02e51E9350249AAC58a78a54b972Ed) |
+| **ImpactBadge** | `0xf36F3835343A56832D2f7401f7434ECFf9186568` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0xf36F3835343A56832D2f7401f7434ECFf9186568) |
+| **CommunityTreasury** | `0xA0627F599c7937518F16327FD05f906326178e16` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0xA0627F599c7937518F16327FD05f906326178e16) |
+| **Governance** | `0x43c32746284cE1294Df74128eE53adbB8e464Ebf` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x43c32746284cE1294Df74128eE53adbB8e464Ebf) |
+| **PaymentSplitter** | `0xD227c3535d07E2c91B254138e05cB30C7fc3534D` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0xD227c3535d07E2c91B254138e05cB30C7fc3534D) |
+| **Marketplace** | `0xa1BFdb605e28524147dac98925b15809a4b2aa17` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0xa1BFdb605e28524147dac98925b15809a4b2aa17) |
+| **CarbonOffset** | `0x181292372a2f4481543a80243F647241e731f956` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0x181292372a2f4481543a80243F647241e731f956) |
+| **QuestRewards** | `0xc55095db8b878dee92168865Dc2C7EEB31C222b3` | [Xem trên Sepolia Etherscan](https://sepolia.etherscan.io/address/0xc55095db8b878dee92168865Dc2C7EEB31C222b3) |
 
 ---
 
@@ -78,12 +78,47 @@ Tài liệu lưu trữ thông tin triển khai, địa chỉ hợp đồng và h
 
 ---
 
+## 🔐 Vá bảo mật contract: đã deploy 2026-11-10
+
+Bộ contract ở bảng trên được deploy lại đầy đủ (block 12103904–12103929, deployer `0x37a036E7a5f85025C54837FcBD6927A8f7969242`) với các lớp bảo vệ:
+xác thực nghệ nhân và giá tối thiểu, chặn tự mua, ECO khi mua hàng chỉ qua Marketplace, chỉ quest mua hàng thưởng ECO,
+tối thiểu 1 kg CO₂ mỗi lần bù đắp, voting delay, timelock, trần giải ngân, hạn thực thi, guardian, trần tỷ lệ chia,
+`Ownable2Step`, `Pausable`, escrow cho đơn hàng. Frontend phải deploy cùng lúc: ABI `Governance.getProposal` đã đổi.
+
+Các bước khi cần deploy lại Sepolia (chạy trong `contracts/`):
+
+```bash
+make simulate-sepolia
+```
+
+```bash
+make deploy-sepolia
+```
+
+```bash
+set -a; . ./.env; set +a; RPC_URL="$SEPOLIA_RPC_URL" DEPLOYER=<ví deploy> bash script/check_deployment.sh
+```
+
+```bash
+node script/sync_frontend_addresses.mjs
+```
+
+Sau đó cập nhật bảng địa chỉ ở trên, commit và merge để `deploy.yml` đưa frontend lên cùng địa chỉ mới.
+Trước lúc deploy lại, owner nên gọi `PaymentSplitter.withdrawPlatformFees` ở bản cũ để rút phí đang chờ.
+ECO, badge và tiến độ quest của bản cũ không chuyển sang bản mới; số dư Quỹ cũ không chuyển được vì chỉ Governance cũ được giải ngân.
+
+Sau khi deploy trên mạng public:
+1. Xác thực từng nghệ nhân bằng `Marketplace.setArtisanVerified(ví, true)`.
+2. Chạy `script/TransferOwnership.s.sol` với `NEW_OWNER` là multisig hoặc timelock, rồi `acceptOwnership()` từ ví đó.
+3. Đặt `Marketplace.setArbiter(multisig)` và `Governance.setGuardian(multisig)`, sau đó deployer tự `renounceRole(DEFAULT_ADMIN_ROLE, deployer)` trên ImpactBadge.
+
+---
+
 ## ⚙️ Thiết lập quyền (Roles & Permissions) sau Deploy
 
 1. **`EcoToken`**:
    - `MINTER_ROLE` được cấp cho `PaymentSplitter` (để tự động mint ECO thưởng khi du khách mua hàng).
-   - `MINTER_ROLE` được cấp cho `Marketplace`.
-   - `MINTER_ROLE` được cấp cho `QuestRewards` (thưởng ECO khi hoàn thành quest).
+   - `MINTER_ROLE` được cấp cho `QuestRewards` (thưởng ECO khi hoàn thành quest mua hàng).
 2. **`ImpactBadge`**:
    - `MINTER_ROLE` được cấp cho `Marketplace` (để tự động mint NFT Proof-of-Action cho người mua).
    - `MINTER_ROLE` được cấp cho `CarbonOffset` (mint `ZERO_CARBON` khi du khách bù đắp carbon).

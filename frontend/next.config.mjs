@@ -1,11 +1,12 @@
 const isDev = process.env.NODE_ENV !== "production";
+const allowLocalRpc = isDev || process.env.NEXT_PUBLIC_CHAIN_ID === "31337";
 
 /**
  * Content-Security-Policy. Next.js injects inline bootstrap scripts (no nonce in
  * this setup), and ConnectKit injects inline styles, so 'unsafe-inline' stays for
  * those two. connect-src allows any https/wss origin because listing and badge
  * metadata may live on any IPFS gateway and wallets use their own relays; plain
- * http is limited to the local Anvil node. Dev mode also needs eval (React Refresh).
+ * http is limited to the local Anvil node, in dev and Anvil builds only. Dev mode also needs eval (React Refresh).
  */
 const csp = [
   "default-src 'self'",
@@ -13,7 +14,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https: wss: http://127.0.0.1:8545 http://localhost:8545",
+  `connect-src 'self' https: wss:${allowLocalRpc ? " http://127.0.0.1:8545 http://localhost:8545" : ""}`,
   "frame-src https://verify.walletconnect.com https://verify.walletconnect.org",
   "worker-src 'self' blob:",
   "media-src 'self' data: blob:",

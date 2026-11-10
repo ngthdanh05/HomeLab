@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
 # verify_sepolia.sh
-# Verify all deployed contracts on Sepolia Etherscan
+# Verify toàn bộ 8 contract trên Sepolia Etherscan; thoát với mã lỗi nếu có contract thất bại.
 # =============================================================================
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$SCRIPT_DIR/.."
@@ -14,39 +14,31 @@ if [[ ! -f "$DEPLOY_FILE" ]]; then
   exit 1
 fi
 
-if [[ -z "${ETHERSCAN_API_KEY:-}" ]]; then
-  echo "❌ Thiếu ETHERSCAN_API_KEY trong môi trường hoặc .env."
+if [[ -z "${ETHERSCAN_API_KEY:-}" || -z "${SEPOLIA_RPC_URL:-}" ]]; then
+  echo "❌ Thiếu ETHERSCAN_API_KEY hoặc SEPOLIA_RPC_URL trong môi trường."
   exit 1
 fi
 
-echo "=========================================================="
-echo "  Verifying contracts on Sepolia Etherscan"
-echo "=========================================================="
+cd "$ROOT_DIR"
+failed=()
 
-ECO_TOKEN=$(grep -o '"EcoToken": *"[^"]*"' "$DEPLOY_FILE" | head -1 | cut -d'"' -f4)
-IMPACT_BADGE=$(grep -o '"ImpactBadge": *"[^"]*"' "$DEPLOY_FILE" | head -1 | cut -d'"' -f4)
-TREASURY=$(grep -o '"CommunityTreasury": *"[^"]*"' "$DEPLOY_FILE" | head -1 | cut -d'"' -f4)
-GOVERNANCE=$(grep -o '"Governance": *"[^"]*"' "$DEPLOY_FILE" | head -1 | cut -d'"' -f4)
-PAYMENT_SPLITTER=$(grep -o '"PaymentSplitter": *"[^"]*"' "$DEPLOY_FILE" | head -1 | cut -d'"' -f4)
-MARKETPLACE=$(grep -o '"Marketplace": *"[^"]*"' "$DEPLOY_FILE" | head -1 | cut -d'"' -f4)
+for name in EcoToken ImpactBadge CommunityTreasury Governance PaymentSplitter Marketplace CarbonOffset QuestRewards; do
+  address=$(grep -o "\"$name\": *\"[^\"]*\"" "$DEPLOY_FILE" | head -1 | cut -d'"' -f4)
+  if [[ -z "$address" ]]; then
+    echo "❌ $name: không có địa chỉ trong $DEPLOY_FILE"
+    failed+=("$name")
+    continue
+  fi
+  echo ">> Verifying $name at $address..."
+  # Constructor args được forge suy ra từ giao dịch tạo contract qua RPC.
+  if ! forge verify-contract --chain-id 11155111 --rpc-url "$SEPOLIA_RPC_URL" --guess-constructor-args \
+    --etherscan-api-key "$ETHERSCAN_API_KEY" --watch "$address" "src/$name.sol:$name"; then
+    failed+=("$name")
+  fi
+done
 
-echo "1. Verifying EcoToken at $ECO_TOKEN..."
-forge verify-contract --chain-id 11155111 "$ECO_TOKEN" src/EcoToken.sol:EcoToken --etherscan-api-key "$ETHERSCAN_API_KEY" || true
-
-echo "2. Verifying ImpactBadge at $IMPACT_BADGE..."
-forge verify-contract --chain-id 11155111 "$IMPACT_BADGE" src/ImpactBadge.sol:ImpactBadge --etherscan-api-key "$ETHERSCAN_API_KEY" || true
-
-echo "3. Verifying CommunityTreasury at $TREASURY..."
-forge verify-contract --chain-id 11155111 "$TREASURY" src/CommunityTreasury.sol:CommunityTreasury --etherscan-api-key "$ETHERSCAN_API_KEY" || true
-
-echo "4. Verifying Governance at $GOVERNANCE..."
-forge verify-contract --chain-id 11155111 "$GOVERNANCE" src/Governance.sol:Governance --etherscan-api-key "$ETHERSCAN_API_KEY" || true
-
-echo "5. Verifying PaymentSplitter at $PAYMENT_SPLITTER..."
-forge verify-contract --chain-id 11155111 "$PAYMENT_SPLITTER" src/PaymentSplitter.sol:PaymentSplitter --etherscan-api-key "$ETHERSCAN_API_KEY" || true
-
-echo "6. Verifying Marketplace at $MARKETPLACE..."
-forge verify-contract --chain-id 11155111 "$MARKETPLACE" src/Marketplace.sol:Marketplace --etherscan-api-key "$ETHERSCAN_API_KEY" || true
-
-echo "=========================================================="
-echo "✅ Verification script executed!"
+if (( ${#failed[@]} > 0 )); then
+  echo "❌ Verify thất bại: ${failed[*]}"
+  exit 1
+fi
+echo "✅ Đã verify đủ 8 contract."

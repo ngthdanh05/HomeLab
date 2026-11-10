@@ -67,7 +67,8 @@ export const QUESTS: readonly QuestDefinition[] = [
     icon: "🌍",
     kind: "carbon-offsets",
     target: 1,
-    ecoReward: 10,
+    ecoReward: 0,
+    rewardBadgeType: 3, // COMMUNITY_DONOR
     action: { href: "/carbon-tracker", label: "Tới Carbon Tracker" },
   },
   {
@@ -78,7 +79,7 @@ export const QUESTS: readonly QuestDefinition[] = [
     icon: "🌳",
     kind: "carbon-grams",
     target: 100_000,
-    ecoReward: 25,
+    ecoReward: 0,
     rewardBadgeType: 1, // ZERO_CARBON
     action: { href: "/carbon-tracker", label: "Tới Carbon Tracker" },
   },
@@ -90,7 +91,7 @@ export const QUESTS: readonly QuestDefinition[] = [
     icon: "🗳️",
     kind: "dao-vote",
     target: 1,
-    ecoReward: 20,
+    ecoReward: 0,
     rewardBadgeType: 3, // COMMUNITY_DONOR
     action: { href: "/dashboard", label: "Xem số dư ECO" },
   },
@@ -102,7 +103,7 @@ export const QUESTS: readonly QuestDefinition[] = [
     icon: "🏛️",
     kind: "heritage-views",
     target: HERITAGE_IDS.length,
-    // Off-chain action (self-attested): badge only, no ECO (ECO is DAO voting power).
+    // ECO is DAO voting power: only purchase quests mint it (QuestRewards.addQuest).
     ecoReward: 0,
     rewardBadgeType: 2, // CULTURE_GUARDIAN
     action: { href: "/", label: "Trang chủ → tab 360° Digital Archive" },

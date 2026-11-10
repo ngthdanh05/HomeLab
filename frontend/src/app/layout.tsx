@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import Link from "next/link";
 import { Web3Provider } from "../providers/Web3Provider";
 import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/seo";
 
@@ -56,7 +57,19 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="font-sans bg-slate-950 text-slate-100 min-h-screen antialiased">
+        <p role="note" className="bg-amber-900/60 px-4 py-1.5 text-center text-xs text-amber-100">
+          ⚠️ Bản thử nghiệm trên testnet: tài sản không có giá trị thực, smart contract chưa được kiểm toán.
+        </p>
         <Web3Provider>{children}</Web3Provider>
+        <footer className="border-t border-slate-800 px-4 py-5 text-center text-xs text-slate-400">
+          <Link href="/terms" className="hover:text-emerald-400">
+            Điều khoản sử dụng
+          </Link>
+          <span aria-hidden> · </span>
+          <Link href="/privacy" className="hover:text-emerald-400">
+            Chính sách riêng tư
+          </Link>
+        </footer>
       </body>
     </html>
   );

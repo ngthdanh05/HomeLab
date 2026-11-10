@@ -5,7 +5,7 @@ import type { Address } from "viem";
 import { useQueries } from "@tanstack/react-query";
 import { useReadContract, useReadContracts } from "wagmi";
 import { ImpactBadgeABI } from "@/config/contracts";
-import { normalizeBadgeMetadata, type BadgeMetadata } from "@/lib/dashboard";
+import { DEFAULT_BADGE_URI, normalizeBadgeMetadata, type BadgeMetadata } from "@/lib/dashboard";
 import { fetchJsonUri } from "@/lib/marketplace";
 import { useActiveChain } from "./useActiveChain";
 
@@ -73,9 +73,9 @@ export function useUserBadges(owner: Address | undefined) {
     [ids, detailsQuery.data],
   );
 
-  // Many badges share the contract's default URI, so fetch each URI once.
+  // The contract's generic default URI adds nothing over the per-type labels, so skip it.
   const uris = useMemo(
-    () => [...new Set(details.map((d) => d.tokenURI).filter((u): u is string => Boolean(u)))],
+    () => [...new Set(details.map((d) => d.tokenURI).filter((u): u is string => Boolean(u) && u !== DEFAULT_BADGE_URI))],
     [details],
   );
   const metadataQueries = useQueries({
@@ -89,7 +89,7 @@ export function useUserBadges(owner: Address | undefined) {
   });
 
   const badges: UserBadge[] = details.map((d) => {
-    const query = d.tokenURI ? metadataQueries[uris.indexOf(d.tokenURI)] : undefined;
+    const query = d.tokenURI && d.tokenURI !== DEFAULT_BADGE_URI ? metadataQueries[uris.indexOf(d.tokenURI)] : undefined;
     return {
       ...d,
       metadata: query?.data,

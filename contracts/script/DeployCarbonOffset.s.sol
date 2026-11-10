@@ -6,11 +6,10 @@ import {ImpactBadge} from "../src/ImpactBadge.sol";
 import {CarbonOffset} from "../src/CarbonOffset.sol";
 
 /// @title DeployCarbonOffset
-/// @notice Deploy riêng CarbonOffset lên mạng đã có hệ thống (Sepolia) và cấp
-///         MINTER_ROLE trên ImpactBadge cho nó. Deployer phải là admin của ImpactBadge.
+/// @notice Deploys CarbonOffset onto an existing system and grants it MINTER_ROLE on ImpactBadge.
+/// @dev Deployer must be ImpactBadge admin.
 ///
-/// Biến môi trường: PRIVATE_KEY, IMPACT_BADGE_ADDRESS, TREASURY_ADDRESS,
-///                  CARBON_PRICE_PER_KG_WEI (tuỳ chọn, mặc định 0.00001 ETH/kg).
+/// Env: PRIVATE_KEY, IMPACT_BADGE_ADDRESS, TREASURY_ADDRESS, CARBON_PRICE_PER_KG_WEI (optional).
 contract DeployCarbonOffset is Script {
     uint256 internal constant DEFAULT_PRICE_PER_KG = 0.00001 ether;
 

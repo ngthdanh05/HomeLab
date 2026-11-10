@@ -8,10 +8,10 @@ import {QuestRewards} from "../src/QuestRewards.sol";
 import {QuestSetup} from "./QuestSetup.sol";
 
 /// @title DeployQuestRewards
-/// @notice Deploy riêng QuestRewards (Task 4.4) lên mạng đã có hệ thống (Sepolia), nạp bộ quest
-///         mặc định và cấp MINTER_ROLE trên EcoToken + ImpactBadge. Deployer phải là admin của cả hai.
+/// @notice Deploys QuestRewards onto an existing system, adds the default quests and grants MINTER_ROLE.
+/// @dev Deployer must be admin of EcoToken and ImpactBadge.
 ///
-/// Biến môi trường: PRIVATE_KEY, ECO_TOKEN_ADDRESS, IMPACT_BADGE_ADDRESS,
+/// Env: PRIVATE_KEY, ECO_TOKEN_ADDRESS, IMPACT_BADGE_ADDRESS,
 ///                  CARBON_OFFSET_ADDRESS, GOVERNANCE_ADDRESS.
 contract DeployQuestRewards is Script {
     function run() external returns (QuestRewards quests) {

@@ -28,6 +28,8 @@ const proposal = (over = {}) => ({
   description: "Dự án\n\nMô tả",
   snapshotBlock: 10n,
   deadline: 1_000n,
+  executeAfter: 1_000n,
+  cancelled: false,
   quorumVotes: 50n * ECO,
   votesFor: 0n,
   votesAgainst: 0n,
@@ -36,6 +38,16 @@ const proposal = (over = {}) => ({
 });
 
 describe("getProposalStatus", () => {
+  test("voting delay, timelock, expiry and guardian cancel", () => {
+    const passed = { votesFor: 60n * ECO, executeAfter: 2_000n };
+    assert.equal(getProposalStatus(proposal(), 500, 10n), "pending");
+    assert.equal(getProposalStatus(proposal(), 500, 11n), "active");
+    assert.equal(getProposalStatus(proposal(passed), 1_500), "queued");
+    assert.equal(getProposalStatus(proposal(passed), 2_000), "passed");
+    assert.equal(getProposalStatus(proposal(passed), 2_000 + 14 * 86_400), "passed");
+    assert.equal(getProposalStatus(proposal(passed), 2_001 + 14 * 86_400), "expired");
+    assert.equal(getProposalStatus(proposal({ cancelled: true, finalized: true, votesFor: 60n * ECO }), 0), "cancelled");
+  });
   test("active strictly before the deadline (vote() requires now < deadline)", () => {
     assert.equal(getProposalStatus(proposal(), 999), "active");
     assert.notEqual(getProposalStatus(proposal(), 1_000), "active");

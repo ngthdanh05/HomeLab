@@ -23,11 +23,18 @@ async function readErrorMessage(response: Response): Promise<string> {
   return "Không thể kết nối tới AI. Vui lòng thử lại.";
 }
 
+const HISTORY_MESSAGES = 8;
+const HISTORY_CHARS = 1000;
+
 export function useAIChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Abort any in-flight stream when the component using the hook unmounts.
   useEffect(() => () => abortControllerRef.current?.abort(), []);
@@ -49,6 +56,11 @@ export function useAIChat() {
 
       const now = new Date();
       const assistantMessageId = crypto.randomUUID();
+      // Earlier turns, so follow-up questions keep their context on the (stateless) API.
+      const history = messagesRef.current
+        .filter((m) => m.content && !m.content.startsWith("⚠️"))
+        .slice(-HISTORY_MESSAGES)
+        .map((m) => ({ role: m.role === "user" ? "user" : "model", text: m.content.slice(0, HISTORY_CHARS) }));
       setMessages((prev) => [
         ...prev,
         { id: crypto.randomUUID(), role: "user", content: message, timestamp: now },
@@ -64,7 +76,7 @@ export function useAIChat() {
         const response = await fetch("/api/ai/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message, context }),
+          body: JSON.stringify({ message, context, history }),
           signal: controller.signal,
         });
 

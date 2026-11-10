@@ -1,5 +1,10 @@
 -include .env
 
+# Ký bằng keystore của Foundry để private key không nằm trong .env và tham số dòng lệnh:
+#   cast wallet import deployer --interactive
+#   make deploy-sepolia DEPLOYER_ACCOUNT=deployer DEPLOYER_ADDRESS=0x...
+SIGNER_FLAGS := $(if $(DEPLOYER_ACCOUNT),--account $(DEPLOYER_ACCOUNT) --sender $(DEPLOYER_ADDRESS),--private-key $(PRIVATE_KEY))
+
 .PHONY: all build test clean \
         deploy-local deploy-sepolia deploy-sepolia-resume \
         deploy-step-by-step \
@@ -15,12 +20,9 @@ sizes:
 test:
 	forge test -vvv
 
-# ── Clean (triệt để: xoá cả out, cache, broadcast) ───────────────────────────
+# ── Clean (out + cache; giữ broadcast vì đó là lịch sử deploy) ───────────────
 clean:
 	forge clean
-	@if exist out rmdir /S /Q out
-	@if exist cache rmdir /S /Q cache
-	@if exist broadcast rmdir /S /Q broadcast
 
 # ── Local Deployment (Anvil) ──────────────────────────────────────────────────
 deploy-local:
@@ -32,20 +34,22 @@ deploy-local:
 		-vvvv
 
 # ── Sepolia Full Deploy ───────────────────────────────────────────────────────
-# Dùng khi chưa có contract nào trên Sepolia.
+# Deploy mới toàn bộ, bỏ qua các địa chỉ *_ADDRESS còn trong .env.
 # --gas-estimate-multiplier 130 : buffer 30% để tránh Out-of-Gas
 # --slow                        : giữa các tx có delay để tránh nonce race
 # --legacy                      : dùng type-0 tx thay vì EIP-1559 (bỏ comment nếu cần)
+deploy-sepolia: export FRESH_DEPLOY := true
 deploy-sepolia: clean
-	forge script script/Deploy.s.sol \
+	@forge script script/Deploy.s.sol \
 		--rpc-url $(SEPOLIA_RPC_URL) \
-		--private-key $(PRIVATE_KEY) \
+		$(SIGNER_FLAGS) \
 		--broadcast \
 		--slow \
+		--skip-simulation \
 		--gas-estimate-multiplier 130 \
 		--verify \
 		--etherscan-api-key $(ETHERSCAN_API_KEY) \
-		-vvvv
+		-vv
 
 # ── Sepolia Resume Deploy ────────────────────────────────────────────────────
 # Dùng khi EcoToken (và tùy chọn ImpactBadge, CommunityTreasury) đã deploy thành công.
@@ -56,9 +60,9 @@ deploy-sepolia: clean
 # Ví dụ:
 #   make deploy-sepolia-resume ECO_TOKEN_ADDRESS=0x9E7c1af2fa393987d8c8451bE512b2df0AD9e35C
 deploy-sepolia-resume:
-	forge script script/Deploy.s.sol \
+	@forge script script/Deploy.s.sol \
 		--rpc-url $(SEPOLIA_RPC_URL) \
-		--private-key $(PRIVATE_KEY) \
+		$(SIGNER_FLAGS) \
 		--broadcast \
 		--slow \
 		--gas-estimate-multiplier 130 \
@@ -91,10 +95,11 @@ deploy-quests-sepolia:
 	forge script script/DeployQuestRewards.s.sol 		--rpc-url $(SEPOLIA_RPC_URL) 		--broadcast 		--slow 		--skip-simulation 		--gas-estimate-multiplier 130 		--verify 		--etherscan-api-key $(ETHERSCAN_API_KEY) 		-vvvv
 
 # ── Sepolia Simulate (không broadcast, kiểm tra local trước) ─────────────────
+simulate-sepolia: export FRESH_DEPLOY := true
 simulate-sepolia:
-	forge script script/Deploy.s.sol \
+	@forge script script/Deploy.s.sol \
 		--rpc-url $(SEPOLIA_RPC_URL) \
-		--private-key $(PRIVATE_KEY) \
+		$(SIGNER_FLAGS) \
 		--gas-estimate-multiplier 130 \
 		-vvvv
 

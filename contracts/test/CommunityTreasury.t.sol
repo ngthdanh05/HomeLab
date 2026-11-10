@@ -26,7 +26,7 @@ contract CommunityTreasuryTest is Test {
         treasury.setGovernance(governance);
     }
 
-    // ───────── Nhận ETH ─────────
+    // ───────── Receiving ETH ─────────
 
     function test_ReceivesEthFromPaymentSplitter() public {
         vm.deal(address(splitter), 5 ether);
@@ -85,7 +85,7 @@ contract CommunityTreasuryTest is Test {
         vm.expectRevert(CommunityTreasury.NotGovernance.selector);
         treasury.disburse(1, recipient, 1 ether);
 
-        // owner cũng không được gọi
+        // not even the owner
         vm.prank(owner);
         vm.expectRevert(CommunityTreasury.NotGovernance.selector);
         treasury.disburse(1, recipient, 1 ether);
@@ -153,7 +153,7 @@ contract CommunityTreasuryTest is Test {
         vm.prank(governance);
         vm.expectRevert(CommunityTreasury.TransferFailed.selector);
         treasury.disburse(1, payable(address(bad)), 1 ether);
-        // revert → history không bị ghi
+        // revert leaves no history
         assertEq(treasury.disbursementsLength(), 0);
     }
 }

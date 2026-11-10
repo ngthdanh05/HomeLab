@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useId, useState } from "react";
-import { parseEther } from "viem";
-import { useAccount } from "wagmi";
+import { formatEther, parseEther } from "viem";
+import { useAccount, useReadContracts, useSignMessage } from "wagmi";
 import { useWalletModal } from "@/providers/WalletModal";
 import { MarketplaceABI } from "@/config/contracts";
 import { useContractTx } from "@/hooks/useContractTx";
@@ -10,6 +10,7 @@ import { useActiveChain } from "@/hooks/useActiveChain";
 import {
   LISTING_LIMITS,
   PRODUCT_TYPES,
+  buildUploadMessage,
   encodeDataJsonUri,
   validateListingText,
   type ProductTypeValue,
@@ -34,8 +35,16 @@ function parsePrice(value: string): bigint | null {
 }
 
 /** Pins metadata to IPFS; falls back to inline JSON when IPFS isn't configured and there is no image. */
-async function uploadMetadata(name: string, description: string, image: File | null) {
+async function uploadMetadata(
+  name: string,
+  description: string,
+  image: File | null,
+  auth: { address: string; timestamp: number; signature: string },
+) {
   const body = new FormData();
+  body.append("address", auth.address);
+  body.append("timestamp", String(auth.timestamp));
+  body.append("signature", auth.signature);
   body.append("name", name);
   body.append("description", description);
   if (image) body.append("image", image);
@@ -58,9 +67,10 @@ async function uploadMetadata(name: string, description: string, image: File | n
 
 export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
   const formId = useId();
-  const { addresses } = useActiveChain();
-  const { isConnected } = useAccount();
+  const { addresses, chainId } = useActiveChain();
+  const { address: account, isConnected } = useAccount();
   const { open: openWalletModal } = useWalletModal();
+  const { signMessageAsync } = useSignMessage();
   const { send, status, isBusy } = useContractTx({
     pending: "Đang đăng bán sản phẩm",
     success: "Đăng bán thành công! 🎉",
@@ -71,6 +81,18 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const busy = uploading || isBusy;
+
+  const market = { address: addresses.marketplace, abi: MarketplaceABI, chainId } as const;
+  const rules = useReadContracts({
+    contracts: [
+      { ...market, functionName: "artisanVerificationRequired" },
+      { ...market, functionName: "verifiedArtisan", args: [account ?? "0x0000000000000000000000000000000000000000"] },
+      { ...market, functionName: "minListingPrice" },
+    ],
+    query: { enabled: open },
+  });
+  const notVerified = Boolean(account) && rules.data?.[0]?.result === true && rules.data?.[1]?.result === false;
+  const minPrice = typeof rules.data?.[2]?.result === "bigint" ? rules.data[2].result : undefined;
 
   useEffect(() => {
     if (!open) return;
@@ -100,6 +122,10 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
     const textError = validateListingText(form.name, form.description);
     if (textError) return setError(textError);
     if (!price) return setError("Giá không hợp lệ (ví dụ: 0.01).");
+    if (minPrice !== undefined && price < minPrice) {
+      return setError(`Giá tối thiểu là ${formatEther(minPrice)} ETH.`);
+    }
+    if (notVerified) return setError("Ví của bạn chưa được xác thực là nghệ nhân nên chưa thể đăng bán.");
     setError(null);
     // Connect before uploading so we don't pin metadata for a listing never created.
     if (!isConnected) return openWalletModal();
@@ -107,7 +133,13 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
     let metadataURI: string;
     try {
       setUploading(true);
-      metadataURI = await uploadMetadata(form.name.trim(), form.description.trim(), image);
+      const timestamp = Date.now();
+      const signature = await signMessageAsync({ message: buildUploadMessage(account as string, timestamp) });
+      metadataURI = await uploadMetadata(form.name.trim(), form.description.trim(), image, {
+        address: account as string,
+        timestamp,
+        signature,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không tải được dữ liệu sản phẩm.");
       return;

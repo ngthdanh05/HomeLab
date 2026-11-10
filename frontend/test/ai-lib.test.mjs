@@ -232,3 +232,25 @@ describe("checkRateLimit", () => {
     assert.equal(checkRateLimit("a", 1, 1_000, now + 1_000).allowed, true);
   });
 });
+
+describe("chat history", () => {
+  const parse = (history) => parseChatRequest({ message: "Xin chào", history }).history;
+
+  test("keeps recent turns, sanitized and role-checked", () => {
+    assert.deepEqual(parse([{ role: "user", text: "a\n\"\"\"b" }, { role: "model", text: "c" }]), [
+      { role: "user", text: 'a "b' },
+      { role: "model", text: "c" },
+    ]);
+  });
+  test("must start with a user turn and ignores malformed input", () => {
+    assert.deepEqual(parse([{ role: "model", text: "x" }, { role: "user", text: "y" }]), [{ role: "user", text: "y" }]);
+    assert.deepEqual(parse("nope"), []);
+    assert.deepEqual(parse([1, null, { role: "user", text: "" }]), []);
+  });
+  test("is capped", () => {
+    const many = Array.from({ length: 50 }, (_, i) => ({ role: i % 2 ? "model" : "user", text: "x".repeat(5000) }));
+    const history = parse(many);
+    assert.ok(history.length <= 8);
+    assert.ok(history.every((m) => m.text.length <= 1000));
+  });
+});

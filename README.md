@@ -192,14 +192,14 @@ All contracts live in [`contracts/src/`](contracts/src).
 
 | Contract | Address |
 | --- | --- |
-| EcoToken | [`0xacB3267dBBeA4924cEE9e5631618DB8342f39a24`](https://sepolia.etherscan.io/address/0xacB3267dBBeA4924cEE9e5631618DB8342f39a24) |
-| ImpactBadge | [`0xba5404682DB9feb35fBB1cbC18b97f1A59b7a9C9`](https://sepolia.etherscan.io/address/0xba5404682DB9feb35fBB1cbC18b97f1A59b7a9C9) |
-| CommunityTreasury | [`0x10E83c02C8667485EDd78ce57E0f6553D33296e6`](https://sepolia.etherscan.io/address/0x10E83c02C8667485EDd78ce57E0f6553D33296e6) |
-| Governance | [`0x1e0404A2EDC3BB2139A82d2e8372631A11697998`](https://sepolia.etherscan.io/address/0x1e0404A2EDC3BB2139A82d2e8372631A11697998) |
-| PaymentSplitter | [`0x5d574343A7e162Be9f3eA9Da676169d7Df874a66`](https://sepolia.etherscan.io/address/0x5d574343A7e162Be9f3eA9Da676169d7Df874a66) |
-| Marketplace | [`0x92e554039D39014A5Fc55b31B1308f9DFe1098D5`](https://sepolia.etherscan.io/address/0x92e554039D39014A5Fc55b31B1308f9DFe1098D5) |
-| CarbonOffset | [`0x4d51Ea6E0ACeBeBa0b96a72655B10457d769DFF5`](https://sepolia.etherscan.io/address/0x4d51Ea6E0ACeBeBa0b96a72655B10457d769DFF5) |
-| QuestRewards | [`0x562845c0bd4F75e1d90207357A57f8aFA8f06F05`](https://sepolia.etherscan.io/address/0x562845c0bd4F75e1d90207357A57f8aFA8f06F05) |
+| EcoToken | [`0xfB72749A4e02e51E9350249AAC58a78a54b972Ed`](https://sepolia.etherscan.io/address/0xfB72749A4e02e51E9350249AAC58a78a54b972Ed) |
+| ImpactBadge | [`0xf36F3835343A56832D2f7401f7434ECFf9186568`](https://sepolia.etherscan.io/address/0xf36F3835343A56832D2f7401f7434ECFf9186568) |
+| CommunityTreasury | [`0xA0627F599c7937518F16327FD05f906326178e16`](https://sepolia.etherscan.io/address/0xA0627F599c7937518F16327FD05f906326178e16) |
+| Governance | [`0x43c32746284cE1294Df74128eE53adbB8e464Ebf`](https://sepolia.etherscan.io/address/0x43c32746284cE1294Df74128eE53adbB8e464Ebf) |
+| PaymentSplitter | [`0xD227c3535d07E2c91B254138e05cB30C7fc3534D`](https://sepolia.etherscan.io/address/0xD227c3535d07E2c91B254138e05cB30C7fc3534D) |
+| Marketplace | [`0xa1BFdb605e28524147dac98925b15809a4b2aa17`](https://sepolia.etherscan.io/address/0xa1BFdb605e28524147dac98925b15809a4b2aa17) |
+| CarbonOffset | [`0x181292372a2f4481543a80243F647241e731f956`](https://sepolia.etherscan.io/address/0x181292372a2f4481543a80243F647241e731f956) |
+| QuestRewards | [`0xc55095db8b878dee92168865Dc2C7EEB31C222b3`](https://sepolia.etherscan.io/address/0xc55095db8b878dee92168865Dc2C7EEB31C222b3) |
 
 Local Anvil addresses are deterministic (deployer = Anvil account #0) and listed in [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md) together with redeployment notes.
 
@@ -413,4 +413,4 @@ The contracts are deployed on a **testnet only** and have **not** had a third-pa
 
 ## License
 
-No license file has been added to this repository yet. The Solidity sources carry the `SPDX-License-Identifier: MIT` header.
+Released under the [MIT License](LICENSE).

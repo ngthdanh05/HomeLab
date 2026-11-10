@@ -2,46 +2,47 @@
 pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {ProductType, IPaymentSplitter} from "./interfaces/IMarketPlaceDeps.sol";
 
-/// @notice Giao diện tối thiểu của CommunityTreasury mà PaymentSplitter cần.
+/// @notice CommunityTreasury functions used here.
 interface ICommunityTreasury {
     function deposit() external payable;
 }
 
-/// @notice Giao diện tối thiểu của EcoToken mà PaymentSplitter cần.
-/// @dev PaymentSplitter phải được cấp quyền mint (MINTER_ROLE / owner) trên EcoToken.
+/// @notice EcoToken functions used here.
+/// @dev Needs MINTER_ROLE on EcoToken.
 interface IEcoToken {
     function mint(address to, uint256 amount) external;
 }
 
 /// @title PaymentSplitter
-/// @notice Tự động phân tách doanh thu D2C giữa nghệ nhân, quỹ cộng đồng và nền tảng,
-///         đồng thời thưởng EcoToken cho du khách.
-contract PaymentSplitter is Ownable, ReentrancyGuard, IPaymentSplitter {
-    // ------------------------------------------------------------------
-    // Errors
-    // ------------------------------------------------------------------
+/// @notice Splits D2C revenue between artisan, treasury and platform, and rewards buyers in ECO.
+contract PaymentSplitter is Ownable2Step, ReentrancyGuard, IPaymentSplitter {
+    // --- Errors ---
     error InvalidBPS();
+    error ShareLimitExceeded();
+    error NotMarketplace();
     error ZeroAddress();
     error ZeroPayment();
     error TransferFailed();
     error NothingToWithdraw();
 
-    // ------------------------------------------------------------------
-    // Events
-    // ------------------------------------------------------------------
+    // --- Events ---
     event PaymentSplit(address indexed artisan, uint256 artisanAmt, uint256 treasuryAmt, uint256 platformAmt);
     event SharesUpdated(uint16 artisanBPS, uint16 treasuryBPS, uint16 platformBPS);
     event EcoRewardRateUpdated(uint256 newRate);
     event EcoRewarded(address indexed visitor, uint256 amount);
     event PlatformFeesWithdrawn(address indexed to, uint256 amount);
+    event MarketplaceUpdated(address indexed marketplace);
 
-    // ------------------------------------------------------------------
-    // State
-    // ------------------------------------------------------------------
+    // --- State ---
     uint256 public constant BPS_DENOMINATOR = 10_000;
+    /// @notice Artisan share floor (50%).
+    uint16 public constant MIN_ARTISAN_BPS = 5_000;
+    /// @notice Platform share cap (20%).
+    uint16 public constant MAX_PLATFORM_BPS = 2_000;
 
     ICommunityTreasury public immutable treasury;
     IEcoToken public immutable ecoToken;
@@ -50,15 +51,16 @@ contract PaymentSplitter is Ownable, ReentrancyGuard, IPaymentSplitter {
     uint16 public treasuryBPS;
     uint16 public platformBPS;
 
-    /// @notice Số EcoToken (đơn vị wei của token) thưởng cho mỗi 1 ether thanh toán.
+    /// @notice ECO (in wei) rewarded per 1 ether paid.
     uint256 public ecoRewardRate;
 
-    /// @notice Phí platform đã tích luỹ, chờ owner rút (pull pattern).
+    /// @notice Accrued platform fees awaiting withdrawal.
     uint256 public pendingPlatformFees;
 
-    // ------------------------------------------------------------------
-    // Constructor
-    // ------------------------------------------------------------------
+    /// @notice Only caller allowed to split with an ECO reward.
+    address public marketplace;
+
+    // --- Constructor ---
     constructor(
         address treasury_,
         address ecoToken_,
@@ -77,36 +79,35 @@ contract PaymentSplitter is Ownable, ReentrancyGuard, IPaymentSplitter {
         emit EcoRewardRateUpdated(ecoRewardRate_);
     }
 
-    // ------------------------------------------------------------------
-    // Core
-    // ------------------------------------------------------------------
+    // --- Core ---
 
-    /// @notice Phân tách thanh toán khi được gọi bởi Marketplace (theo IPaymentSplitter).
-    /// @dev msg.sender lúc này là Marketplace, nên người nhận thưởng ECO phải được
-    ///      truyền vào qua `buyer`. Người gọi tự trả ETH nên chỉ chọn được nơi nhận
-    ///      phần thưởng tương ứng với khoản thanh toán của chính mình.
+    /// @notice Splits a Marketplace payment and rewards `buyer`.
+    /// @dev Marketplace only: ECO is voting power, so it must come from a verified artisan's listing.
     function splitPayment(address seller, address buyer, ProductType /* pType */)
         external
         payable
         override
         nonReentrant
     {
+        if (msg.sender != marketplace) revert NotMarketplace();
+        if (buyer == address(0)) revert ZeroAddress();
         _splitPayment(seller, buyer);
     }
 
-    /// @notice Du khách thanh toán trực tiếp cho nghệ nhân; thưởng ECO cho chính người trả.
+    /// @notice Direct payment to an artisan, without an ECO reward.
     function splitPayment(address artisan) external payable nonReentrant {
-        _splitPayment(artisan, msg.sender);
+        _splitPayment(artisan, address(0));
     }
 
+    /// @param rewardRecipient ECO recipient; address(0) means no reward.
     function _splitPayment(address artisan, address rewardRecipient) internal {
-        if (artisan == address(0) || rewardRecipient == address(0)) revert ZeroAddress();
+        if (artisan == address(0)) revert ZeroAddress();
         if (msg.value == 0) revert ZeroPayment();
 
-        // --- Checks / Effects: tính toán và ghi sổ trước mọi external call ---
+        // --- Checks / Effects ---
         uint256 artisanAmt = (msg.value * artisanBPS) / BPS_DENOMINATOR;
         uint256 treasuryAmt = (msg.value * treasuryBPS) / BPS_DENOMINATOR;
-        uint256 platformAmt = msg.value - artisanAmt - treasuryAmt; // gồm cả phần dư làm tròn
+        uint256 platformAmt = msg.value - artisanAmt - treasuryAmt; // includes rounding dust
 
         pendingPlatformFees += platformAmt;
 
@@ -120,7 +121,7 @@ contract PaymentSplitter is Ownable, ReentrancyGuard, IPaymentSplitter {
             treasury.deposit{value: treasuryAmt}();
         }
 
-        uint256 reward = (msg.value * ecoRewardRate) / 1 ether;
+        uint256 reward = rewardRecipient == address(0) ? 0 : (msg.value * ecoRewardRate) / 1 ether;
         if (reward > 0) {
             ecoToken.mint(rewardRecipient, reward);
             emit EcoRewarded(rewardRecipient, reward);
@@ -129,14 +130,14 @@ contract PaymentSplitter is Ownable, ReentrancyGuard, IPaymentSplitter {
         emit PaymentSplit(artisan, artisanAmt, treasuryAmt, platformAmt);
     }
 
-    /// @notice Owner rút toàn bộ phí platform đã tích luỹ.
+    /// @notice Withdraws all accrued platform fees.
     function withdrawPlatformFees(address payable to) external onlyOwner nonReentrant {
         if (to == address(0)) revert ZeroAddress();
 
         uint256 amount = pendingPlatformFees;
         if (amount == 0) revert NothingToWithdraw();
 
-        pendingPlatformFees = 0; // effect trước interaction
+        pendingPlatformFees = 0; // effect before interaction
 
         (bool ok,) = to.call{value: amount}("");
         if (!ok) revert TransferFailed();
@@ -144,26 +145,30 @@ contract PaymentSplitter is Ownable, ReentrancyGuard, IPaymentSplitter {
         emit PlatformFeesWithdrawn(to, amount);
     }
 
-    // ------------------------------------------------------------------
-    // Admin
-    // ------------------------------------------------------------------
+    // --- Admin ---
 
-    /// @notice Cập nhật tỷ lệ chia. Revert nếu tổng khác 10_000.
+    /// @notice Sets the Marketplace allowed to split with a reward.
+    function setMarketplace(address marketplace_) external onlyOwner {
+        if (marketplace_ == address(0)) revert ZeroAddress();
+        marketplace = marketplace_;
+        emit MarketplaceUpdated(marketplace_);
+    }
+
+    /// @notice Updates the split. Must total 10_000 and respect the share limits.
     function setShares(uint16 artisanBPS_, uint16 treasuryBPS_, uint16 platformBPS_) external onlyOwner {
         _setShares(artisanBPS_, treasuryBPS_, platformBPS_);
     }
 
-    /// @notice Cập nhật mức thưởng EcoToken trên mỗi 1 ether thanh toán (0 = tắt thưởng).
+    /// @notice Updates the ECO reward per 1 ether (0 disables it).
     function setEcoRewardRate(uint256 newRate) external onlyOwner {
         ecoRewardRate = newRate;
         emit EcoRewardRateUpdated(newRate);
     }
 
-    // ------------------------------------------------------------------
-    // Internal
-    // ------------------------------------------------------------------
+    // --- Internal ---
     function _setShares(uint16 a, uint16 t, uint16 p) internal {
         if (uint256(a) + uint256(t) + uint256(p) != BPS_DENOMINATOR) revert InvalidBPS();
+        if (a < MIN_ARTISAN_BPS || p > MAX_PLATFORM_BPS) revert ShareLimitExceeded();
         artisanBPS = a;
         treasuryBPS = t;
         platformBPS = p;

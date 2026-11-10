@@ -25,6 +25,8 @@ test.describe("05 · Dashboard & Badge Gallery", () => {
     await connectWallet();
     await page.getByRole("button", { name: /Mua ngay · 0\.01 ETH/ }).click();
     await expect(page.getByRole("status").filter({ hasText: "Mua hàng thành công! 🎉" })).toBeVisible();
+    await page.getByRole("button", { name: /Đã nhận hàng/ }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Đã xác nhận nhận hàng!" })).toBeVisible();
 
     // 2) A carbon offset sent straight to the contract (not through this page).
     const wallet = walletFor("buyer");

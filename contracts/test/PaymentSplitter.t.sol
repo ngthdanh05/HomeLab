@@ -27,10 +27,10 @@ contract MockEcoToken {
     }
 }
 
-/// @dev Nghệ nhân độc hại: khi nhận ETH sẽ cố gọi lại splitPayment.
+/// @dev Malicious artisan that re-enters splitPayment on receipt.
 contract ReentrantArtisan {
     PaymentSplitter public immutable splitter;
-    bool public immutable swallow; // true: nuốt lỗi reentrancy để giao dịch ngoài vẫn thành công
+    bool public immutable swallow; // true: swallow the reentrancy error so the outer call succeeds
     bool public reentered;
     bytes public lastReason;
 
@@ -53,7 +53,7 @@ contract ReentrantArtisan {
     }
 }
 
-/// @dev Contract không có receive/fallback => từ chối ETH.
+/// @dev No receive/fallback, so it rejects ETH.
 contract RejectETH {}
 
 // ----------------------------------------------------------------------
@@ -164,8 +164,11 @@ contract PaymentSplitterTest is Test {
         if (uint256(a) + t + p != 10_000) {
             vm.expectRevert(PaymentSplitter.InvalidBPS.selector);
             splitter.setShares(a, t, p);
-            // trạng thái cũ giữ nguyên
+            // previous state is kept
             assertEq(uint256(splitter.artisanBPS()) + splitter.treasuryBPS() + splitter.platformBPS(), 10_000);
+        } else if (a < 5_000 || p > 2_000) {
+            vm.expectRevert(PaymentSplitter.ShareLimitExceeded.selector);
+            splitter.setShares(a, t, p);
         } else {
             splitter.setShares(a, t, p);
             assertEq(uint256(splitter.artisanBPS()) + splitter.treasuryBPS() + splitter.platformBPS(), 10_000);
@@ -211,15 +214,13 @@ contract PaymentSplitterTest is Test {
         assertEq(address(splitter).balance, 0.1 ether);
     }
 
-    function test_SplitPayment_MintsEcoTokenToVisitor() public {
-        vm.expectEmit(true, false, false, true, address(splitter));
-        emit EcoRewarded(visitor, 200 ether);
-
+    function test_SplitPayment_DirectCallMintsNoEco() public {
         vm.prank(visitor);
         splitter.splitPayment{value: 2 ether}(artisan);
 
-        assertEq(eco.balanceOf(visitor), 200 ether); // 2 ETH * 100 ECO/ETH
+        assertEq(eco.balanceOf(visitor), 0);
         assertEq(eco.balanceOf(artisan), 0);
+        assertEq(artisan.balance, 1.4 ether);
     }
 
     function test_SplitPayment_EmitsPaymentSplit() public {
@@ -231,8 +232,8 @@ contract PaymentSplitterTest is Test {
     }
 
     function test_SplitPayment_RoundingDustGoesToPlatform() public {
-        // 10 wei: artisan 7, treasury 2, platform 1 (chính xác)
-        // 3 wei : artisan 2 (2.1), treasury 0 (0.6), platform 1 (dư)
+        // 10 wei: artisan 7, treasury 2, platform 1
+        // 3 wei: artisan 2, treasury 0, platform 1 (dust)
         vm.prank(visitor);
         splitter.splitPayment{value: 3}(artisan);
 
@@ -242,22 +243,24 @@ contract PaymentSplitterTest is Test {
     }
 
     function test_SplitPayment_SkipsZeroShares() public {
-        // artisan 0%, treasury 0%, platform 100%
+        // artisan 100%, treasury 0%, platform 0%
         vm.prank(owner);
-        splitter.setShares(0, 0, 10_000);
+        splitter.setShares(10_000, 0, 0);
 
         vm.prank(visitor);
         splitter.splitPayment{value: 1 ether}(artisan);
 
-        assertEq(artisan.balance, 0);
+        assertEq(artisan.balance, 1 ether);
         assertEq(treasury.totalDeposited(), 0);
-        assertEq(splitter.pendingPlatformFees(), 1 ether);
+        assertEq(splitter.pendingPlatformFees(), 0);
     }
 
     function test_SplitPaymentForBuyer_RewardsBuyerNotCaller() public {
         // Marketplace-style call: the caller pays, the buyer earns the ECO reward.
         address marketplace = makeAddr("marketplace");
         vm.deal(marketplace, 1 ether);
+        vm.prank(owner);
+        splitter.setMarketplace(marketplace);
 
         vm.expectEmit(true, false, false, true);
         emit EcoRewarded(visitor, REWARD_RATE);
@@ -271,6 +274,8 @@ contract PaymentSplitterTest is Test {
     }
 
     function test_SplitPaymentForBuyer_RevertsOnZeroBuyer() public {
+        vm.prank(owner);
+        splitter.setMarketplace(visitor);
         vm.prank(visitor);
         vm.expectRevert(PaymentSplitter.ZeroAddress.selector);
         splitter.splitPayment{value: 1 ether}(artisan, address(0), ProductType.Food);
@@ -327,7 +332,7 @@ contract PaymentSplitterTest is Test {
         vm.expectRevert(PaymentSplitter.TransferFailed.selector);
         splitter.splitPayment{value: 1 ether}(rejecter);
 
-        // revert toàn bộ: không có gì bị ghi sổ
+        // full revert: nothing recorded
         assertEq(splitter.pendingPlatformFees(), 0);
         assertEq(treasury.totalDeposited(), 0);
     }
@@ -340,8 +345,10 @@ contract PaymentSplitterTest is Test {
 
     function testFuzz_SplitPayment_ConservesFunds(uint96 amount, uint16 a, uint16 t) public {
         amount = uint96(bound(amount, 1, 100 ether));
-        a = uint16(bound(a, 0, 10_000));
-        t = uint16(bound(t, 0, 10_000 - a));
+        a = uint16(bound(a, 5_000, 10_000));
+        // Split the rest so the platform stays within 20%.
+        uint16 rest = 10_000 - a;
+        t = uint16(bound(t, rest > 2_000 ? rest - 2_000 : 0, rest));
         uint16 p = 10_000 - a - t;
 
         vm.prank(owner);
@@ -350,7 +357,7 @@ contract PaymentSplitterTest is Test {
         vm.prank(visitor);
         splitter.splitPayment{value: amount}(artisan);
 
-        // artisan + treasury + platform == msg.value, không mất/không tạo thêm wei
+        // no wei lost or created
         assertEq(artisan.balance + treasury.totalDeposited() + splitter.pendingPlatformFees(), amount);
         assertEq(address(splitter).balance, splitter.pendingPlatformFees());
     }
@@ -361,7 +368,7 @@ contract PaymentSplitterTest is Test {
         ReentrantArtisan attacker = new ReentrantArtisan(splitter, false);
         vm.deal(address(attacker), 10 ether);
 
-        // Attacker re-enter => inner call bị guard chặn => receive() revert => TransferFailed
+        // Reentry is blocked, receive() reverts, so TransferFailed
         vm.expectRevert(PaymentSplitter.TransferFailed.selector);
         attacker.attack{value: 1 ether}();
 
@@ -430,7 +437,7 @@ contract PaymentSplitterTest is Test {
         vm.expectRevert(PaymentSplitter.TransferFailed.selector);
         splitter.withdrawPlatformFees(rejecter);
 
-        // revert => số dư chờ rút vẫn còn nguyên
+        // reverted: fees still pending
         assertEq(splitter.pendingPlatformFees(), 0.1 ether);
     }
 }

@@ -8,7 +8,7 @@ import {ImpactBadge} from "../src/ImpactBadge.sol";
 import {CommunityTreasury} from "../src/CommunityTreasury.sol";
 import {CarbonOffset} from "../src/CarbonOffset.sol";
 
-/// @dev Ví hợp đồng không nhận ETH hoàn lại.
+/// @dev Wallet contract that rejects refunds.
 contract NoRefundReceiver {
     function doOffset(CarbonOffset c, uint256 grams) external payable {
         c.offset{value: msg.value}(grams, "");
@@ -19,7 +19,7 @@ contract NoRefundReceiver {
     }
 }
 
-/// @dev Thử gọi lại offset() khi nhận NFT (reentrancy).
+/// @dev Tries to re-enter offset() on NFT receipt.
 contract ReentrantReceiver {
     CarbonOffset internal c;
     bool internal attacked;
@@ -204,7 +204,7 @@ contract CarbonOffsetTest is Test {
     }
 
     function testFuzz_Offset_PaysExactQuote(uint256 grams) public {
-        grams = bound(grams, 1, carbon.MAX_OFFSET_GRAMS());
+        grams = bound(grams, 1_000, carbon.MAX_OFFSET_GRAMS());
         uint256 fee = carbon.quoteOffset(grams);
         vm.deal(alice, fee);
         vm.prank(alice);

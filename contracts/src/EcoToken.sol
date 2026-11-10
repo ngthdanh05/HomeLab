@@ -9,10 +9,11 @@ import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Vo
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /// @title EcoToken
 /// @notice ERC-20 circular reward token with capped supply, role-gated minting, public burn, and governance voting support.
-contract EcoToken is ERC20, ERC20Capped, ERC20Burnable, ERC20Permit, ERC20Votes, AccessControl, Ownable {
+contract EcoToken is ERC20, ERC20Capped, ERC20Burnable, ERC20Permit, ERC20Votes, AccessControl, Ownable2Step {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** 18;
 

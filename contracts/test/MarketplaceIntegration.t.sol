@@ -34,6 +34,8 @@ contract MarketplaceIntegrationTest is Test {
 
         eco.grantRole(eco.MINTER_ROLE(), address(splitter));
         badge.grantRole(badge.MINTER_ROLE(), address(market));
+        splitter.setMarketplace(address(market));
+        market.setArtisanVerified(seller, true);
         vm.stopPrank();
 
         vm.deal(buyer, 1 ether);
@@ -45,6 +47,10 @@ contract MarketplaceIntegrationTest is Test {
 
         vm.prank(buyer);
         market.purchaseListing{value: PRICE}(id);
+        assertEq(eco.balanceOf(buyer), 0, "no reward while funds are in escrow");
+
+        vm.prank(buyer);
+        market.confirmDelivery(id);
 
         uint256 expectedReward = (PRICE * REWARD_RATE) / 1 ether; // 10 ECO
         assertEq(eco.balanceOf(buyer), expectedReward, "buyer earns ECO");

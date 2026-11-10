@@ -140,6 +140,11 @@ jobs:
             curl -sf "$base/" | grep -q "MyHomeLab" || { echo "::error::home page content missing"; exit 1; }
           fi
 
+      # Smoke test thất bại trên production: quay lại bản trước.
+      - name: Roll back production
+        if: failure() && steps.deploy.outcome == 'success' && env.TARGET == 'production'
+        run: npx -y ${{ env.VERCEL_CLI }} rollback --yes --token="$VERCEL_TOKEN"
+
       - name: Comment preview URL on the PR
         if: steps.secrets.outputs.ok == 'true' && github.event_name == 'pull_request'
         uses: actions/github-script@v7

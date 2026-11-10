@@ -5,7 +5,7 @@ import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 import {ImpactBadge} from "../src/ImpactBadge.sol";
 import {QuestRewards} from "../src/QuestRewards.sol";
 
-/// @notice Bộ quest mặc định (Task 4.4). Thứ tự = questId; phải khớp frontend/src/data/quests.ts.
+/// @notice Default quests. Order = questId; must match frontend/src/data/quests.ts.
 library QuestSetup {
     uint256 internal constant QUEST_COUNT = 6;
 
@@ -23,7 +23,7 @@ library QuestSetup {
     function defaultQuests() internal pure returns (QuestRewards.Quest[] memory q) {
         q = new QuestRewards.Quest[](QUEST_COUNT);
 
-        // 0 — Mua sản phẩm thủ công đầu tiên (1 badge ECO_CHECKIN từ Marketplace)
+        // 0: first handicraft purchase
         q[0] = QuestRewards.Quest({
             requirement: QuestRewards.Requirement.BADGES_OF_TYPE,
             proofBadgeType: ImpactBadge.BadgeType.ECO_CHECKIN,
@@ -35,7 +35,7 @@ library QuestSetup {
             active: true
         });
 
-        // 1 — Mua 3 sản phẩm thủ công → badge hiếm CULTURE_GUARDIAN
+        // 1: three handicraft purchases, CULTURE_GUARDIAN badge
         q[1] = QuestRewards.Quest({
             requirement: QuestRewards.Requirement.BADGES_OF_TYPE,
             proofBadgeType: ImpactBadge.BadgeType.ECO_CHECKIN,
@@ -51,24 +51,29 @@ library QuestSetup {
             active: true
         });
 
-        // 2 — Bù đắp carbon lần đầu
+        // Only purchase quests mint ECO (see QuestRewards.addQuest).
+        // 2: first carbon offset, COMMUNITY_DONOR badge
         q[2] = QuestRewards.Quest({
             requirement: QuestRewards.Requirement.OFFSET_COUNT,
             proofBadgeType: ImpactBadge.BadgeType.ECO_CHECKIN,
             target: 1,
-            ecoReward: 10 ether,
-            rewardsBadge: false,
-            rewardBadgeType: ImpactBadge.BadgeType.ECO_CHECKIN,
-            badgeURI: "",
+            ecoReward: 0,
+            rewardsBadge: true,
+            rewardBadgeType: ImpactBadge.BadgeType.COMMUNITY_DONOR,
+            badgeURI: _badgeURI(
+                unicode"Quest · Carbon offset lần đầu",
+                unicode"Hoàn thành Eco Quest: lần đầu bù đắp CO₂, phí được chuyển vào Quỹ Cộng đồng.",
+                unicode"Bù đắp carbon lần đầu"
+            ),
             active: true
         });
 
-        // 3 — Tổng bù đắp ≥ 100 kg CO₂ → badge ZERO_CARBON
+        // 3: at least 100 kg CO2 offset, ZERO_CARBON badge
         q[3] = QuestRewards.Quest({
             requirement: QuestRewards.Requirement.OFFSET_GRAMS,
             proofBadgeType: ImpactBadge.BadgeType.ECO_CHECKIN,
             target: 100_000,
-            ecoReward: 25 ether,
+            ecoReward: 0,
             rewardsBadge: true,
             rewardBadgeType: ImpactBadge.BadgeType.ZERO_CARBON,
             badgeURI: _badgeURI(
@@ -79,12 +84,12 @@ library QuestSetup {
             active: true
         });
 
-        // 4 — Tham gia vote DAO → badge COMMUNITY_DONOR
+        // 4: DAO vote, COMMUNITY_DONOR badge
         q[4] = QuestRewards.Quest({
             requirement: QuestRewards.Requirement.DAO_VOTE,
             proofBadgeType: ImpactBadge.BadgeType.ECO_CHECKIN,
             target: 0,
-            ecoReward: 20 ether,
+            ecoReward: 0,
             rewardsBadge: true,
             rewardBadgeType: ImpactBadge.BadgeType.COMMUNITY_DONOR,
             badgeURI: _badgeURI(
@@ -95,7 +100,7 @@ library QuestSetup {
             active: true
         });
 
-        // 5 — Xem các di sản 360° (off-chain, tự khai báo) → chỉ badge, không ECO
+        // 5: view 360 heritage (off-chain, self-attested), badge only
         q[5] = QuestRewards.Quest({
             requirement: QuestRewards.Requirement.SELF_ATTESTED,
             proofBadgeType: ImpactBadge.BadgeType.ECO_CHECKIN,
