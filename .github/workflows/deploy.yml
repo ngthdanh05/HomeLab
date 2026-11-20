@@ -86,6 +86,15 @@ jobs:
         if: steps.secrets.outputs.ok == 'true'
         run: npx -y ${{ env.VERCEL_CLI }} build ${{ env.TARGET == 'production' && '--prod' || '' }} --token="$VERCEL_TOKEN"
 
+      # Ghi lại bản production đang chạy để có thể quay lại nếu smoke test thất bại.
+      - name: Record current production deployment
+        id: previous
+        if: steps.secrets.outputs.ok == 'true' && env.TARGET == 'production'
+        run: |
+          id=$(curl -sf -H "Authorization: Bearer $VERCEL_TOKEN"             "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID" | jq -r '.targets.production.id // empty') || id=""
+          echo "current production deployment: ${id:-none}"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
       - name: Deploy
         id: deploy
         if: steps.secrets.outputs.ok == 'true'
@@ -137,13 +146,20 @@ jobs:
             echo "::error::$path returned $code"; exit 1
           done
           if [ "$TARGET" = "production" ]; then
-            curl -sf "$base/" | grep -q "MyHomeLab" || { echo "::error::home page content missing"; exit 1; }
+            # Tên thương hiệu lấy từ SITE_NAME / SITE_NAME_EN trong frontend/src/lib/seo.ts.
+            curl -sf "$base/" | grep -qE "San Hô Xanh|BlueReef Travel" || { echo "::error::home page content missing"; exit 1; }
           fi
 
-      # Smoke test thất bại trên production: quay lại bản trước.
+      # Smoke test thất bại trên production: quay lại bản trước. Gọi REST API với teamId
+      # vì `vercel rollback` báo "User not found" với token theo team.
       - name: Roll back production
         if: failure() && steps.deploy.outcome == 'success' && env.TARGET == 'production'
-        run: npx -y ${{ env.VERCEL_CLI }} rollback --yes --token="$VERCEL_TOKEN"
+        env:
+          PREVIOUS_ID: ${{ steps.previous.outputs.id }}
+        run: |
+          [ -n "$PREVIOUS_ID" ] || { echo "::error::no previous production deployment recorded; roll back manually"; exit 1; }
+          curl -sf -X POST -H "Authorization: Bearer $VERCEL_TOKEN"             "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID/rollback/$PREVIOUS_ID?teamId=$VERCEL_ORG_ID"             || { echo "::error::rollback to $PREVIOUS_ID failed; roll back manually in the Vercel dashboard"; exit 1; }
+          echo "::warning::production rolled back to $PREVIOUS_ID"
 
       - name: Comment preview URL on the PR
         if: steps.secrets.outputs.ok == 'true' && github.event_name == 'pull_request'
