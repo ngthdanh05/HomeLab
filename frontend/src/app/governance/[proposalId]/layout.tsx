@@ -11,13 +11,13 @@ export async function generateMetadata(props: Params): Promise<Metadata> {
   const params = await props.params;
   const id = /^\d{1,30}$/.test(params.proposalId) ? params.proposalId : "";
   const locale = await getLocale();
-  const noun = pick(locale, "Đề xuất DAO", "DAO proposal");
+  const noun = pick(locale, "Đề xuất của Quỹ bảo tồn biển", "Ocean Conservation Fund proposal");
   return pageMetadata({
     title: id ? `${noun} #${id}` : noun,
     description: pick(
       locale,
-      "Đề xuất giải ngân Quỹ Cộng đồng cho dự án bảo tồn: số ETH yêu cầu, phiếu Đồng ý/Phản đối bằng EcoToken và trạng thái thực thi on-chain.",
-      "A proposal to disburse the Community Treasury to a conservation project: ETH requested, For/Against votes in EcoToken and on-chain execution status.",
+      "Đề xuất giải ngân Quỹ bảo tồn biển cho dự án bảo tồn: số ETH yêu cầu, phiếu Đồng ý/Phản đối bằng ECO và trạng thái giải ngân.",
+      "A proposal to disburse the Ocean Conservation Fund to a conservation project: ETH requested, For/Against votes in EcoToken and on-chain execution status.",
     ),
     path: `/governance/${id || params.proposalId}`,
     locale,

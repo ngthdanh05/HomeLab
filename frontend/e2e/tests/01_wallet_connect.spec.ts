@@ -1,4 +1,4 @@
-import { connectedButton, expect, test } from "../fixtures/anvil.fixture";
+import { connectedButton, expect, openMyPage, test } from "../fixtures/anvil.fixture";
 
 test.describe("01 · Kết nối ví", () => {
   test("kết nối MetaMask (mock) → header hiển thị địa chỉ rút gọn và mạng Anvil", async ({
@@ -13,6 +13,8 @@ test.describe("01 · Kết nối ví", () => {
     await connectWallet();
 
     await expect(connectedButton(page, address)).toBeVisible();
+    // Trạng thái mạng nằm trong menu ví.
+    await connectedButton(page, address).click();
     await expect(header.getByText("Anvil Localnet")).toBeVisible();
   });
 
@@ -20,12 +22,12 @@ test.describe("01 · Kết nối ví", () => {
     await page.goto("/marketplace");
     await connectWallet();
 
-    await page.getByRole("link", { name: "🏅 Dashboard" }).click();
+    await openMyPage(page, address);
     await expect(page).toHaveURL(/\/dashboard$/);
-    await expect(page.getByRole("heading", { name: "Tác động của bạn" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Của tôi" })).toBeVisible();
 
     await page.reload();
     await expect(connectedButton(page, address)).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Tác động của bạn" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Của tôi" })).toBeVisible();
   });
 });

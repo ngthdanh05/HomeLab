@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useId, useState } from "react";
+import React, { useId, useState } from "react";
 import { useAccount } from "wagmi";
-import { useWalletModal } from "@/providers/WalletModal";
-import { Spinner } from "@/components/marketplace/PurchaseButton";
+import { Alert, Button, Field, Input, Modal, Textarea, TxButton } from "@/components/ui";
 import { GovernanceABI } from "@/config/contracts";
+import { PROPOSAL_TEMPLATES, localizeTemplate, type ProposalTemplate } from "@/data/proposalTemplates";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useContractTx } from "@/hooks/useContractTx";
 import { useVotingPower } from "@/hooks/useGovernance";
@@ -27,11 +27,13 @@ interface CreateProposalModalProps {
   proposalThreshold: bigint | undefined;
   votingPeriod: bigint | undefined;
   treasuryBalance: bigint | undefined;
+  /** Mẫu điền sẵn khi mở từ thẻ "Ý tưởng dự án". */
+  template?: ProposalTemplate | null;
 }
 
 const EMPTY_FORM: ProposalForm = { title: "", body: "", amount: "", recipient: "" };
 
-/** Form for Governance.propose(): conservation project, ETH requested, recipient. */
+/** Form Governance.propose(): dự án bảo tồn biển, số ETH yêu cầu, ví nhận. */
 export function CreateProposalModal({
   open,
   onClose,
@@ -39,52 +41,42 @@ export function CreateProposalModal({
   proposalThreshold,
   votingPeriod,
   treasuryBalance,
+  template,
 }: CreateProposalModalProps) {
   const { locale, t } = useI18n();
   const formId = useId();
   const { addresses } = useActiveChain();
-  const { address: user, isConnected } = useAccount();
-  const { open: openWalletModal } = useWalletModal();
+  const { address: user } = useAccount();
   const { balance } = useVotingPower(user);
   const { send, status, isBusy } = useContractTx({
     pending: t("Đang tạo đề xuất", "Creating proposal"),
-    success: t("Tạo đề xuất thành công! 🎉", "Proposal created! 🎉"),
+    success: t("Tạo đề xuất thành công!", "Proposal created!"),
   });
 
-  const [form, setForm] = useState<ProposalForm>(EMPTY_FORM);
+  // Mở từ một mẫu: điền tên, mô tả, số ETH (ví nhận để người đề xuất tự nhập).
+  // Trang cha đổi `key` theo mẫu nên form được khởi tạo lại.
+  const [form, setForm] = useState<ProposalForm>(() => (template ? { ...EMPTY_FORM, ...localizeTemplate(template, locale) } : EMPTY_FORM));
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isBusy) onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, isBusy, onClose]);
-
-  if (!open) return null;
-
   const amount = parseEthAmount(form.amount);
-  const belowThreshold =
-    isConnected && balance !== undefined && proposalThreshold !== undefined && balance < proposalThreshold;
+  const belowThreshold = Boolean(user) && balance !== undefined && proposalThreshold !== undefined && balance < proposalThreshold;
   const exceedsTreasury = amount !== null && treasuryBalance !== undefined && amount > treasuryBalance;
+  const set = (patch: Partial<ProposalForm>) => setForm((f) => ({ ...f, ...patch }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isConnected) return openWalletModal();
+  const submit = async () => {
     const formError = validateProposalForm(form, locale);
     if (formError) return setError(formError);
-    if (belowThreshold) return setError(t("Số dư ECO chưa đạt ngưỡng tối thiểu để tạo đề xuất.", "Your ECO balance is below the minimum required to create a proposal."));
+    if (belowThreshold) {
+      return setError(t("Số dư ECO chưa đạt ngưỡng tối thiểu để tạo đề xuất.", "Your ECO balance is below the minimum required to create a proposal."));
+    }
     setError(null);
-
     const result = await send({
       address: addresses.governance,
       abi: GovernanceABI,
       functionName: "propose",
       args: [form.recipient.trim(), amount, encodeProposalDescription(form.title, form.body)],
     });
-    // Close on "unconfirmed" too: the tx is already sent, resubmitting would duplicate it.
+    // Đóng cả khi "unconfirmed": giao dịch đã gửi, gửi lại sẽ tạo trùng.
     if (result) {
       setForm(EMPTY_FORM);
       onCreated?.();
@@ -92,156 +84,124 @@ export function CreateProposalModal({
     }
   };
 
-  const inputClass =
-    "w-full rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none";
-
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
-      onClick={() => !isBusy && onClose()}
+    <Modal
+      open={open}
+      onClose={onClose}
+      dismissible={!isBusy}
+      title={t("Đề xuất dự án bảo tồn", "Propose a conservation project")}
+      description={
+        <>
+          {t("Cộng đồng bỏ phiếu bằng ECO", "The community votes with ECO")}
+          {votingPeriod !== undefined ? ` ${t("trong", "for")} ${formatDuration(Number(votingPeriod), locale)}` : ""}.{" "}
+          {t("Nếu được thông qua, Quỹ bảo tồn biển tự động giải ngân ETH cho ví nhận.", "If it passes, the Ocean Conservation Fund disburses ETH to the recipient wallet automatically.")}
+        </>
+      }
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={isBusy}>
+            {t("Huỷ", "Cancel")}
+          </Button>
+          <TxButton status={status} disabled={belowThreshold} onClick={submit}>
+            {t("Gửi đề xuất", "Submit proposal")}
+          </TxButton>
+        </>
+      }
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={`${formId}-title`}
-        className="animate-fade-in max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl sm:max-w-lg sm:rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
+      {belowThreshold && (
+        <Alert tone="warning" role="alert" className="mb-4">
+          {t("Cần tối thiểu", "You need at least")} <strong>{formatTokenAmount(proposalThreshold ?? 0n, 18, 4, locale)} ECO</strong>{" "}
+          {t("để tạo đề xuất; ví của bạn có", "to create a proposal; your wallet has")} {formatTokenAmount(balance ?? 0n, 18, 2, locale)} ECO.
+        </Alert>
+      )}
+
+      <form
+        id={formId}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!isBusy) void submit();
+        }}
+        className="space-y-4"
       >
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <h2 id={`${formId}-title`} className="text-lg font-bold text-white">
-              🌱 {t("Đề xuất dự án bảo tồn", "Propose a conservation project")}
-            </h2>
-            <p className="text-xs text-slate-400">
-              {t("Cộng đồng bỏ phiếu bằng ECO", "The community votes with ECO")}
-              {votingPeriod !== undefined ? ` ${t("trong", "for")} ${formatDuration(Number(votingPeriod), locale)}` : ""}.{" "}
-              {t("Nếu được thông qua, Quỹ Cộng đồng giải ngân ETH cho ví nhận.", "If it passes, the Community Treasury disburses ETH to the recipient wallet.")}
-            </p>
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-text">{t("Bắt đầu từ mẫu", "Start from an example")}</p>
+          <div className="flex flex-wrap gap-2">
+            {PROPOSAL_TEMPLATES.map((tpl) => {
+              const filled = localizeTemplate(tpl, locale);
+              return (
+                <button
+                  key={tpl.key}
+                  type="button"
+                  onClick={() => set({ title: filled.title, body: filled.body, amount: filled.amount })}
+                  className="min-h-11 rounded-sm border border-border bg-surface px-3 text-left text-sm text-text-muted transition-colors hover:border-primary hover:text-primary"
+                >
+                  {filled.title}
+                </button>
+              );
+            })}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isBusy}
-            aria-label={t("Đóng", "Close")}
-            className="text-slate-400 hover:text-white disabled:opacity-40"
-          >
-            ✕
-          </button>
         </div>
 
-        {belowThreshold && (
-          <p role="alert" className="mb-4 rounded-xl border border-amber-800/60 bg-amber-950/40 p-3 text-sm text-amber-200">
-            🔒 {t("Cần tối thiểu", "You need at least")} <strong>{formatTokenAmount(proposalThreshold ?? 0n, 18, 4, locale)} ECO</strong>{" "}
-            {t("để tạo đề xuất; ví của bạn có", "to create a proposal; your wallet has")} {formatTokenAmount(balance ?? 0n, 18, 2, locale)} ECO.{" "}
-            {t("Mua sản phẩm thủ công hoặc hoàn thành quest để nhận thêm ECO.", "Buy handicrafts or complete quests to earn more ECO.")}
-          </p>
+        <Field label={t("Tên dự án", "Project name")} required>
+          <Input
+            value={form.title}
+            maxLength={PROPOSAL_LIMITS.title}
+            onChange={(e) => set({ title: e.target.value })}
+            placeholder={t("VD: Tài trợ phao neo bảo vệ rạn san hô", "E.g. Mooring buoys to protect the coral reef")}
+          />
+        </Field>
+
+        <Field
+          label={t("Mô tả", "Description")}
+          required
+          hint={`${t("Mục tiêu, kế hoạch dùng quỹ, ai thực hiện", "Goals, how the funds are used, who does it")} · ${form.body.length}/${PROPOSAL_LIMITS.body}`}
+        >
+          <Textarea
+            rows={4}
+            value={form.body}
+            maxLength={PROPOSAL_LIMITS.body}
+            onChange={(e) => set({ body: e.target.value })}
+            placeholder={t("Thu gom lưới ma trên rạn cùng 12 thợ lặn địa phương…", "Remove ghost nets from the reef with 12 local divers…")}
+          />
+        </Field>
+
+        <Field
+          label={t("Số ETH yêu cầu", "ETH requested")}
+          required
+          hint={
+            treasuryBalance !== undefined ? (
+              <span className={exceedsTreasury ? "text-warning" : undefined}>
+                {t("Quỹ hiện có", "The Fund currently holds")} {formatEth(treasuryBalance, locale)}
+                {exceedsTreasury &&
+                  t(
+                    " — số yêu cầu lớn hơn số dư, đề xuất chỉ giải ngân được khi Quỹ đủ tiền.",
+                    ". The amount exceeds the balance, so it can only be disbursed once the Fund has enough.",
+                  )}
+              </span>
+            ) : undefined
+          }
+        >
+          <Input className="tabular-nums" inputMode="decimal" value={form.amount} onChange={(e) => set({ amount: e.target.value })} placeholder="0.05" />
+        </Field>
+
+        <Field label={t("Địa chỉ ví nhận", "Recipient wallet address")} required hint={t("Ví của nhóm thực hiện dự án.", "The wallet of the team carrying out the project.")}>
+          <Input
+            className="font-mono"
+            value={form.recipient}
+            onChange={(e) => set({ recipient: e.target.value })}
+            placeholder="0x…"
+            spellCheck={false}
+            autoComplete="off"
+          />
+        </Field>
+        {user && (
+          <Button variant="ghost" onClick={() => set({ recipient: user })} className="-mt-2">
+            {t("Dùng ví của tôi", "Use my wallet")}
+          </Button>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor={`${formId}-name`} className="mb-1 block text-xs font-medium text-slate-300">
-              {t("Tên dự án *", "Project name *")}
-            </label>
-            <input
-              id={`${formId}-name`}
-              className={inputClass}
-              value={form.title}
-              maxLength={PROPOSAL_LIMITS.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder={t("VD: Phục hồi rừng ngập mặn Cẩm Thanh", "E.g. Restoring the Cam Thanh mangrove forest")}
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor={`${formId}-desc`} className="mb-1 block text-xs font-medium text-slate-300">
-              {t("Mô tả *", "Description *")} <span className="text-slate-400">{t("(mục tiêu, kế hoạch sử dụng quỹ, người thực hiện)", "(goals, how the funds will be used, who will do it)")}</span>
-            </label>
-            <textarea
-              id={`${formId}-desc`}
-              className={`${inputClass} resize-y`}
-              rows={4}
-              value={form.body}
-              maxLength={PROPOSAL_LIMITS.body}
-              onChange={(e) => setForm({ ...form, body: e.target.value })}
-              placeholder={t("Trồng 2.000 cây đước cùng 30 hộ dân địa phương…", "Plant 2,000 mangrove trees with 30 local households…")}
-              required
-            />
-            <p className="mt-1 text-right text-[11px] text-slate-400">
-              {form.body.length}/{PROPOSAL_LIMITS.body}
-            </p>
-          </div>
-
-          <div>
-            <label htmlFor={`${formId}-amount`} className="mb-1 block text-xs font-medium text-slate-300">
-              {t("Số ETH yêu cầu *", "ETH requested *")}
-            </label>
-            <input
-              id={`${formId}-amount`}
-              className={`${inputClass} font-mono`}
-              inputMode="decimal"
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              placeholder="0.05"
-              required
-            />
-            {treasuryBalance !== undefined && (
-              <p className={`mt-1 text-[11px] ${exceedsTreasury ? "text-amber-300" : "text-slate-400"}`}>
-                {t("Quỹ hiện có", "The Treasury currently holds")} {formatEth(treasuryBalance, locale)}
-                {exceedsTreasury && t(" — số yêu cầu lớn hơn số dư, đề xuất chỉ giải ngân được khi Quỹ đủ tiền.", ". The amount exceeds the balance, so the proposal can only be disbursed once the Treasury has enough funds.")}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <label htmlFor={`${formId}-recipient`} className="block text-xs font-medium text-slate-300">
-                {t("Địa chỉ ví nhận *", "Recipient wallet address *")}
-              </label>
-              {user && (
-                <button
-                  type="button"
-                  onClick={() => setForm({ ...form, recipient: user })}
-                  className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300"
-                >
-                  {t("Dùng ví của tôi", "Use my wallet")}
-                </button>
-              )}
-            </div>
-            <input
-              id={`${formId}-recipient`}
-              className={`${inputClass} font-mono`}
-              value={form.recipient}
-              onChange={(e) => setForm({ ...form, recipient: e.target.value })}
-              placeholder="0x…"
-              spellCheck={false}
-              autoComplete="off"
-              required
-            />
-          </div>
-
-          {error && (
-            <p role="alert" className="rounded-xl border border-red-700/50 bg-red-900/30 p-3 text-sm text-red-300">
-              ⚠️ {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={isBusy || belowThreshold}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white transition-colors hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400"
-          >
-            {isBusy && <Spinner />}
-            {!isConnected
-              ? t("Kết nối ví để tạo đề xuất", "Connect wallet to create a proposal")
-              : status === "awaiting-wallet"
-                ? t("Xác nhận trong ví…", "Confirm in wallet…")
-                : status === "pending"
-                  ? t("Đang chờ xác nhận on-chain…", "Waiting for on-chain confirmation…")
-                  : t("Gửi đề xuất", "Submit proposal")}
-          </button>
-        </form>
-      </div>
-    </div>
+        {error && <Alert tone="danger">{error}</Alert>}
+      </form>
+    </Modal>
   );
 }

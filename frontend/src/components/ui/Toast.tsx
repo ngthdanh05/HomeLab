@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useRef, useState } from "react";
+import { CheckCircle2, ExternalLink, Loader2, X, XCircle, type LucideIcon } from "lucide-react";
 import { useI18n } from "@/providers/LocaleProvider";
 
 type ToastVariant = "success" | "error" | "info";
@@ -25,10 +26,10 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const VARIANT_STYLES: Record<ToastVariant, { box: string; icon: string }> = {
-  success: { box: "border-emerald-600/60 bg-emerald-950/95", icon: "✅" },
-  error: { box: "border-red-600/60 bg-red-950/95", icon: "⚠️" },
-  info: { box: "border-slate-600 bg-slate-900/95", icon: "⏳" },
+const VARIANT_STYLES: Record<ToastVariant, { box: string; icon: LucideIcon; iconColor: string }> = {
+  success: { box: "border-primary/30", icon: CheckCircle2, iconColor: "text-primary" },
+  error: { box: "border-danger/30", icon: XCircle, iconColor: "text-danger" },
+  info: { box: "border-border", icon: Loader2, iconColor: "text-info animate-spin motion-reduce:animate-none" },
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -56,7 +57,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       <div
         aria-live="polite"
-        className="fixed z-50 bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:w-96 flex flex-col gap-2"
+        className="fixed z-50 bottom-24 lg:bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:w-96 flex flex-col gap-2"
       >
         {toasts.map((t) => {
           const style = VARIANT_STYLES[t.variant ?? "info"];
@@ -64,23 +65,24 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <div
               key={t.id}
               role={t.variant === "error" ? "alert" : "status"}
-              className={`animate-fade-in rounded-xl border px-4 py-3 shadow-2xl backdrop-blur ${style.box}`}
+              className={`animate-fade-in rounded-md border bg-surface px-4 py-3 shadow-overlay ${style.box}`}
             >
               <div className="flex items-start gap-3">
-                <span aria-hidden>{style.icon}</span>
+                <style.icon aria-hidden className={`mt-px h-5 w-5 shrink-0 ${style.iconColor}`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white">{t.title}</p>
+                  <p className="text-sm font-semibold text-text">{t.title}</p>
                   {t.description && (
-                    <p className="text-xs text-slate-300 mt-0.5 break-words">{t.description}</p>
+                    <p className="mt-1 break-words text-sm text-text-muted">{t.description}</p>
                   )}
                   {t.link && (
                     <a
                       href={t.link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-block mt-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 underline"
+                      className="mt-1 inline-flex min-h-8 items-center gap-1 text-sm font-medium text-primary underline hover:text-primary-hover"
                     >
-                      {t.link.label} ↗
+                      {t.link.label}
+                      <ExternalLink aria-hidden className="h-4 w-4" />
                     </a>
                   )}
                 </div>
@@ -88,9 +90,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   type="button"
                   onClick={() => dismiss(t.id)}
                   aria-label={translate("Đóng thông báo", "Close notification")}
-                  className="text-slate-400 hover:text-white"
+                  className="-m-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-bg hover:text-text"
                 >
-                  ✕
+                  <X aria-hidden className="h-5 w-5" />
                 </button>
               </div>
             </div>

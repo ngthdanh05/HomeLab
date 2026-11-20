@@ -11,13 +11,13 @@ import { encodeDataJsonUri } from "./marketplace.ts";
  * vehicle, load and route, so results are estimates.
  */
 export const TRANSPORT_MODES = [
-  { id: "plane", label: "Máy bay (nội địa)", labelEn: "Plane (domestic)", icon: "✈️", factor: 0.246, perVehicle: false },
-  { id: "car", label: "Ô tô (xăng)", labelEn: "Car (petrol)", icon: "🚗", factor: 0.171, perVehicle: true },
-  { id: "motorbike", label: "Xe máy", labelEn: "Motorbike", icon: "🛵", factor: 0.114, perVehicle: true },
-  { id: "bus", label: "Xe khách / xe buýt", labelEn: "Coach / bus", icon: "🚌", factor: 0.027, perVehicle: false },
-  { id: "train", label: "Tàu hoả", labelEn: "Train", icon: "🚆", factor: 0.035, perVehicle: false },
-  { id: "boat", label: "Tàu cao tốc / phà", labelEn: "Speedboat / ferry", icon: "⛴️", factor: 0.115, perVehicle: false },
-  { id: "bicycle", label: "Xe đạp / đi bộ", labelEn: "Bicycle / walking", icon: "🚲", factor: 0, perVehicle: false },
+  { id: "plane", label: "Máy bay (nội địa)", labelEn: "Plane (domestic)", icon: "plane", factor: 0.246, perVehicle: false },
+  { id: "car", label: "Ô tô (xăng)", labelEn: "Car (petrol)", icon: "car", factor: 0.171, perVehicle: true },
+  { id: "motorbike", label: "Xe máy", labelEn: "Motorbike", icon: "motorbike", factor: 0.114, perVehicle: true },
+  { id: "bus", label: "Xe khách / xe buýt", labelEn: "Coach / bus", icon: "bus", factor: 0.027, perVehicle: false },
+  { id: "train", label: "Tàu hoả", labelEn: "Train", icon: "train", factor: 0.035, perVehicle: false },
+  { id: "boat", label: "Tàu cao tốc / phà", labelEn: "Speedboat / ferry", icon: "boat", factor: 0.115, perVehicle: false },
+  { id: "bicycle", label: "Xe đạp / đi bộ", labelEn: "Bicycle / walking", icon: "bicycle", factor: 0, perVehicle: false },
 ] as const;
 
 export type TransportModeId = (typeof TRANSPORT_MODES)[number]["id"];
@@ -61,21 +61,21 @@ export const LEVEL_INFO: Record<CarbonLevel, { label: string; labelEn: string; c
   low: {
     label: "Thấp",
     labelEn: "Low",
-    color: "#10b981",
+    color: "#0E6375",
     hint: "Hành trình rất xanh — tiếp tục ưu tiên tàu, xe khách và xe đạp nhé!",
     hintEn: "A very green trip. Keep choosing trains, coaches and bicycles!",
   },
   medium: {
     label: "Trung bình",
     labelEn: "Medium",
-    color: "#f59e0b",
+    color: "#B07A12",
     hint: "Có thể giảm bằng cách thay một chặng bay/ô tô bằng tàu hoặc xe khách.",
     hintEn: "You could cut this by replacing a flight or car leg with a train or coach.",
   },
   high: {
     label: "Cao",
     labelEn: "High",
-    color: "#ef4444",
+    color: "#A3221B",
     hint: "Phát thải lớn, chủ yếu từ máy bay/ô tô. Hãy cân nhắc bù đắp carbon.",
     hintEn: "High emissions, mostly from flights or cars. Consider offsetting your carbon.",
   },
@@ -106,7 +106,7 @@ export function calculateTrip(legs: TripLeg[], locale: Locale = "vi"): { totalKg
     const mode = getTransportMode(leg.mode);
     const label = mode ? pick<string>(locale, mode.label, mode.labelEn) : leg.mode;
     return {
-      activity: `${mode?.icon ?? ""} ${label} · ${leg.km} km`.trim(),
+      activity: `${label} · ${leg.km} km`,
       kgCO2: round(calculateLegKg(leg)),
     };
   });
@@ -237,13 +237,13 @@ export function buildOffsetMetadataUri(input: {
   let description = (input.summary ?? "").trim().slice(0, 400);
   const build = () =>
     encodeDataJsonUri({
-      name: `Zero Carbon · ${kgText}`,
+      name: pick(locale, `Bù đắp carbon · ${kgText}`, `Carbon Offset · ${kgText}`),
       description:
         description ||
         pick(
           locale,
-          `Đã bù đắp ${kgText} cho chuyến đi; phí bù đắp được chuyển vào Quỹ Cộng đồng.`,
-          `Offset ${kgText} for a trip; the fee went to the Community Treasury.`,
+          `Đã bù đắp ${kgText} cho chuyến đi; phí bù đắp được chuyển vào Quỹ bảo tồn biển.`,
+          `Offset ${kgText} for a trip; the fee went to the Ocean Conservation Fund.`,
         ),
       action: pick(locale, `Bù đắp ${kgText}`, `Offset ${kgText}`),
       carbonOffset: kgText,

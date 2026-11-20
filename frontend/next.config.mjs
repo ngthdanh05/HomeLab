@@ -42,6 +42,11 @@ const nextConfig = {
   // Lets a production build run beside a `next dev` that is using .next.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  // Ảnh minh hoạ biển / san hô trên trang chủ lấy từ Unsplash, qua bộ tối ưu ảnh của Next (AVIF/WebP, đúng kích thước).
+  images: {
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com", pathname: "/photo-*" }],
+  },
   // E2E coverage maps V8 coverage of the browser bundles back to src/ (e2e/playwright.config.ts).
   productionBrowserSourceMaps: process.env.E2E_SOURCEMAPS === "1",
   async headers() {

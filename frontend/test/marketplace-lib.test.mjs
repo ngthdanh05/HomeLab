@@ -111,7 +111,7 @@ describe("formatting", () => {
   });
 
   test("getProductType maps on-chain enum values and falls back to the first", () => {
-    assert.equal(getProductType(2).label, "Tour trải nghiệm");
+    assert.equal(getProductType(2).label, "Tour lặn & Trải nghiệm sinh thái");
     assert.equal(getProductType(99).value, 0);
   });
 });

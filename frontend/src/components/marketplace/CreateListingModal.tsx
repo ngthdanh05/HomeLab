@@ -1,23 +1,27 @@
 "use client";
 
-import React, { useEffect, useId, useState } from "react";
+import React, { useId, useState } from "react";
+import { BadgeCheck, Wallet } from "lucide-react";
 import { formatEther, parseEther } from "viem";
 import { useAccount, useReadContracts, useSignMessage } from "wagmi";
-import { useWalletModal } from "@/providers/WalletModal";
+import { Address, Alert, Button, Field, Input, Modal, Select, SkeletonText, Textarea, TxButton } from "@/components/ui";
 import { MarketplaceABI } from "@/config/contracts";
-import { useContractTx } from "@/hooks/useContractTx";
 import { useActiveChain } from "@/hooks/useActiveChain";
+import { useContractTx } from "@/hooks/useContractTx";
+import type { Locale } from "@/lib/i18n";
 import {
+  EXPERIENCE_TYPE,
   LISTING_LIMITS,
   PRODUCT_TYPES,
   buildUploadMessage,
   encodeDataJsonUri,
+  normalizeListingDetails,
   validateListingText,
+  type ListingDetailField,
   type ProductTypeValue,
 } from "@/lib/marketplace";
-import type { Locale } from "@/lib/i18n";
 import { useI18n } from "@/providers/LocaleProvider";
-import { Spinner } from "./PurchaseButton";
+import { useWalletModal } from "@/providers/WalletModal";
 import { SplitBreakdown } from "./SplitBreakdown";
 
 interface CreateListingModalProps {
@@ -25,7 +29,17 @@ interface CreateListingModalProps {
   onClose: () => void;
 }
 
-const EMPTY_FORM = { name: "", description: "", price: "", pType: 0 as ProductTypeValue };
+const EMPTY_FORM = {
+  name: "",
+  description: "",
+  price: "",
+  pType: 0 as ProductTypeValue,
+  artisan: "",
+  village: "",
+  contact: "",
+  schedule: "",
+};
+type FormState = typeof EMPTY_FORM;
 
 function parsePrice(value: string): bigint | null {
   try {
@@ -36,10 +50,9 @@ function parsePrice(value: string): bigint | null {
   }
 }
 
-/** Pins metadata to IPFS; falls back to inline JSON when IPFS isn't configured and there is no image. */
+/** Ghim metadata lên IPFS; khi IPFS chưa cấu hình và không có ảnh thì dùng JSON nội tuyến. */
 async function uploadMetadata(
-  name: string,
-  description: string,
+  fields: { name: string; description: string; details: Partial<Record<ListingDetailField, string>> },
   image: File | null,
   auth: { address: string; timestamp: number; signature: string; locale: Locale },
   messages: { ipfsDisabled: string; uploadFailed: string },
@@ -49,66 +62,69 @@ async function uploadMetadata(
   body.append("timestamp", String(auth.timestamp));
   body.append("signature", auth.signature);
   body.append("locale", auth.locale);
-  body.append("name", name);
-  body.append("description", description);
+  body.append("name", fields.name);
+  body.append("description", fields.description);
+  for (const [key, value] of Object.entries(fields.details)) body.append(key, value);
   if (image) body.append("image", image);
 
   const response = await fetch("/api/ipfs/metadata", { method: "POST", body });
-  const data = (await response.json().catch(() => ({}))) as {
-    uri?: string;
-    error?: string;
-    code?: string;
-  };
+  const data = (await response.json().catch(() => ({}))) as { uri?: string; error?: string; code?: string };
 
   if (response.ok && data.uri) return data.uri;
-  if (data.code === "IPFS_DISABLED" && !image) return encodeDataJsonUri({ name, description });
-  throw new Error(
-    data.code === "IPFS_DISABLED" ? messages.ipfsDisabled : data.error || messages.uploadFailed,
-  );
+  if (data.code === "IPFS_DISABLED" && !image) {
+    return encodeDataJsonUri({ name: fields.name, description: fields.description, ...fields.details });
+  }
+  throw new Error(data.code === "IPFS_DISABLED" ? messages.ipfsDisabled : data.error || messages.uploadFailed);
 }
 
+/** Điều kiện đăng bán của ví đang kết nối, đọc từ Marketplace. */
+function useSellerEligibility(enabled: boolean) {
+  const { addresses, chainId } = useActiveChain();
+  const { address } = useAccount();
+  const market = { address: addresses.marketplace, abi: MarketplaceABI, chainId } as const;
+  const rules = useReadContracts({
+    contracts: [
+      { ...market, functionName: "artisanVerificationRequired" },
+      { ...market, functionName: "verifiedArtisan", args: [address ?? "0x0000000000000000000000000000000000000000"] },
+      { ...market, functionName: "minListingPrice" },
+    ],
+    query: { enabled: enabled && Boolean(address) },
+  });
+  const [required, verified, minPrice] = rules.data ?? [];
+  return {
+    isLoading: rules.isLoading,
+    // Không đọc được (Marketplace cũ chưa có xác thực) ⇒ coi như không bắt buộc.
+    notVerified: required?.result === true && verified?.result === false,
+    minPrice: typeof minPrice?.result === "bigint" ? minPrice.result : undefined,
+  };
+}
+
+/**
+ * Đăng bán sản phẩm. Khi mở, kiểm tra ngay ví đã kết nối và đã được xác thực nghệ nhân chưa;
+ * chưa đủ điều kiện thì hiện hướng dẫn thay cho form (không để điền xong mới báo lỗi).
+ */
 export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
   const { locale, t } = useI18n();
   const formId = useId();
-  const { addresses, chainId } = useActiveChain();
+  const { addresses } = useActiveChain();
   const { address: account, isConnected } = useAccount();
   const { open: openWalletModal } = useWalletModal();
   const { signMessageAsync } = useSignMessage();
   const { send, status, isBusy } = useContractTx({
     pending: t("Đang đăng bán sản phẩm", "Listing your product"),
-    success: t("Đăng bán thành công! 🎉", "Product listed! 🎉"),
+    success: t("Đăng bán thành công!", "Product listed!"),
   });
+  const eligibility = useSellerEligibility(open);
 
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [image, setImage] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const busy = uploading || isBusy;
 
-  const market = { address: addresses.marketplace, abi: MarketplaceABI, chainId } as const;
-  const rules = useReadContracts({
-    contracts: [
-      { ...market, functionName: "artisanVerificationRequired" },
-      { ...market, functionName: "verifiedArtisan", args: [account ?? "0x0000000000000000000000000000000000000000"] },
-      { ...market, functionName: "minListingPrice" },
-    ],
-    query: { enabled: open },
-  });
-  const notVerified = Boolean(account) && rules.data?.[0]?.result === true && rules.data?.[1]?.result === false;
-  const minPrice = typeof rules.data?.[2]?.result === "bigint" ? rules.data[2].result : undefined;
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !busy) onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, busy, onClose]);
-
-  if (!open) return null;
-
   const price = parsePrice(form.price);
+  const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
+  const isTour = form.pType === EXPERIENCE_TYPE;
 
   const handleImage = (file: File | null) => {
     setError(null);
@@ -120,18 +136,16 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
     setImage(file);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async () => {
     const textError = validateListingText(form.name, form.description, locale);
     if (textError) return setError(textError);
     if (!price) return setError(t("Giá không hợp lệ (ví dụ: 0.01).", "Invalid price (example: 0.01)."));
-    if (minPrice !== undefined && price < minPrice) {
-      return setError(t(`Giá tối thiểu là ${formatEther(minPrice)} ETH.`, `The minimum price is ${formatEther(minPrice)} ETH.`));
+    if (eligibility.minPrice !== undefined && price < eligibility.minPrice) {
+      return setError(
+        t(`Giá tối thiểu là ${formatEther(eligibility.minPrice)} ETH.`, `The minimum price is ${formatEther(eligibility.minPrice)} ETH.`),
+      );
     }
-    if (notVerified) return setError(t("Ví của bạn chưa được xác thực là nghệ nhân nên chưa thể đăng bán.", "Your wallet has not been verified as an artisan, so it cannot list products yet."));
     setError(null);
-    // Connect before uploading so we don't pin metadata for a listing never created.
-    if (!isConnected) return openWalletModal();
 
     let metadataURI: string;
     try {
@@ -139,8 +153,11 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
       const timestamp = Date.now();
       const signature = await signMessageAsync({ message: buildUploadMessage(account as string, timestamp, locale) });
       metadataURI = await uploadMetadata(
-        form.name.trim(),
-        form.description.trim(),
+        {
+          name: form.name.trim(),
+          description: form.description.trim(),
+          details: normalizeListingDetails({ ...form, schedule: isTour ? form.schedule : "" }),
+        },
         image,
         { address: account as string, timestamp, signature, locale },
         {
@@ -164,7 +181,7 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
       functionName: "createListing",
       args: [price, form.pType, metadataURI],
     });
-    // Close on "unconfirmed" too: the tx is already sent, resubmitting would duplicate it.
+    // Đóng cả khi "unconfirmed": giao dịch đã gửi, gửi lại sẽ tạo trùng.
     if (result) {
       setForm(EMPTY_FORM);
       setImage(null);
@@ -172,150 +189,170 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
     }
   };
 
-  const inputClass =
-    "w-full rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none";
+  const title = t("Đăng bán sản phẩm", "List a product");
 
-  return (
-    <div
-      className="fixed inset-0 z-40 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
-      onClick={() => !busy && onClose()}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={`${formId}-title`}
-        className="animate-fade-in max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl sm:max-w-lg sm:rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
+  // 1) Chưa kết nối ví.
+  if (!isConnected || !account) {
+    return (
+      <Modal open={open} onClose={onClose} title={title} size="sm" footer={<Button icon={Wallet} onClick={openWalletModal}>{t("Kết nối ví", "Connect wallet")}</Button>}>
+        <p className="text-sm text-text-muted">
+          {t(
+            "Kết nối ví nghệ nhân để đăng bán. Tiền bán hàng sẽ được chuyển thẳng về ví này sau khi người mua xác nhận.",
+            "Connect your artisan wallet to list a product. Sales are paid straight to this wallet once the buyer confirms.",
+          )}
+        </p>
+      </Modal>
+    );
+  }
+
+  // 2) Đang kiểm tra điều kiện.
+  if (eligibility.isLoading) {
+    return (
+      <Modal open={open} onClose={onClose} title={title} size="sm">
+        <div role="status" aria-busy="true">
+          <SkeletonText lines={3} />
+          <span className="sr-only">{t("Đang kiểm tra ví nghệ nhân…", "Checking your artisan wallet…")}</span>
+        </div>
+      </Modal>
+    );
+  }
+
+  // 3) Ví chưa được xác thực: hướng dẫn đăng ký thay cho form.
+  if (eligibility.notVerified) {
+    return (
+      <Modal
+        open={open}
+        onClose={onClose}
+        title={t("Đăng ký làm nghệ nhân", "Become a verified artisan")}
+        size="sm"
+        footer={<Button variant="secondary" onClick={onClose}>{t("Đã hiểu", "Got it")}</Button>}
       >
-        <div className="mb-5 flex items-start justify-between">
-          <div>
-            <h2 id={`${formId}-title`} className="text-lg font-bold text-white">
-              🧺 {t("Đăng bán sản phẩm", "List a product")}
-            </h2>
-            <p className="text-xs text-slate-400">
-              {t("Sản phẩm được ghi on-chain, tiền bán hàng tự động chia qua Smart Contract.", "Products are recorded on-chain, and sales are split automatically by the smart contract.")}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={busy}
-            aria-label={t("Đóng", "Close")}
-            className="text-slate-400 hover:text-white disabled:opacity-40"
+        <div className="space-y-4 text-sm">
+          <Alert tone="info" icon={BadgeCheck} title={t("Ví này chưa được xác thực nghệ nhân", "This wallet is not a verified artisan yet")}>
+            {t(
+              "Để bảo vệ du khách, chỉ ngư dân và nghệ nhân đã được ban điều hành xác minh mới đăng bán được.",
+              "To protect travellers, only fishers and artisans verified by the operators can list products.",
+            )}
+          </Alert>
+          <ol className="list-decimal space-y-2 pl-5 text-text">
+            <li>{t("Chuẩn bị tên, làng chài và ảnh sản phẩm hoặc tour của bạn.", "Prepare your name, village and photos of your product or tour.")}</li>
+            <li>
+              {t("Gửi địa chỉ ví dưới đây cho ban điều hành San Hô Xanh:", "Send the wallet address below to the BlueReef Travel operators:")}{" "}
+              <Address value={account} />
+            </li>
+            <li>{t("Sau khi được xác thực, mở lại mục này để đăng bán.", "Once verified, open this again to list your product.")}</li>
+          </ol>
+        </div>
+      </Modal>
+    );
+  }
+
+  // 4) Đủ điều kiện: form đăng bán.
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      dismissible={!busy}
+      title={title}
+      description={t(
+        "Sản phẩm được ghi công khai; tiền bán hàng được giữ an toàn rồi tự động chia khi người mua xác nhận.",
+        "Products are recorded publicly; payments are held safely and split automatically once the buyer confirms.",
+      )}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={busy}>
+            {t("Huỷ", "Cancel")}
+          </Button>
+          {/* Không dùng type="submit": khi sai mạng, nút "Chuyển mạng" của TxButton không được gửi form. */}
+          <TxButton
+            status={uploading ? "pending" : status}
+            busyLabels={{ pending: uploading ? t("Đang tải lên IPFS…", "Uploading to IPFS…") : t("Đang chờ mạng xác nhận…", "Waiting for on-chain confirmation…") }}
+            onClick={() => (busy ? undefined : submit())}
           >
-            ✕
-          </button>
+            {t("Đăng bán", "List product")}
+          </TxButton>
+        </>
+      }
+    >
+      <form
+        id={formId}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!busy) void submit();
+        }}
+        className="space-y-4"
+      >
+        <Field label={t("Tên sản phẩm", "Product name")} required>
+          <Input
+            value={form.name}
+            maxLength={LISTING_LIMITS.name}
+            onChange={(e) => set({ name: e.target.value })}
+            placeholder={t("VD: Đèn ngủ vỏ sò làng chài Nhơn Lý", "E.g. Seashell night lamp from Nhon Ly village")}
+          />
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("Loại sản phẩm", "Product type")}>
+            <Select value={form.pType} onChange={(e) => set({ pType: Number(e.target.value) as ProductTypeValue })}>
+              {PRODUCT_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {t<string>(type.label, type.labelEn)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={t("Giá (ETH)", "Price (ETH)")} required>
+            <Input className="tabular-nums" inputMode="decimal" value={form.price} onChange={(e) => set({ price: e.target.value })} placeholder="0.01" />
+          </Field>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor={`${formId}-name`} className="mb-1 block text-xs font-medium text-slate-300">
-              {t("Tên sản phẩm *", "Product name *")}
-            </label>
-            <input
-              id={`${formId}-name`}
-              className={inputClass}
-              value={form.name}
-              maxLength={LISTING_LIMITS.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder={t("VD: Đèn lồng lụa Hội An làm thủ công", "E.g. Handmade Hoi An silk lantern")}
-              required
-            />
-          </div>
+        <Field label={t("Mô tả", "Description")} hint={t("Chất liệu, nguồn gốc, câu chuyện của bạn…", "Materials, origin, your story…")}>
+          <Textarea rows={3} value={form.description} maxLength={LISTING_LIMITS.description} onChange={(e) => set({ description: e.target.value })} />
+        </Field>
 
-          <div>
-            <label htmlFor={`${formId}-desc`} className="mb-1 block text-xs font-medium text-slate-300">
-              {t("Mô tả", "Description")}
-            </label>
-            <textarea
-              id={`${formId}-desc`}
-              className={`${inputClass} resize-none`}
-              rows={3}
-              value={form.description}
-              maxLength={LISTING_LIMITS.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder={t("Chất liệu, nguồn gốc, câu chuyện của nghệ nhân…", "Materials, origin, the artisan's story…")}
-            />
-          </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("Tên nghệ nhân / ngư dân", "Artisan / fisher name")}>
+            <Input value={form.artisan} maxLength={120} onChange={(e) => set({ artisan: e.target.value })} placeholder={t("VD: Cô Lan", "E.g. Ms. Lan")} />
+          </Field>
+          <Field label={t("Làng chài / địa phương", "Fishing village")}>
+            <Input value={form.village} maxLength={120} onChange={(e) => set({ village: e.target.value })} placeholder={t("VD: Nhơn Lý, Quy Nhơn", "E.g. Nhon Ly, Quy Nhon")} />
+          </Field>
+        </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor={`${formId}-price`} className="mb-1 block text-xs font-medium text-slate-300">
-                {t("Giá (ETH) *", "Price (ETH) *")}
-              </label>
-              <input
-                id={`${formId}-price`}
-                className={`${inputClass} font-mono`}
-                inputMode="decimal"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                placeholder="0.01"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor={`${formId}-type`} className="mb-1 block text-xs font-medium text-slate-300">
-                {t("Loại sản phẩm", "Product type")}
-              </label>
-              <select
-                id={`${formId}-type`}
-                className={inputClass}
-                value={form.pType}
-                onChange={(e) =>
-                  setForm({ ...form, pType: Number(e.target.value) as ProductTypeValue })
-                }
-              >
-                {PRODUCT_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.icon} {t<string>(type.label, type.labelEn)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor={`${formId}-image`} className="mb-1 block text-xs font-medium text-slate-300">
-              {t("Ảnh sản phẩm (PNG/JPEG/WebP/GIF, tối đa 2MB)", "Product image (PNG/JPEG/WebP/GIF, up to 2 MB)")}
-            </label>
-            <input
-              id={`${formId}-image`}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              onChange={(e) => handleImage(e.target.files?.[0] ?? null)}
-              className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-700 file:px-3 file:py-2 file:text-slate-200 hover:file:bg-slate-600"
-            />
-          </div>
-
-          {price && (
-            <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-3">
-              <p className="mb-2 text-xs font-medium text-slate-300">{t("Khi có người mua, bạn nhận:", "When someone buys, the payment is split:")}</p>
-              <SplitBreakdown price={price} compact />
-            </div>
+        <Field
+          label={t("Kênh liên hệ để hẹn giao hàng", "Contact channel for delivery")}
+          hint={t(
+            "Số Zalo, email hoặc link trang. Thông tin này hiển thị công khai cho người mua.",
+            "Phone, email or a page link. This is shown publicly to buyers.",
           )}
+        >
+          <Input value={form.contact} maxLength={120} onChange={(e) => set({ contact: e.target.value })} placeholder="0905 123 456" />
+        </Field>
 
-          {error && (
-            <p role="alert" className="rounded-xl border border-red-700/50 bg-red-900/30 p-3 text-sm text-red-300">
-              ⚠️ {error}
-            </p>
-          )}
+        {isTour && (
+          <Field label={t("Lịch tour", "Tour schedule")} hint={t("VD: Khởi hành 6:30 hằng ngày, đón tại cảng cá.", "E.g. Departs 6:30 daily from the fishing port.")}>
+            <Input value={form.schedule} maxLength={120} onChange={(e) => set({ schedule: e.target.value })} />
+          </Field>
+        )}
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white transition-colors hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400"
-          >
-            {busy && <Spinner />}
-            {uploading
-              ? t("Đang tải lên IPFS…", "Uploading to IPFS…")
-              : status === "awaiting-wallet"
-                ? t("Xác nhận trong ví…", "Confirm in wallet…")
-                : status === "pending"
-                  ? t("Đang chờ xác nhận on-chain…", "Waiting for on-chain confirmation…")
-                  : t("Đăng bán", "List product")}
-          </button>
-        </form>
-      </div>
-    </div>
+        <Field label={t("Ảnh sản phẩm", "Product image")} hint={t("PNG, JPEG, WebP hoặc GIF, tối đa 2 MB.", "PNG, JPEG, WebP or GIF, up to 2 MB.")}>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            onChange={(e) => handleImage(e.target.files?.[0] ?? null)}
+            className="block min-h-11 w-full text-sm text-text-muted file:mr-3 file:min-h-11 file:rounded-sm file:border-0 file:bg-primary-soft file:px-4 file:font-semibold file:text-primary"
+          />
+        </Field>
+
+        {price && (
+          <div className="rounded-md bg-bg p-4">
+            <p className="mb-2 text-sm font-medium text-text">{t("Khi có người mua, tiền được chia:", "When someone buys, the payment is split:")}</p>
+            <SplitBreakdown price={price} compact />
+          </div>
+        )}
+
+        {error && <Alert tone="danger">{error}</Alert>}
+      </form>
+    </Modal>
   );
 }

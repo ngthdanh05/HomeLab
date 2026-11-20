@@ -12,9 +12,16 @@ import { getTxErrorMessage, isReceiptTimeoutError } from "@/lib/marketplace";
 import { useActiveChain } from "./useActiveChain";
 import { ACTIVITY_QUERY_KEY } from "./useActivityFeed";
 import { PROPOSAL_VOTES_QUERY_KEY } from "./useGovernance";
+import { MY_IMPACT_QUERY_KEY, MY_ORDERS_QUERY_KEY } from "./useOrders";
 
 /** Caches derived from events, plus the block number proposal status depends on; refreshed after every tx. */
-const EVENT_QUERY_KEYS = new Set<unknown>([ACTIVITY_QUERY_KEY, PROPOSAL_VOTES_QUERY_KEY, "blockNumber"]);
+const EVENT_QUERY_KEYS = new Set<unknown>([
+  ACTIVITY_QUERY_KEY,
+  PROPOSAL_VOTES_QUERY_KEY,
+  MY_ORDERS_QUERY_KEY,
+  MY_IMPACT_QUERY_KEY,
+  "blockNumber",
+]);
 
 export type TxStatus =
   | "idle"
@@ -158,7 +165,7 @@ export function useContractTx({ pending, success }: TxMessages) {
           timeout: RECEIPT_TIMEOUT_MS,
           pollingInterval: RECEIPT_POLLING_MS,
         });
-        if (receipt.status !== "success") throw new Error(t("Giao dịch bị revert on-chain.", "The transaction reverted on-chain."));
+        if (receipt.status !== "success") throw new Error(t("Giao dịch bị mạng từ chối.", "The transaction reverted on-chain."));
 
         setStatus("success");
         toast({ title: success, variant: "success", link: txLink(txHash) });

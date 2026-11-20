@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { ogLocale, pick, type Locale } from "./i18n.ts";
 
-export const SITE_NAME = "MyHomeLab";
-export const SITE_TAGLINE = "Hệ sinh thái Du lịch số Tuần hoàn & Tái tạo";
+/** Tên thương hiệu: "San Hô Xanh" (tiếng Việt) · "BlueReef Travel" (tiếng Anh, chỉ ký tự ASCII nên dùng được trong ảnh OG). */
+export const SITE_NAME = "San Hô Xanh";
+export const SITE_NAME_EN = "BlueReef Travel";
+export const SITE_TAGLINE = "Du lịch biển bền vững, gìn giữ từng rạn san hô";
 export const SITE_DESCRIPTION =
-  "Du lịch sinh thái tuần hoàn trên blockchain: mua trực tiếp từ nghệ nhân (chia doanh thu 70/20/10 bằng Smart Contract), bù đắp carbon, nhận EcoToken và NFT ImpactBadge, DAO Quỹ Cộng đồng, AI Travel Assistant và di sản 360°.";
+  "Lên kế hoạch lặn ngắm san hô và du lịch biển đảo xanh, mua sản vật trực tiếp từ ngư dân và nghệ nhân làng chài, bù đắp carbon chuyến đi và cùng cộng đồng quyết định Quỹ bảo tồn biển. Mọi giao dịch được ghi công khai trên blockchain.";
 
-const SITE_TAGLINE_EN = "Circular & Regenerative Digital Tourism Ecosystem";
+const SITE_TAGLINE_EN = "Sustainable ocean travel that protects every reef";
 const SITE_DESCRIPTION_EN =
-  "Circular eco-tourism on the blockchain: buy directly from artisans (70/20/10 revenue split by smart contract), offset carbon, earn EcoToken and ImpactBadge NFTs, join the Community Treasury DAO, plan with an AI travel assistant and explore 360° heritage.";
+  "Plan reef dives and low-impact island trips, buy seafood products and crafts directly from fishing villages, offset your trip's carbon and decide together how the Marine Conservation Fund is spent. Every transaction is recorded publicly on the blockchain.";
 
+export const siteName = (locale: Locale) => pick(locale, SITE_NAME, SITE_NAME_EN);
 export const siteTagline = (locale: Locale) => pick(locale, SITE_TAGLINE, SITE_TAGLINE_EN);
 export const siteDescription = (locale: Locale) => pick(locale, SITE_DESCRIPTION, SITE_DESCRIPTION_EN);
 
@@ -32,10 +35,15 @@ export function getSiteUrl(): URL {
 export const PUBLIC_ROUTES = [
   { path: "/", priority: 1, changeFrequency: "weekly" },
   { path: "/marketplace", priority: 0.9, changeFrequency: "daily" },
+  { path: "/assistant", priority: 0.8, changeFrequency: "monthly" },
   { path: "/carbon-tracker", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/culture", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/heritage", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/getting-started", priority: 0.6, changeFrequency: "monthly" },
   { path: "/quests", priority: 0.7, changeFrequency: "weekly" },
   { path: "/governance", priority: 0.7, changeFrequency: "daily" },
   { path: "/dashboard", priority: 0.4, changeFrequency: "weekly" },
+  { path: "/transparency", priority: 0.5, changeFrequency: "monthly" },
   { path: "/terms", priority: 0.2, changeFrequency: "yearly" },
   { path: "/privacy", priority: 0.2, changeFrequency: "yearly" },
 ] as const;
@@ -56,6 +64,7 @@ export function pageMetadata({
   path: string;
   locale?: Locale;
 }): Metadata {
+  const name = siteName(locale);
   return {
     title,
     description,
@@ -63,14 +72,14 @@ export function pageMetadata({
     openGraph: {
       type: "website",
       locale: ogLocale(locale),
-      siteName: SITE_NAME,
-      title: `${title} — ${SITE_NAME}`,
+      siteName: name,
+      title: `${title} — ${name}`,
       description,
       url: path,
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} — ${SITE_NAME}`,
+      title: `${title} — ${name}`,
       description,
     },
   };

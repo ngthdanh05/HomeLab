@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { ArrowRight } from "lucide-react";
 import { formatEther } from "viem";
 import { usePaymentSplitter } from "@/hooks/usePaymentSplitter";
 import { formatBps, splitPrice } from "@/lib/marketplace";
@@ -23,19 +24,19 @@ export function SplitBreakdown({
       label: t("Nghệ nhân", "Artisan"),
       bps: shares.artisanBPS,
       amount: amounts?.artisan,
-      color: "bg-emerald-500",
+      color: "bg-primary",
     },
     {
-      label: t("Quỹ Cộng đồng", "Community Treasury"),
+      label: t("Quỹ bảo tồn biển", "Ocean Conservation Fund"),
       bps: shares.treasuryBPS,
       amount: amounts?.treasury,
-      color: "bg-teal-400",
+      color: "bg-accent",
     },
     {
       label: t("Nền tảng", "Platform"),
       bps: shares.platformBPS,
       amount: amounts?.platform,
-      color: "bg-slate-500",
+      color: "bg-border-strong",
     },
   ];
 
@@ -51,22 +52,23 @@ export function SplitBreakdown({
         ))}
       </div>
       <ul
-        className={`grid gap-2 ${compact ? "grid-cols-3 text-[11px]" : "grid-cols-1 sm:grid-cols-3 text-xs"}`}
+        className={`grid gap-2 ${compact ? "grid-cols-3 text-xs" : "grid-cols-1 sm:grid-cols-3 text-xs"}`}
       >
         {rows.map((row) => (
           <li
             key={row.label}
-            className="flex items-center gap-2 text-slate-300"
+            className="flex items-center gap-2 text-text-muted"
           >
             <span
               className={`h-2 w-2 shrink-0 rounded-full ${row.color}`}
               aria-hidden
             />
             <span>
-              <strong className="text-white">{formatBps(row.bps, locale)}</strong> →{" "}
+              <strong className="tabular-nums text-text">{formatBps(row.bps, locale)}</strong>{" "}
+              <ArrowRight aria-hidden className="inline h-4 w-4 align-text-bottom" />{" "}
               {row.label}
               {row.amount !== undefined && (
-                <span className="block text-slate-400 font-mono">
+                <span className="block tabular-nums text-text-muted">
                   {formatEther(row.amount)} ETH
                 </span>
               )}

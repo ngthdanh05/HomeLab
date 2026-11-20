@@ -16,10 +16,10 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
   const t = (vi: string, en: string) => pick(locale, vi, en);
   return (
     <html lang={locale}>
-      <body style={{ background: "#020617", color: "#f1f5f9", fontFamily: "sans-serif", textAlign: "center", padding: "20vh 16px" }}>
+      <body style={{ background: "#F7F9F9", color: "#132A33", fontFamily: "sans-serif", textAlign: "center", padding: "20vh 16px" }}>
         <h1>{t("Đã xảy ra lỗi", "Something went wrong")}</h1>
         <p>{t("Ứng dụng chưa tải được. Vui lòng thử lại sau ít phút.", "The app could not be loaded. Please try again in a few minutes.")}</p>
-        <button type="button" onClick={reset} style={{ padding: "10px 20px", cursor: "pointer" }}>
+        <button type="button" onClick={reset} style={{ minHeight: 44, padding: "10px 20px", cursor: "pointer", background: "#0E6375", color: "#FFFFFF", border: 0, borderRadius: 12, fontWeight: 600 }}>
           {t("Thử lại", "Try again")}
         </button>
       </body>

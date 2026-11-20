@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { TriangleAlert } from "lucide-react";
 import { useI18n } from "@/providers/LocaleProvider";
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -11,14 +12,12 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
   }, [error]);
 
   return (
-    <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center gap-4 px-4 text-center">
-      <p className="text-5xl" aria-hidden>
-        ⚠️
-      </p>
-      <h1 className="text-2xl font-bold text-white">{t("Đã xảy ra lỗi", "Something went wrong")}</h1>
-      <p className="text-sm text-slate-400">
+    <main id="main" className="w-full flex-1 mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center gap-4 px-4 text-center">
+      <TriangleAlert aria-hidden className="h-12 w-12 text-danger" />
+      <h1 className="text-2xl font-bold text-text">{t("Đã xảy ra lỗi", "Something went wrong")}</h1>
+      <p className="text-sm text-text-muted">
         {t(
-          "Trang này chưa tải được. Tiền và giao dịch on-chain của bạn không bị ảnh hưởng.",
+          "Trang này chưa tải được. Tiền và giao dịch của bạn không bị ảnh hưởng.",
           "This page could not be loaded. Your funds and on-chain transactions are not affected.",
         )}
       </p>
@@ -26,11 +25,11 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
         <button
           type="button"
           onClick={reset}
-          className="rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600"
+          className="min-h-11 rounded-md bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary-hover"
         >
           {t("Thử lại", "Try again")}
         </button>
-        <Link href="/" className="rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-semibold text-slate-200 hover:bg-slate-700">
+        <Link href="/" className="inline-flex min-h-11 items-center rounded-md border border-border bg-surface px-5 py-3 text-sm font-semibold text-text hover:bg-primary-soft">
           {t("Về trang chủ", "Back to home")}
         </Link>
       </div>

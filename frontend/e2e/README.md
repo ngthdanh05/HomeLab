@@ -15,7 +15,7 @@ Requirements: Foundry (`anvil`, `forge`) on `PATH`, and port **8545** free (the 
 
 ## How it works
 
-- **`fixtures/global-setup.ts`** starts a fresh Anvil, deploys every contract with the real `contracts/script/Deploy.s.sol`, checks the addresses match `src/config/contracts.ts`, then seeds: 50 ECO for the voter (not delegated), 1 ETH in the Community Treasury, one handicraft listing (0.01 ETH) by the seller.
+- **`fixtures/global-setup.ts`** starts a fresh Anvil, deploys every contract with the real `contracts/script/Deploy.s.sol`, checks the addresses match `src/config/contracts.ts`, then seeds: 50 ECO for the voter (not delegated), 1 ETH in the Ocean Conservation Fund, one handicraft listing (0.01 ETH) by the seller.
 - **`fixtures/anvil.fixture.ts`** wraps each test in `evm_snapshot` / `evm_revert`, so tests are independent and can run in any order. `test.use({ account })` picks the Anvil dev account (`voter`, `buyer`, `seller`, `traveller`, …, see `fixtures/anvil.ts`).
 - **`fixtures/mock-wallet.ts`** injects an EIP-1193 provider that looks like MetaMask (also announced via EIP-6963). It forwards requests to Anvil, which signs with its unlocked dev accounts. `connectWallet()` goes through ConnectKit's real "Connect Wallet → MetaMask" flow.
 - Time travel: `chain.increaseTime(seconds)` (`evm_increaseTime` + `evm_mine`).

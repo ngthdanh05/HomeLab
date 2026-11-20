@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useReadContract, useReadContracts } from "wagmi";
 import { MarketplaceABI } from "@/config/contracts";
 import {
@@ -127,4 +127,54 @@ export function useListingMetadata(uri: string | undefined) {
     gcTime: 60 * 60 * 1000,
     retry: 1,
   });
+}
+
+/**
+ * Metadata của nhiều sản phẩm cùng lúc (dùng chung cache với `useListingMetadata`),
+ * để trang Chợ tìm kiếm theo tên, nghệ nhân, làng chài.
+ */
+export function useListingsMetadata(listings: readonly Listing[]) {
+  return useQueries({
+    queries: listings.map((l) => ({
+      queryKey: ["listing-metadata", l.metadataURI],
+      queryFn: () => fetchMetadata(l.metadataURI),
+      enabled: Boolean(l.metadataURI),
+      staleTime: Infinity,
+      gcTime: 60 * 60 * 1000,
+      retry: 1,
+    })),
+    combine: (results) => {
+      const byId = new Map<string, ListingMetadata | null | undefined>();
+      results.forEach((r, i) => byId.set(listings[i].id.toString(), r.data));
+      return byId;
+    },
+  });
+}
+
+/**
+ * Sản phẩm không còn bán: đã bán (có đơn) hay đã huỷ (không có đơn).
+ * Đọc `getOrder` cho các listing `isActive = false`.
+ */
+export function useInactiveListingStates(listings: readonly Listing[]) {
+  const { chainId, addresses } = useActiveChain();
+  const inactive = useMemo(() => listings.filter((l) => !l.isActive), [listings]);
+  const query = useReadContracts({
+    contracts: inactive.map((l) => ({
+      address: addresses.marketplace,
+      abi: MarketplaceABI,
+      functionName: "getOrder",
+      args: [l.id],
+      chainId,
+    })),
+    query: { enabled: inactive.length > 0, refetchInterval: LISTINGS_REFRESH_MS },
+  });
+  return useMemo(() => {
+    const states = new Map<string, "sold" | "cancelled">();
+    (query.data ?? []).forEach((r, i) => {
+      // Marketplace cũ (chưa có escrow) không có getOrder: coi là đã bán.
+      const status = r.status === "success" ? (r.result as Order).status : 1;
+      states.set(inactive[i].id.toString(), status === 0 ? "cancelled" : "sold");
+    });
+    return states;
+  }, [query.data, inactive]);
 }

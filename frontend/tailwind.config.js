@@ -1,26 +1,73 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- file cấu hình CommonJS
+const defaultTheme = require("tailwindcss/defaultTheme");
+
+/** Màu theo vai trò, đọc từ CSS variables (kênh RGB) trong src/app/globals.css. */
+const token = (name) => `rgb(var(--color-${name}) / <alpha-value>)`;
+
+/**
+ * Khoảng cách theo bậc 4px: bỏ các bậc lẻ 2px của Tailwind (0.5, 1.5, 2.5, 3.5).
+ * Giữ `px` (1px) cho đường kẻ.
+ */
+const spacing = Object.fromEntries(
+  Object.entries(defaultTheme.spacing).filter(([key]) => !["0.5", "1.5", "2.5", "3.5"].includes(key)),
+);
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: "class",
-
-  content: [
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/hooks/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
 
   theme: {
+    // Thay hẳn bảng màu mặc định: class kiểu `bg-slate-900`, `text-emerald-400` không còn tồn tại.
+    colors: {
+      transparent: "transparent",
+      current: "currentColor",
+      inherit: "inherit",
+      white: "#FFFFFF",
+      black: "#000000",
+      bg: token("bg"),
+      surface: token("surface"),
+      border: {
+        DEFAULT: token("border"),
+        strong: token("border-strong"),
+      },
+      text: {
+        DEFAULT: token("text"),
+        muted: token("text-muted"),
+      },
+      primary: {
+        DEFAULT: token("primary"),
+        hover: token("primary-hover"),
+        soft: token("primary-soft"),
+      },
+      accent: {
+        DEFAULT: token("accent"),
+        strong: token("accent-strong"),
+        soft: token("accent-soft"),
+      },
+      warning: { DEFAULT: token("warning"), soft: token("warning-soft") },
+      danger: { DEFAULT: token("danger"), soft: token("danger-soft") },
+      info: { DEFAULT: token("info"), soft: token("info-soft") },
+    },
+
+    // Chỉ 3 mức bo góc: 8px (ô nhập, nhãn) · 12px (nút, thẻ nhỏ) · 20px (thẻ lớn, modal).
+    borderRadius: {
+      none: "0",
+      sm: "8px",
+      md: "12px",
+      lg: "20px",
+      full: "9999px",
+    },
+
+    spacing,
+
     extend: {
       fontFamily: {
-        sans: ["Inter", "Arial", "sans-serif"],
+        sans: ["var(--font-be-vietnam-pro)", "Arial", "sans-serif"],
       },
 
-      colors: {
-        brand: {
-          blue: "#2563eb",
-          cyan: "#22d3ee",
-          violet: "#8b5cf6",
-        },
+      boxShadow: {
+        // Bóng nhẹ cho lớp nổi (modal, toast, menu); thẻ thường chỉ dùng viền.
+        overlay: "0 12px 32px -8px rgb(var(--color-text) / 0.18)",
       },
 
       animation: {

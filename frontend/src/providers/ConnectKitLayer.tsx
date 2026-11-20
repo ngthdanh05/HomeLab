@@ -31,12 +31,29 @@ export function ConnectKitLayer({ openRequest }: { openRequest: number }) {
   return (
     <ConnectKitProvider
       customTheme={{
-        "--ck-font-family": "var(--font-sans)",
-        "--ck-border-radius": "12px",
-        "--ck-accent-color": "#10B981",
-        "--ck-accent-text-color": "#ffffff",
+        // Đồng bộ với token trong globals.css (ConnectKit không đọc được CSS variables dạng kênh RGB).
+        "--ck-font-family": "var(--font-be-vietnam-pro), Arial, sans-serif",
+        "--ck-border-radius": "20px",
+        "--ck-accent-color": "#0E6375",
+        "--ck-accent-text-color": "#FFFFFF",
+        "--ck-body-background": "#FFFFFF",
+        "--ck-body-background-secondary": "#F7F9F9",
+        "--ck-body-background-tertiary": "#E3F2F5",
+        "--ck-body-color": "#132A33",
+        "--ck-body-color-muted": "#4D646D",
+        "--ck-body-color-muted-hover": "#132A33",
+        "--ck-body-divider": "#DCE5E6",
+        "--ck-primary-button-background": "#F7F9F9",
+        "--ck-primary-button-hover-background": "#E3F2F5",
+        "--ck-primary-button-color": "#132A33",
+        "--ck-primary-button-border-radius": "12px",
+        "--ck-secondary-button-background": "#F7F9F9",
+        "--ck-secondary-button-hover-background": "#E3F2F5",
+        "--ck-secondary-button-border-radius": "12px",
+        "--ck-focus-color": "#0E6375",
+        "--ck-overlay-background": "rgba(19, 42, 51, 0.45)",
       }}
-      mode="dark"
+      mode="light"
       // Connect on the chain the app is built for (NEXT_PUBLIC_CHAIN_ID); ConnectKit
       // otherwise asks the wallet to switch to the first configured chain (Sepolia).
       options={{ initialChainId: DEFAULT_CHAIN_ID, language: t("vi-VN", "en-US") }}

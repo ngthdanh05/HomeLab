@@ -45,7 +45,7 @@ export function ConnectWalletButton({ className = "" }: { className?: string }) 
       onPointerEnter={prefetch}
       onFocus={prefetch}
       aria-busy={mounted && isConnecting && !address}
-      className={`inline-flex h-10 items-center gap-2 rounded-xl bg-slate-800 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${className}`}
+      className={`inline-flex h-11 items-center gap-2 rounded-md bg-bg px-4 text-sm font-semibold text-text transition-colors hover:bg-primary-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${className}`}
     >
       {shown ? (
         <>

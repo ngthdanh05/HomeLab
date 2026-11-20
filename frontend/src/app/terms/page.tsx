@@ -10,8 +10,8 @@ export async function generateMetadata(): Promise<Metadata> {
     title: pick(locale, "Điều khoản sử dụng", "Terms of Use"),
     description: pick(
       locale,
-      "Điều khoản sử dụng bản thử nghiệm MyHomeLab trên testnet.",
-      "Terms of use for the MyHomeLab testnet preview.",
+      "Điều khoản sử dụng bản thử nghiệm San Hô Xanh trên testnet.",
+      "Terms of use for the BlueReef Travel testnet preview.",
     ),
     path: "/terms",
     locale,
@@ -25,7 +25,7 @@ export default async function TermsPage() {
       <LegalPage title="Terms of Use">
         <h2>1. Service status</h2>
         <p>
-          MyHomeLab runs on a test network. Testnet ETH, ECO and ImpactBadge in this version have no monetary value. The smart
+          BlueReef Travel (San Hô Xanh) runs on a test network. Testnet ETH, ECO and ImpactBadge in this version have no monetary value. The smart
           contracts have not been independently audited. Do not send real assets to the project&apos;s addresses.
         </p>
         <h2>2. Blockchain transactions</h2>
@@ -41,7 +41,7 @@ export default async function TermsPage() {
         </p>
         <h2>4. Carbon offsets</h2>
         <p>
-          Offset fees go to the DAO-managed Community Treasury. They are not currently tied to verified carbon credits, and the
+          Offset fees go to the DAO-managed Ocean Conservation Fund. They are not currently tied to verified carbon credits, and the
           badge only records your contribution.
         </p>
         <h2>5. ECO token</h2>
@@ -56,13 +56,13 @@ export default async function TermsPage() {
     <LegalPage title="Điều khoản sử dụng">
       <h2>1. Tình trạng dịch vụ</h2>
       <p>
-        MyHomeLab đang chạy trên mạng thử nghiệm. ETH testnet, ECO và ImpactBadge trong bản này không có giá trị tiền tệ.
+        San Hô Xanh đang chạy trên mạng thử nghiệm. ETH thử nghiệm, ECO và Huy hiệu tác động trong bản này không có giá trị tiền tệ.
         Smart contract chưa được kiểm toán độc lập. Không gửi tài sản thật vào các địa chỉ của dự án.
       </p>
       <h2>2. Giao dịch trên blockchain</h2>
       <ul>
         <li>Bạn tự quản lý ví và khoá riêng; chúng tôi không thể khôi phục hay đảo ngược giao dịch.</li>
-        <li>Khi mua hàng, tiền được giữ trong escrow tới khi bạn xác nhận hoặc hết thời hạn hiển thị trên đơn hàng.</li>
+        <li>Khi mua hàng, tiền được giữ an toàn tới khi bạn xác nhận hoặc hết thời hạn hiển thị trên đơn hàng.</li>
         <li>Khiếu nại được xử lý bởi địa chỉ trọng tài do nền tảng chỉ định.</li>
       </ul>
       <h2>3. Người bán</h2>
@@ -72,11 +72,11 @@ export default async function TermsPage() {
       </p>
       <h2>4. Bù đắp carbon</h2>
       <p>
-        Phí bù đắp được chuyển vào Quỹ Cộng đồng do DAO quản lý. Khoản này hiện chưa gắn với tín chỉ carbon đã được kiểm định,
-        và badge chỉ ghi nhận đóng góp của bạn.
+        Phí bù đắp được chuyển vào Quỹ bảo tồn biển do người nắm ECO cùng quyết định. Khoản này hiện chưa gắn với tín chỉ carbon đã được kiểm định,
+        và huy hiệu chỉ ghi nhận đóng góp của bạn.
       </p>
       <h2>5. Token ECO</h2>
-      <p>ECO dùng để biểu quyết trong DAO. ECO không phải khoản đầu tư và không hứa hẹn lợi nhuận.</p>
+      <p>ECO dùng để bỏ phiếu về cách dùng Quỹ bảo tồn biển. ECO không phải khoản đầu tư và không hứa hẹn lợi nhuận.</p>
       <h2>6. Nội dung AI</h2>
       <p>Gợi ý do AI tạo ra có thể sai. Hãy kiểm tra lại thông tin quan trọng trước khi quyết định.</p>
     </LegalPage>

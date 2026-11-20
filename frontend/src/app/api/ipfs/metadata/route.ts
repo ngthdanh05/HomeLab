@@ -9,7 +9,9 @@ import { getSepoliaRpcUrls } from "@/lib/rpc";
 import {
   buildUploadMessage,
   isFreshUploadTimestamp,
+  LISTING_DETAIL_FIELDS,
   LISTING_LIMITS,
+  normalizeListingDetails,
   detectImageType,
   validateListingText,
 } from "@/lib/marketplace";
@@ -127,6 +129,9 @@ export async function POST(request: NextRequest) {
   const description = String(form.get("description") ?? "").trim();
   const textError = validateListingText(name, description, locale);
   if (textError) return jsonResponse({ error: textError }, 400);
+  const details = normalizeListingDetails(
+    Object.fromEntries(LISTING_DETAIL_FIELDS.map((field) => [field, form.get(field)])),
+  );
 
   try {
     let image: string | undefined;
@@ -148,7 +153,7 @@ export async function POST(request: NextRequest) {
     const uri = await pinata(
       "pinJSONToIPFS",
       JSON.stringify({
-        pinataContent: { name, description, ...(image ? { image } : {}) },
+        pinataContent: { name, description, ...details, ...(image ? { image } : {}) },
         pinataMetadata: { name: `listing-${name.slice(0, 40)}` },
       }),
       jwt,

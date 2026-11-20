@@ -36,13 +36,22 @@ export function sphericalToCartesian(
   );
 }
 
+// Màu canvas/WebGL không đọc được CSS variable: giữ đúng giá trị token trong globals.css
+// (docs/UX-UI.md mục 4.1) thay cho bảng màu emerald/slate cũ.
+const OCEAN = {
+  accent: 0xc2513a, // --color-accent: cam san hô, nổi trên ảnh biển xanh
+  primarySoft: "#e3f2f5",
+  primary: "#0e6375",
+  text: "#132a33",
+} as const;
+
 export function createHotspotMesh(): THREE.Mesh<
   THREE.SphereGeometry,
   THREE.MeshBasicMaterial
 > {
   const geometry = new THREE.SphereGeometry(8, 16, 16);
   const material = new THREE.MeshBasicMaterial({
-    color: 0x10b981,
+    color: OCEAN.accent,
     transparent: true,
     opacity: 0.85,
   });
@@ -57,15 +66,14 @@ export function createFallbackTexture(): THREE.Texture {
   const ctx = canvas.getContext("2d");
   if (ctx) {
     const grad = ctx.createLinearGradient(0, 0, 0, 512);
-    grad.addColorStop(0, "#064e3b");
-    grad.addColorStop(0.5, "#0f172a");
-    grad.addColorStop(1, "#022c22");
+    grad.addColorStop(0, OCEAN.primary);
+    grad.addColorStop(1, OCEAN.text);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 1024, 512);
-    ctx.fillStyle = "#10b981";
+    ctx.fillStyle = OCEAN.primarySoft;
     ctx.font = "24px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("360° Digital Heritage Viewer", 512, 256);
+    ctx.fillText("Di sản biển 360° · 360° ocean heritage", 512, 256);
   }
   return new THREE.CanvasTexture(canvas);
 }

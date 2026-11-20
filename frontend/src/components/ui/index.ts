@@ -1,0 +1,21 @@
+// Bộ component dùng chung (docs/UX-UI.md mục 4.5). Chỉ dùng token màu theo vai trò.
+export { cn } from "./cn";
+export { Button, ButtonLink, Spinner, buttonClasses, type ButtonProps, type ButtonVariant, type ButtonSize } from "./Button";
+export { TxButton, type TxButtonProps } from "./TxButton";
+export { Card, CardTitle, CardDescription, type CardProps } from "./Card";
+export { PageHeader, type PageHeaderProps } from "./PageHeader";
+export { Stat, StatGroup, type StatProps } from "./Stat";
+export { Tabs, tabPanelProps, tabId, tabPanelId, type TabItem, type TabsProps } from "./Tabs";
+export { FilterChips, type FilterChipItem, type FilterChipsProps } from "./FilterChips";
+export { Field, Input, Select, Textarea, type FieldProps } from "./Field";
+export { Modal, type ModalProps } from "./Modal";
+export { Alert, type AlertProps, type AlertTone } from "./Alert";
+export { EmptyState, type EmptyStateProps } from "./EmptyState";
+export { Skeleton, SkeletonText, LoadingRegion } from "./Skeleton";
+export { Address, type AddressProps } from "./Address";
+export { Amount, type AmountProps } from "./Amount";
+export { AppIcon, APP_ICONS, type AppIconProps } from "./AppIcon";
+export { ToastProvider, useToast } from "./Toast";
+export { ConfirmDialog, type ConfirmDialogProps } from "./ConfirmDialog";
+export { ProgressSteps, type ProgressStep, type StepState } from "./ProgressSteps";
+export { Switch, type SwitchProps } from "./Switch";

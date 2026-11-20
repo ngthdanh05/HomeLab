@@ -34,7 +34,8 @@ ACC2_PK="0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
 # Recipient (Anvil Account #3)
 RECIPIENT="0x90F79bf6EB2c4f870365E785982E1f101E93b906"
 AMOUNT="20000000000000000" # 0.02 ETH
-DESCRIPTION="Giai ngan 0.02 ETH cho du an trong rung ngap man va bao ton san ho"
+# Tiêu đề + dòng trống + mô tả (định dạng encodeProposalDescription của frontend).
+DESCRIPTION=$'Tài trợ phao neo bảo vệ rạn san hô Hòn Mun\n\nLắp phao neo cố định để tàu du lịch không thả neo lên rạn san hô; ngư dân Bích Đầm thi công và bảo dưỡng.'
 
 echo "=========================================================="
 echo "  [Task 2.2] 04_create_proposal.sh"

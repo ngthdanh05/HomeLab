@@ -4,11 +4,13 @@ import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAccount } from "wagmi";
+import { ArrowLeft, ExternalLink, HandCoins, Hourglass, SearchX, ThumbsDown, ThumbsUp } from "lucide-react";
 import { ExecuteProposalButton } from "@/components/governance/ExecuteProposalButton";
 import { ProposalStatusBadge, VoteBar } from "@/components/governance/ProposalCard";
 import { formatEth } from "@/components/governance/TreasuryStats";
 import { VoteButtons } from "@/components/governance/VoteButtons";
 import { VotingPowerPanel } from "@/components/governance/VotingPowerPanel";
+import { Alert } from "@/components/ui";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useProposal, useProposalVotes } from "@/hooks/useGovernance";
 import { useTreasury } from "@/hooks/useTreasury";
@@ -24,12 +26,13 @@ function AddressLink({ address, explorerUrl }: { address: string; explorerUrl?: 
       href={`${explorerUrl}/address/${address}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="font-mono text-emerald-400 hover:underline"
+      className="inline-flex items-center gap-1 font-mono text-primary hover:underline"
     >
-      {shortenAddress(address)} ↗
+      {shortenAddress(address)}
+      <ExternalLink aria-hidden className="h-4 w-4" />
     </a>
   ) : (
-    <span className="font-mono text-slate-200">{shortenAddress(address)}</span>
+    <span className="font-mono text-text">{shortenAddress(address)}</span>
   );
 }
 
@@ -47,8 +50,9 @@ export default function ProposalDetailPage() {
   const treasury = useTreasury();
 
   const back = (
-    <Link href="/governance" className="text-sm text-slate-400 hover:text-white">
-      {t("← Tất cả đề xuất", "← All proposals")}
+    <Link href="/governance" className="inline-flex min-h-11 items-center gap-2 text-sm text-text-muted hover:text-text">
+      <ArrowLeft aria-hidden className="h-4 w-4" />
+      {t("Tất cả đề xuất", "All proposals")}
     </Link>
   );
 
@@ -56,9 +60,9 @@ export default function ProposalDetailPage() {
     return (
       <>
         {back}
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-10 text-center">
-          <p className="text-4xl">🔍</p>
-          <p className="mt-3 font-semibold text-white">{t("Không tìm thấy đề xuất", "Proposal not found")}</p>
+        <div className="rounded-lg border border-border bg-surface p-10 text-center">
+          <SearchX aria-hidden className="mx-auto h-10 w-10 text-text-muted" />
+          <p className="mt-3 font-semibold text-text">{t("Không tìm thấy đề xuất", "Proposal not found")}</p>
         </div>
       </>
     );
@@ -69,14 +73,14 @@ export default function ProposalDetailPage() {
       <>
         {back}
         {isError ? (
-          <p className="rounded-xl border border-red-900/60 bg-red-950/30 p-3 text-sm text-red-200">
+          <Alert tone="danger">
             {t("Không đọc được đề xuất (RPC có thể đang quá tải).", "Could not read the proposal (the RPC may be overloaded).")}{" "}
-            <button type="button" onClick={refetch} className="font-semibold underline">
+            <button type="button" onClick={refetch} className="min-h-11 font-semibold underline hover:text-danger">
               {t("Thử lại", "Try again")}
             </button>
-          </p>
+          </Alert>
         ) : (
-          <div className="h-80 animate-pulse rounded-3xl bg-slate-900" aria-label={t("Đang tải", "Loading")} />
+          <div className="h-80 animate-pulse rounded-lg border border-border bg-surface" aria-label={t("Đang tải", "Loading")} />
         )}
       </>
     );
@@ -92,106 +96,113 @@ export default function ProposalDetailPage() {
       {back}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <article className="space-y-6 rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-7">
+        <article className="space-y-6 rounded-lg border border-border bg-surface p-5 sm:p-7">
           <header className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-sm text-slate-400">{t("Đề xuất", "Proposal")} #{proposal.id.toString()}</span>
+              <span className="text-sm tabular-nums text-text-muted">{t("Đề xuất", "Proposal")} #{proposal.id.toString()}</span>
               <ProposalStatusBadge status={proposal.status} />
             </div>
-            <h1 className="break-words text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+            <h1 className="break-words text-2xl font-bold tracking-tight text-text sm:text-3xl">
               {displayProposalTitle(proposal.title, locale)}
             </h1>
           </header>
 
           {proposal.body ? (
-            <p className="whitespace-pre-line break-words text-sm leading-relaxed text-slate-300 sm:text-base">
+            <p className="whitespace-pre-line break-words text-sm leading-relaxed text-text-muted sm:text-base">
               {proposal.body}
             </p>
           ) : (
-            <p className="text-sm italic text-slate-400">{t("Không có mô tả.", "No description.")}</p>
+            <p className="text-sm italic text-text-muted">{t("Không có mô tả.", "No description.")}</p>
           )}
 
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
-            <div className="rounded-xl bg-slate-800/60 p-3">
-              <dt className="text-xs text-slate-400">{t("Số ETH yêu cầu", "ETH requested")}</dt>
-              <dd className="mt-0.5 font-mono text-lg font-bold text-amber-300">{formatEth(proposal.amount, locale)}</dd>
+            <div className="rounded-md bg-bg p-3">
+              <dt className="text-xs text-text-muted">{t("Số ETH yêu cầu", "ETH requested")}</dt>
+              <dd className="mt-1 text-lg font-bold tabular-nums text-text">{formatEth(proposal.amount, locale)}</dd>
             </div>
-            <div className="rounded-xl bg-slate-800/60 p-3">
-              <dt className="text-xs text-slate-400">{isOpen ? t("Thời gian còn lại", "Time left") : t("Hạn bỏ phiếu", "Voting deadline")}</dt>
-              <dd className="mt-0.5 text-lg font-semibold text-slate-100" aria-live="off">
-                {isOpen ? `⏳ ${formatCountdown(secondsLeft, locale)}` : formatDateTime(Number(proposal.deadline), locale)}
+            <div className="rounded-md bg-bg p-3">
+              <dt className="text-xs text-text-muted">{isOpen ? t("Thời gian còn lại", "Time left") : t("Hạn bỏ phiếu", "Voting deadline")}</dt>
+              <dd className="mt-1 flex items-center gap-2 text-lg font-semibold text-text" aria-live="off">
+                {isOpen ? (
+                  <>
+                    <Hourglass aria-hidden className="h-5 w-5 text-text-muted" />
+                    {formatCountdown(secondsLeft, locale)}
+                  </>
+                ) : (
+                  formatDateTime(Number(proposal.deadline), locale)
+                )}
               </dd>
               {isOpen && (
-                <dd className="text-[11px] text-slate-400">{t("Kết thúc", "Ends")} {formatDateTime(Number(proposal.deadline), locale)}</dd>
+                <dd className="text-xs text-text-muted">{t("Kết thúc", "Ends")} {formatDateTime(Number(proposal.deadline), locale)}</dd>
               )}
             </div>
-            <div className="rounded-xl bg-slate-800/60 p-3">
-              <dt className="text-xs text-slate-400">{t("Ví nhận", "Recipient wallet")}</dt>
-              <dd className="mt-0.5">
+            <div className="rounded-md bg-bg p-3">
+              <dt className="text-xs text-text-muted">{t("Ví nhận", "Recipient wallet")}</dt>
+              <dd className="mt-1">
                 <AddressLink address={proposal.recipient} explorerUrl={explorerUrl} />
               </dd>
             </div>
-            <div className="rounded-xl bg-slate-800/60 p-3">
-              <dt className="text-xs text-slate-400">{t("Người đề xuất", "Proposer")}</dt>
-              <dd className="mt-0.5">
+            <div className="rounded-md bg-bg p-3">
+              <dt className="text-xs text-text-muted">{t("Người đề xuất", "Proposer")}</dt>
+              <dd className="mt-1">
                 <AddressLink address={proposal.proposer} explorerUrl={explorerUrl} />
               </dd>
             </div>
           </dl>
 
           <VoteBar proposal={proposal} />
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-text-muted">
             {t(
-              `Phiếu tính theo ECO đã kích hoạt quyền vote tại block snapshot #${proposal.snapshotBlock} (block ngay trước khi đề xuất được tạo).`,
+              `Phiếu tính theo ECO đã kích hoạt quyền bỏ phiếu tại khối #${proposal.snapshotBlock} (khối chốt số dư khi đề xuất được tạo).`,
               `Votes are counted from ECO with activated voting power at snapshot block #${proposal.snapshotBlock} (the block just before the proposal was created).`,
             )}
           </p>
 
           {disbursement && (
-            <p className="rounded-xl border border-emerald-800/60 bg-emerald-950/30 p-3 text-sm text-emerald-200">
-              💸 {t("Quỹ Cộng đồng đã giải ngân", "The Community Treasury disbursed")} {formatEth(disbursement.amount, locale)} {t("cho", "to")}{" "}
+            <Alert tone="success" icon={HandCoins}>
+              {t("Quỹ bảo tồn biển đã giải ngân", "The Ocean Conservation Fund disbursed")} {formatEth(disbursement.amount, locale)} {t("cho", "to")}{" "}
               <span className="font-mono">{shortenAddress(disbursement.recipient)}</span> {t("lúc", "at")}{" "}
               {formatDateTime(disbursement.timestamp, locale)}.
-            </p>
+            </Alert>
           )}
           {proposal.status === "pending" && (
-            <p className="rounded-xl border border-slate-700 bg-slate-800/60 p-3 text-sm text-slate-300">
+            <p className="rounded-md border border-border bg-bg p-3 text-sm text-text-muted">
               {t(
-                `Bỏ phiếu mở sau block #${proposal.snapshotBlock}. Hãy kích hoạt quyền vote trước block này để phiếu của bạn được tính.`,
+                `Bỏ phiếu mở sau khối #${proposal.snapshotBlock}. Hãy kích hoạt quyền bỏ phiếu trước khối này để phiếu của bạn được tính.`,
                 `Voting opens after block #${proposal.snapshotBlock}. Activate your voting power before this block for your vote to count.`,
               )}
             </p>
           )}
           {proposal.status === "queued" && (
-            <p className="rounded-xl border border-amber-800/60 bg-amber-950/40 p-3 text-sm text-amber-200">
+            <Alert tone="warning">
               {t(
                 "Đề xuất đã thông qua và đang trong thời gian chờ an toàn. Có thể giải ngân từ",
                 "The proposal passed and is in its safety waiting period. It can be disbursed from",
               )}{" "}
               {new Date(Number(proposal.executeAfter) * 1000).toLocaleString(intlLocale(locale))}.
-            </p>
+            </Alert>
           )}
           {proposal.status === "expired" && (
-            <p className="rounded-xl border border-slate-700 bg-slate-800/60 p-3 text-sm text-slate-300">
+            <p className="rounded-md border border-border bg-bg p-3 text-sm text-text-muted">
               {t("Đề xuất đã quá thời hạn giải ngân nên không thể thực thi nữa.", "The proposal's disbursement window has expired, so it can no longer be executed.")}
             </p>
           )}
           {proposal.status === "cancelled" && (
-            <p className="rounded-xl border border-red-800/60 bg-red-950/40 p-3 text-sm text-red-200">
-              {t("Đề xuất đã bị guardian huỷ và không giải ngân.", "The proposal was cancelled by the guardian and will not be disbursed.")}
-            </p>
+            <Alert tone="danger" role="status">
+              {t("Đề xuất đã bị người giám sát huỷ và không giải ngân.", "The proposal was cancelled by the guardian and will not be disbursed.")}
+            </Alert>
           )}
           {proposal.status === "no-quorum" && (
-            <p className="rounded-xl border border-slate-700 bg-slate-800/60 p-3 text-sm text-slate-300">
-              {t("Đề xuất không đạt quorum nên không thể thực thi và không giải ngân.", "The proposal did not reach quorum, so it cannot be executed or disbursed.")}
+            <p className="rounded-md border border-border bg-bg p-3 text-sm text-text-muted">
+              {t("Đề xuất không đạt số phiếu tối thiểu nên không thể giải ngân.", "The proposal did not reach quorum, so it cannot be executed or disbursed.")}
             </p>
           )}
         </article>
 
         <aside className="space-y-5">
           {(isOpen || hasVoted) && (
-            <section aria-labelledby="vote-heading" className="space-y-3 rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
-              <h2 id="vote-heading" className="font-bold text-white">
+            <section aria-labelledby="vote-heading" className="space-y-3 rounded-lg border border-border bg-surface p-5">
+              <h2 id="vote-heading" className="font-bold text-text">
                 {t("Bỏ phiếu", "Vote")}
               </h2>
               <VoteButtons
@@ -206,8 +217,8 @@ export default function ProposalDetailPage() {
           )}
 
           {(proposal.status === "passed" || proposal.status === "defeated") && (
-            <section className="space-y-3 rounded-3xl border border-amber-800/50 bg-amber-950/10 p-5">
-              <h2 className="font-bold text-white">{t("Thực thi đề xuất", "Execute proposal")}</h2>
+            <section className="space-y-3 rounded-lg border border-border bg-surface p-5">
+              <h2 className="font-bold text-text">{t("Thực thi đề xuất", "Execute proposal")}</h2>
               <ExecuteProposalButton
                 proposalId={proposal.id}
                 status={proposal.status}
@@ -223,39 +234,44 @@ export default function ProposalDetailPage() {
 
           {isConnected && user && (isOpen || proposal.status === "pending") && <VotingPowerPanel user={user} />}
 
-          <section aria-labelledby="voters-heading" className="space-y-3 rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
-            <h2 id="voters-heading" className="font-bold text-white">
+          <section aria-labelledby="voters-heading" className="space-y-3 rounded-lg border border-border bg-surface p-5">
+            <h2 id="voters-heading" className="font-bold text-text">
               {t("Phiếu bầu", "Votes")} {votes.data ? `(${votes.data.length})` : ""}
             </h2>
             {votes.isLoading ? (
-              <div className="h-16 animate-pulse rounded-xl bg-slate-800" />
+              <div className="h-16 animate-pulse rounded-md bg-bg" />
             ) : votes.isError ? (
-              <p className="text-sm text-slate-400">{t("Không tải được danh sách phiếu bầu.", "Could not load the vote list.")}</p>
+              <p className="text-sm text-text-muted">{t("Không tải được danh sách phiếu bầu.", "Could not load the vote list.")}</p>
             ) : !votes.data?.length ? (
-              <p className="text-sm text-slate-400">{t("Chưa có phiếu bầu nào.", "No votes yet.")}</p>
+              <p className="text-sm text-text-muted">{t("Chưa có phiếu bầu nào.", "No votes yet.")}</p>
             ) : (
-              <ul className="max-h-80 divide-y divide-slate-800 overflow-y-auto">
+              <ul className="max-h-80 divide-y divide-border overflow-y-auto">
                 {votes.data.map((v) => (
                   <li key={v.transactionHash} className="flex items-center justify-between gap-2 py-2 text-sm">
                     <span className="flex items-center gap-2">
-                      <span aria-label={v.support ? t("Đồng ý", "For") : t("Phản đối", "Against")}>{v.support ? "👍" : "👎"}</span>
+                      {v.support ? (
+                        <ThumbsUp aria-hidden className="h-4 w-4 text-primary" />
+                      ) : (
+                        <ThumbsDown aria-hidden className="h-4 w-4 text-danger" />
+                      )}
+                      <span className="sr-only">{v.support ? t("Đồng ý", "For") : t("Phản đối", "Against")}</span>
                       {explorerUrl ? (
                         <a
                           href={`${explorerUrl}/tx/${v.transactionHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-mono text-slate-300 hover:text-emerald-300"
+                          className="font-mono text-text-muted hover:text-primary"
                         >
                           {shortenAddress(v.voter)}
                         </a>
                       ) : (
-                        <span className="font-mono text-slate-300">{shortenAddress(v.voter)}</span>
+                        <span className="font-mono text-text-muted">{shortenAddress(v.voter)}</span>
                       )}
                       {user && v.voter.toLowerCase() === user.toLowerCase() && (
-                        <span className="rounded bg-slate-700 px-1.5 text-[10px] text-slate-200">{t("Bạn", "You")}</span>
+                        <span className="rounded-sm bg-primary-soft px-2 text-xs font-medium text-primary">{t("Bạn", "You")}</span>
                       )}
                     </span>
-                    <span className="font-mono text-xs text-slate-400">{formatTokenAmount(v.weight, 18, 2, locale)} ECO</span>
+                    <span className="text-xs tabular-nums text-text-muted">{formatTokenAmount(v.weight, 18, 2, locale)} ECO</span>
                   </li>
                 ))}
               </ul>

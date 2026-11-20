@@ -1,10 +1,9 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import type { Address } from "viem";
-import { useAccount } from "wagmi";
-import { Spinner } from "@/components/marketplace/PurchaseButton";
+import { ArrowRight, Check, Gift, Sparkles } from "lucide-react";
+import { AppIcon, ButtonLink, cn, TxButton } from "@/components/ui";
 import { QuestRewardsABI } from "@/config/contracts";
 import { useContractTx } from "@/hooks/useContractTx";
 import type { QuestWithProgress } from "@/hooks/useQuestProgress";
@@ -16,28 +15,33 @@ import { QuestProgressBar } from "./QuestProgress";
 
 interface QuestCardProps {
   quest: QuestWithProgress;
-  /** QuestRewards on the active chain. */
-  contract: Address;
-  /** Called once the claim transaction is confirmed. */
+  /** QuestRewards trên mạng đang dùng; undefined ⇒ chưa deploy, không nhận thưởng được. */
+  contract: Address | undefined;
+  /** Ví đã kết nối: mới hiện tiến độ thật và nút nhận thưởng. */
+  connected: boolean;
+  /** Gọi khi giao dịch nhận thưởng đã được xác nhận. */
   onClaimed: (quest: QuestWithProgress) => void;
+  /** Thẻ "Nhiệm vụ tiếp theo": lớn hơn, viền nhấn. */
+  featured?: boolean;
 }
 
-/** One Eco Quest: rewards, progress and the on-chain claim button. */
-export function QuestCard({ quest: rawQuest, contract, onClaimed }: QuestCardProps) {
+/** Một nhiệm vụ bảo tồn: phần thưởng, tiến độ và nút nhận thưởng on-chain. */
+export function QuestCard({ quest: rawQuest, contract, connected, onClaimed, featured = false }: QuestCardProps) {
   const { locale, t } = useI18n();
   const quest = localizeQuest(rawQuest, locale);
-  const { isConnected } = useAccount();
-  const { progress } = quest;
-  const { send, status, isBusy } = useContractTx({
+  const progress = connected ? quest.progress : { ...quest.progress, state: "in-progress" as const, current: 0, ratio: 0 };
+  const { send, status } = useContractTx({
     pending: t(`Đang nhận thưởng "${quest.title}"`, `Claiming "${quest.title}"`),
-    success: t(`Hoàn thành quest "${quest.title}"! 🎉`, `Quest "${quest.title}" completed! 🎉`),
+    success: t(`Hoàn thành nhiệm vụ "${quest.title}"!`, `Quest "${quest.title}" completed!`),
   });
 
   const completed = progress.state === "completed";
-  const ready = progress.state === "ready";
+  const ready = progress.state === "ready" && Boolean(contract);
   const badge = quest.rewardBadgeType !== undefined ? getBadgeType(quest.rewardBadgeType) : undefined;
+  const titleId = `quest-${quest.id}-title${featured ? "-next" : ""}`;
 
   const claim = async () => {
+    if (!contract) return;
     const result = await send({
       address: contract,
       abi: QuestRewardsABI,
@@ -49,103 +53,96 @@ export function QuestCard({ quest: rawQuest, contract, onClaimed }: QuestCardPro
 
   return (
     <article
-      aria-labelledby={`quest-${quest.id}-title`}
-      className={`flex flex-col gap-4 rounded-3xl border p-5 transition-colors ${
-        completed
-          ? "border-emerald-700/60 bg-emerald-950/20"
-          : ready
-            ? "border-amber-600/60 bg-amber-950/10"
-            : "border-slate-800 bg-slate-900/60"
-      }`}
+      aria-labelledby={titleId}
+      className={cn(
+        "flex h-full flex-col gap-4 rounded-lg border bg-surface p-6",
+        featured ? "border-2 border-primary" : completed ? "border-primary/30" : ready ? "border-accent" : "border-border",
+      )}
     >
+      {featured && (
+        <p className="inline-flex items-center gap-2 self-start rounded-sm bg-primary-soft px-2 py-1 text-xs font-semibold text-primary">
+          <Sparkles aria-hidden className="h-4 w-4" />
+          {ready ? t("Sẵn sàng nhận thưởng", "Ready to claim") : t("Nhiệm vụ tiếp theo", "Next quest")}
+        </p>
+      )}
       <div className="flex items-start gap-3">
         <span
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl ${
-            completed ? "bg-emerald-500/20" : "bg-slate-800"
-          }`}
           aria-hidden
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-md",
+            featured ? "h-14 w-14" : "h-12 w-12",
+            completed ? "bg-primary-soft text-primary" : ready ? "bg-accent-soft text-accent-strong" : "bg-bg text-primary",
+          )}
         >
-          {quest.icon}
+          <AppIcon name={quest.icon} className={featured ? "h-7 w-7" : "h-6 w-6"} />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 id={`quest-${quest.id}-title`} className="font-bold text-white">
+          <h3 id={titleId} className={cn("font-semibold text-text", featured ? "text-xl" : "text-lg")}>
             {quest.title}
           </h3>
-          <p className="mt-0.5 text-sm text-slate-400">{quest.description}</p>
+          <p className="mt-1 text-sm text-text-muted">{quest.description}</p>
         </div>
         {completed && (
-          <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-slate-950"
-            role="img"
-            aria-label={t("Đã hoàn thành", "Completed")}
-          >
-            ✓
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-white" role="img" aria-label={t("Đã hoàn thành", "Completed")}>
+            <Check aria-hidden className="h-5 w-5" />
           </span>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-1.5 text-xs">
-        {quest.ecoReward > 0 && (
-          <span className="rounded-lg bg-emerald-500/15 px-2 py-1 font-semibold text-emerald-300">
-            +{quest.ecoReward} ECO
-          </span>
-        )}
+      <ul className="flex flex-wrap gap-2 text-xs" aria-label={t("Phần thưởng", "Rewards")}>
+        {quest.ecoReward > 0 && <li className="rounded-sm bg-accent-soft px-2 py-1 font-semibold tabular-nums text-accent-strong">+{quest.ecoReward} ECO</li>}
         {badge && (
-          <span className="rounded-lg bg-violet-500/15 px-2 py-1 font-semibold text-violet-300">
-            {badge.icon} Badge {badge.label}
-          </span>
+          <li className="inline-flex items-center gap-1 rounded-sm bg-accent-soft px-2 py-1 font-semibold text-accent-strong">
+            <AppIcon name={badge.icon} className="h-4 w-4" />
+            {t(`Huy hiệu ${badge.label}`, `${badge.labelEn} badge`)}
+          </li>
         )}
         {quest.kind === "heritage-views" && (
-          <span className="rounded-lg bg-slate-800 px-2 py-1 text-slate-400" title={t("Hành động off-chain nên không thưởng ECO", "Off-chain action, so no ECO reward")}>
-            {t("Theo dõi trên trình duyệt này", "Tracked in this browser")}
-          </span>
+          <li className="rounded-sm bg-bg px-2 py-1 font-medium text-text-muted">{t("Theo dõi trên trình duyệt này", "Tracked in this browser")}</li>
         )}
-      </div>
+      </ul>
 
-      <div className="space-y-1.5">
-        <div className="flex justify-between text-xs text-slate-400">
-          <span>{t("Tiến độ", "Progress")}</span>
-          <span className="font-mono text-slate-200">
-            {progress.state === "loading" && !completed
-              ? "…"
-              : `${formatQuestCount(quest, progress.current, locale)} / ${formatQuestCount(quest, progress.target, locale)}`}
-          </span>
+      {connected && (
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs font-medium text-text-muted">
+            <span>{t("Tiến độ", "Progress")}</span>
+            <span className="tabular-nums text-text">
+              {progress.state === "loading"
+                ? "…"
+                : `${formatQuestCount(quest, progress.current, locale)} / ${formatQuestCount(quest, progress.target, locale)}`}
+            </span>
+          </div>
+          <QuestProgressBar
+            ratio={progress.ratio}
+            label={t(`Tiến độ nhiệm vụ ${quest.title}`, `Progress of quest ${quest.title}`)}
+            tone={completed ? "primary" : ready ? "accent" : "neutral"}
+          />
         </div>
-        <QuestProgressBar
-          ratio={progress.ratio}
-          label={t(`Tiến độ quest ${quest.title}`, `Progress of quest ${quest.title}`)}
-          tone={completed ? "emerald" : ready ? "amber" : "slate"}
-        />
-      </div>
+      )}
 
       <div className="mt-auto">
         {completed ? (
-          <p className="rounded-xl bg-emerald-500/10 py-2.5 text-center text-sm font-semibold text-emerald-300">
+          <p className="flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary-soft text-sm font-semibold text-primary">
+            <Check aria-hidden className="h-4 w-4" />
             {t("Đã nhận thưởng", "Reward claimed")}
           </p>
-        ) : ready && isConnected ? (
-          <button
-            type="button"
-            onClick={() => void claim()}
-            disabled={isBusy || status === "unconfirmed"}
-            className="quest-glow flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 text-sm font-bold text-slate-950 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-70"
+        ) : ready ? (
+          <TxButton
+            fullWidth
+            variant={featured ? "primary" : "secondary"}
+            size={featured ? "lg" : "md"}
+            icon={Gift}
+            status={status}
+            disabled={status === "unconfirmed"}
+            onClick={claim}
+            busyLabels={{ pending: t("Đang nhận thưởng…", "Claiming on-chain…") }}
           >
-            {isBusy && <Spinner />}
-            {status === "awaiting-wallet"
-              ? t("Xác nhận trong ví…", "Confirm in wallet…")
-              : status === "pending"
-                ? t("Đang nhận thưởng on-chain…", "Claiming on-chain…")
-                : status === "unconfirmed"
-                  ? t("Đang chờ xác nhận…", "Waiting for confirmation…")
-                  : t("🎁 Nhận thưởng", "🎁 Claim reward")}
-          </button>
+            {status === "unconfirmed" ? t("Đang chờ xác nhận…", "Waiting for confirmation…") : t("Nhận thưởng", "Claim reward")}
+          </TxButton>
         ) : (
-          <Link
-            href={quest.action.href}
-            className="block rounded-xl border border-slate-700 py-2.5 text-center text-sm font-medium text-slate-300 transition-colors hover:border-emerald-600 hover:text-emerald-300"
-          >
-            {quest.action.label} →
-          </Link>
+          <ButtonLink href={quest.action.href} variant={featured ? "primary" : "secondary"} size={featured ? "lg" : "md"} fullWidth iconRight={ArrowRight}>
+            {quest.action.label}
+          </ButtonLink>
         )}
       </div>
     </article>
