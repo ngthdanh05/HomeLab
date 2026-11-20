@@ -1,38 +1,47 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
+import { ArrowRight, HandCoins, Lightbulb, Plus, Waves } from "lucide-react";
 import { CreateProposalModal } from "@/components/governance/CreateProposalModal";
+import { ParticipationSteps } from "@/components/governance/ParticipationSteps";
 import { ProposalCard } from "@/components/governance/ProposalCard";
-import { formatEth, TreasuryStats } from "@/components/governance/TreasuryStats";
-import { VotingPowerPanel } from "@/components/governance/VotingPowerPanel";
-import { getChainName } from "@/config/contracts";
-import { useActiveChain } from "@/hooks/useActiveChain";
-import { useChainNow, useProposals } from "@/hooks/useGovernance";
+import { formatEth, TreasuryStats, VotingRules } from "@/components/governance/TreasuryStats";
+import { Address, Alert, Button, Card, CardDescription, CardTitle, EmptyState, FilterChips, LoadingRegion, PageHeader, Skeleton } from "@/components/ui";
+import { localizeTemplate, PROPOSAL_TEMPLATES, type ProposalTemplate } from "@/data/proposalTemplates";
+import { useChainNow, useProposals, useVotingPower } from "@/hooks/useGovernance";
 import { useTreasury } from "@/hooks/useTreasury";
-import { formatDateTime } from "@/lib/dashboard";
+import { formatDateTime, formatTokenAmount } from "@/lib/dashboard";
 import { PROPOSALS_PAGE_SIZE, type ProposalStatus } from "@/lib/governance";
-import { shortenAddress } from "@/lib/marketplace";
 import { useI18n } from "@/providers/LocaleProvider";
 
-const FILTERS: { key: string; label: string; labelEn: string; statuses: ProposalStatus[] | null }[] = [
+type FilterKey = "all" | "active" | "pending" | "closed";
+
+const FILTERS: { key: FilterKey; label: string; labelEn: string; statuses: ProposalStatus[] | null }[] = [
   { key: "all", label: "Tất cả", labelEn: "All", statuses: null },
-  { key: "active", label: "🗳️ Đang bỏ phiếu", labelEn: "🗳️ Voting", statuses: ["pending", "active"] },
-  { key: "pending", label: "⏳ Chờ thực thi", labelEn: "⏳ Awaiting execution", statuses: ["queued", "passed", "defeated"] },
-  { key: "closed", label: "📁 Đã kết thúc", labelEn: "📁 Closed", statuses: ["executed", "rejected", "no-quorum", "expired", "cancelled"] },
+  { key: "active", label: "Đang bỏ phiếu", labelEn: "Voting", statuses: ["pending", "active"] },
+  // Gồm cả đề xuất bị bác chưa được chốt: nhãn nói về việc chốt kết quả, không phải "chờ thực thi".
+  { key: "pending", label: "Chờ chốt kết quả", labelEn: "Awaiting final result", statuses: ["queued", "passed", "defeated"] },
+  { key: "closed", label: "Đã kết thúc", labelEn: "Closed", statuses: ["executed", "rejected", "no-quorum", "expired", "cancelled"] },
 ];
 
 export default function GovernancePage() {
   const { locale, t } = useI18n();
-  const { chainId, explorerUrl, isWrongNetwork } = useActiveChain();
-  const { address: user, isConnected } = useAccount();
+  const hintId = useId();
+  const { address: user } = useAccount();
   const [limit, setLimit] = useState(PROPOSALS_PAGE_SIZE);
   const { config, proposals, hasMore, isLoading, isError, refetch } = useProposals(limit);
   const treasury = useTreasury();
+  const { balance } = useVotingPower(user);
   const now = useChainNow();
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<FilterKey>("all");
   const [modalOpen, setModalOpen] = useState(false);
+  const [template, setTemplate] = useState<ProposalTemplate | null>(null);
+
+  const threshold = config.proposalThreshold;
+  const canPropose = Boolean(user) && balance !== undefined && threshold !== undefined && balance >= threshold;
+  const fmtEco = (v: bigint | undefined) => (v !== undefined ? `${formatTokenAmount(v, 18, 2, locale)} ECO` : "—");
 
   const activeCount = config.proposalCount === undefined ? undefined : proposals.filter((p) => p.status === "active").length;
   const visible = useMemo(() => {
@@ -40,42 +49,55 @@ export default function GovernancePage() {
     return statuses ? proposals.filter((p) => statuses.includes(p.status)) : proposals;
   }, [proposals, filter]);
 
-  return (
-    <>
-      <section className="relative overflow-hidden rounded-3xl border border-sky-900/50 bg-gradient-to-r from-sky-950/70 via-slate-900 to-slate-900 p-6 sm:p-8">
-        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <span className="inline-flex rounded-full border border-sky-800/80 bg-sky-950/80 px-3 py-1 text-xs font-semibold text-sky-300">
-              🗳️ Community DAO · {getChainName(chainId)}
-            </span>
-            <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-              {t("Cộng đồng quyết định, Quỹ minh bạch", "The community decides, the Treasury stays transparent")}
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
-              {t(
-                "20% mỗi giao dịch D2C chảy vào Quỹ Cộng đồng. Người nắm EcoToken đề xuất và bỏ phiếu cho các dự án bảo tồn; đề xuất được thông qua sẽ được Smart Contract giải ngân tự động.",
-                "20% of every direct-to-consumer sale flows into the Community Treasury. EcoToken holders propose and vote on conservation projects, and the smart contract disburses funds to approved proposals automatically.",
-              )}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="shrink-0 rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white shadow-lg shadow-emerald-950 transition-colors hover:bg-emerald-600"
-          >
-            {t("＋ Tạo đề xuất", "＋ Create proposal")}
-          </button>
-        </div>
-      </section>
+  const openCreate = (tpl: ProposalTemplate | null = null) => {
+    setTemplate(tpl);
+    setModalOpen(true);
+  };
+  const showActive = () => {
+    setFilter("active");
+    document.getElementById("proposals-heading")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
-      {isWrongNetwork && (
-        <p className="rounded-2xl border border-amber-800/60 bg-amber-950/40 p-4 text-sm text-amber-200">
-          {t(
-            `Ví đang ở mạng chưa hỗ trợ. Dữ liệu dưới đây lấy từ ${getChainName(chainId)}; khi bỏ phiếu, ví sẽ được yêu cầu chuyển mạng.`,
-            `Your wallet is on an unsupported network. The data below comes from ${getChainName(chainId)}; your wallet will be asked to switch networks when you vote.`,
+  const createAction = (
+    <div className="flex max-w-xs flex-col gap-2 sm:items-end sm:text-right">
+      <Button
+        variant={canPropose ? "primary" : "secondary"}
+        icon={Plus}
+        disabled={!canPropose}
+        aria-describedby={canPropose ? undefined : hintId}
+        onClick={() => openCreate()}
+      >
+        {t("Tạo đề xuất", "Create proposal")}
+      </Button>
+      {!canPropose && (
+        <p id={hintId} className="text-sm text-text-muted">
+          {!user ? (
+            t(`Kết nối ví để tạo đề xuất (cần ${fmtEco(threshold)}).`, `Connect your wallet to create a proposal (needs ${fmtEco(threshold)}).`)
+          ) : (
+            <>
+              {t(`Cần ${fmtEco(threshold)} để tạo đề xuất · bạn có ${fmtEco(balance)}.`, `You need ${fmtEco(threshold)} to propose · you have ${fmtEco(balance)}.`)}{" "}
+              <Link href="/quests" className="font-semibold text-primary underline">
+                {t("Cách kiếm thêm ECO", "How to earn more ECO")}
+              </Link>
+            </>
           )}
         </p>
       )}
+    </div>
+  );
+
+  return (
+    <>
+      <PageHeader
+        eyebrow={t("Quỹ bảo tồn biển", "Ocean Conservation Fund")}
+        icon={Waves}
+        title={t("Cộng đồng chọn dự án giữ biển xanh", "The community picks projects that keep the sea blue")}
+        description={t(
+          "20% mỗi đơn hàng ở Chợ làng chài và toàn bộ phí bù carbon vào Quỹ. Người có ECO bỏ phiếu chọn dự án phục hồi san hô, làm sạch đại dương; dự án được thông qua sẽ được giải ngân tự động.",
+          "20% of every Village Market order and all carbon offset fees go into the Fund. ECO holders vote on coral restoration and ocean clean-up projects; approved projects are paid out automatically.",
+        )}
+        actions={createAction}
+      />
 
       <TreasuryStats
         balance={treasury.balance}
@@ -83,99 +105,122 @@ export default function GovernancePage() {
         disbursementCount={treasury.disbursementCount}
         activeCount={activeCount}
         totalProposals={config.proposalCount}
-        proposalThreshold={config.proposalThreshold}
-        quorumBps={config.quorumBps}
-        votingPeriod={config.votingPeriod}
-        treasuryAddress={treasury.address}
-        explorerUrl={explorerUrl}
       />
 
-      {isConnected && user && <VotingPowerPanel user={user} />}
+      <ParticipationSteps onShowActive={showActive} />
 
-      <section aria-labelledby="proposals-heading" className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 id="proposals-heading" className="text-xl font-bold text-white">
-            {t("Đề xuất dự án bảo tồn", "Conservation project proposals")}
+      <section aria-labelledby="proposals-heading" className="scroll-mt-24 space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <h2 id="proposals-heading" className="text-2xl font-semibold text-text">
+            {t("Dự án bảo tồn biển", "Ocean conservation projects")}
           </h2>
-          <div role="tablist" aria-label={t("Lọc đề xuất", "Filter proposals")} className="flex gap-1 overflow-x-auto rounded-xl bg-slate-900 p-1">
-            {FILTERS.map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                role="tab"
-                aria-selected={filter === f.key}
-                onClick={() => setFilter(f.key)}
-                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  filter === f.key ? "bg-slate-700 text-white" : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                {t(f.label, f.labelEn)}
-              </button>
-            ))}
-          </div>
+          <FilterChips
+            items={FILTERS.map((f) => ({ id: f.key, label: t(f.label, f.labelEn) }))}
+            value={filter}
+            onChange={setFilter}
+            label={t("Lọc đề xuất", "Filter proposals")}
+          />
         </div>
 
         {isError && (
-          <p className="rounded-xl border border-red-900/60 bg-red-950/30 p-3 text-sm text-red-200">
-            {t("Không đọc được dữ liệu DAO (RPC có thể đang quá tải).", "Could not read DAO data (the RPC may be overloaded).")}{" "}
-            <button type="button" onClick={refetch} className="font-semibold underline">
-              {t("Thử lại", "Try again")}
-            </button>
-          </p>
+          <Alert
+            tone="danger"
+            action={
+              <Button variant="secondary" onClick={refetch}>
+                {t("Thử lại", "Try again")}
+              </Button>
+            }
+          >
+            {t("Không đọc được dữ liệu Quỹ bảo tồn biển (máy chủ có thể đang quá tải).", "Could not read Fund data (the RPC may be overloaded).")}
+          </Alert>
         )}
 
         {isLoading ? (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3" aria-label={t("Đang tải đề xuất", "Loading proposals")}>
+          <LoadingRegion label={t("Đang tải đề xuất", "Loading proposals")} className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-72 animate-pulse rounded-3xl bg-slate-900" />
+              <Skeleton key={i} className="h-72 rounded-lg" />
             ))}
-          </div>
+          </LoadingRegion>
         ) : visible.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-700 p-10 text-center">
-            <p className="text-4xl">🌱</p>
-            <p className="mt-3 font-semibold text-slate-200">
-              {proposals.length === 0 ? t("Chưa có đề xuất nào", "No proposals yet") : t("Không có đề xuất nào ở mục này", "No proposals in this category")}
-            </p>
-            <p className="mt-1 text-sm text-slate-400">
-              {proposals.length === 0 && t("Hãy là người đầu tiên đề xuất một dự án bảo tồn cho cộng đồng.", "Be the first to propose a conservation project for the community.")}
-            </p>
-          </div>
+          <EmptyState
+            icon={Waves}
+            title={proposals.length === 0 ? t("Chưa có đề xuất nào", "No proposals yet") : t("Không có đề xuất nào ở mục này", "No proposals in this category")}
+            description={
+              proposals.length === 0
+                ? t("Hãy là người đầu tiên đề xuất một dự án cho biển. Xem vài ý tưởng bên dưới.", "Be the first to propose a project for the sea. See some ideas below.")
+                : t("Thử một mục lọc khác.", "Try another filter.")
+            }
+            action={
+              proposals.length > 0 && (
+                <Button variant="secondary" onClick={() => setFilter("all")}>
+                  {t("Xem tất cả", "Show all")}
+                </Button>
+              )
+            }
+          />
         ) : (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {visible.map((p) => (
               <ProposalCard key={p.id.toString()} proposal={p} now={now} />
             ))}
           </div>
         )}
         {hasMore && !isError && (
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => setLimit((n) => n + PROPOSALS_PAGE_SIZE)}
-              className="rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-700"
-            >
+          <div className="text-center">
+            <Button variant="secondary" onClick={() => setLimit((n) => n + PROPOSALS_PAGE_SIZE)}>
               {t("Xem thêm đề xuất", "Show more proposals")}
-            </button>
+            </Button>
           </div>
         )}
       </section>
 
+      {!isLoading && proposals.length === 0 && (
+        <section aria-labelledby="ideas-heading" className="space-y-4">
+          <h2 id="ideas-heading" className="flex items-center gap-2 text-xl font-semibold text-text">
+            <Lightbulb aria-hidden className="h-5 w-5 text-accent-strong" />
+            {t("Ý tưởng dự án", "Project ideas")}
+          </h2>
+          <ul className="grid gap-4 md:grid-cols-3">
+            {PROPOSAL_TEMPLATES.map((tpl) => {
+              const filled = localizeTemplate(tpl, locale);
+              return (
+                <Card as="li" key={tpl.key} padding="md" className="flex flex-col gap-3">
+                  <CardTitle>{filled.title}</CardTitle>
+                  <CardDescription className="flex-1">{filled.body}</CardDescription>
+                  <Button variant="ghost" iconRight={ArrowRight} disabled={!canPropose} onClick={() => openCreate(tpl)} className="-ml-4 self-start">
+                    {t("Dùng mẫu này", "Use this example")}
+                  </Button>
+                </Card>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      <VotingRules
+        proposalThreshold={config.proposalThreshold}
+        quorumBps={config.quorumBps}
+        votingPeriod={config.votingPeriod}
+        treasuryAddress={treasury.address}
+      />
+
       {treasury.disbursements.length > 0 && (
         <section aria-labelledby="disbursements-heading" className="space-y-3">
-          <h2 id="disbursements-heading" className="text-xl font-bold text-white">
-            💸 {t("Lịch sử giải ngân", "Disbursement history")}
+          <h2 id="disbursements-heading" className="flex items-center gap-2 text-xl font-semibold text-text">
+            <HandCoins aria-hidden className="h-5 w-5 text-primary" />
+            {t("Lịch sử giải ngân", "Disbursement history")}
           </h2>
-          <ul className="divide-y divide-slate-800 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
             {treasury.disbursements.map((d) => (
               <li key={d.index} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
-                <Link href={`/governance/${d.proposalId.toString()}`} className="font-semibold text-slate-200 hover:text-emerald-300">
+                <Link href={`/governance/${d.proposalId.toString()}`} className="inline-flex min-h-11 items-center font-semibold text-text hover:text-primary">
                   {t("Đề xuất", "Proposal")} #{d.proposalId.toString()}
                 </Link>
-                <span className="text-slate-400">
-                  → <span className="font-mono">{shortenAddress(d.recipient)}</span>
+                <span className="inline-flex items-center gap-2 text-text-muted">
+                  {t("tới", "to")} <Address value={d.recipient} />
                 </span>
-                <span className="font-mono font-bold text-amber-300">{formatEth(d.amount, locale)}</span>
-                <span className="text-xs text-slate-400">{formatDateTime(d.timestamp, locale)}</span>
+                <span className="font-semibold tabular-nums text-text">{formatEth(d.amount, locale)}</span>
+                <span className="text-xs font-medium text-text-muted">{formatDateTime(d.timestamp, locale)}</span>
               </li>
             ))}
           </ul>
@@ -183,12 +228,14 @@ export default function GovernancePage() {
       )}
 
       <CreateProposalModal
+        key={template?.key ?? "blank"}
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreated={refetch}
         proposalThreshold={config.proposalThreshold}
         votingPeriod={config.votingPeriod}
         treasuryBalance={treasury.balance}
+        template={template}
       />
     </>
   );

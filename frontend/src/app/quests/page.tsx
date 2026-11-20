@@ -1,23 +1,29 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
 import { useAccount } from "wagmi";
-import { ConnectWalletButton } from "@/components/layout/ConnectWalletButton";
+import { Target, Wallet } from "lucide-react";
 import { QuestCard } from "@/components/quests/QuestCard";
 import { QuestCelebration } from "@/components/quests/QuestCelebration";
 import { QuestSummary } from "@/components/quests/QuestProgress";
+import { Alert, Button, PageHeader } from "@/components/ui";
 import { getChainName } from "@/config/contracts";
-import type { QuestDefinition } from "@/data/quests";
+import { JOURNEY_STAGES, sortByJourney, type QuestDefinition } from "@/data/quests";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useQuestProgress, type QuestWithProgress } from "@/hooks/useQuestProgress";
+import { pickNextQuest } from "@/lib/quests";
 import { useI18n } from "@/providers/LocaleProvider";
+import { useWalletModal } from "@/providers/WalletModal";
 
 export default function QuestsPage() {
   const { t } = useI18n();
   const { chainId } = useActiveChain();
   const { address: user, isConnected } = useAccount();
-  const { address, quests, completedCount, isError, refetch } = useQuestProgress(user);
+  const { open: openWalletModal, prefetch } = useWalletModal();
+  const { address: contract, quests, completedCount, isError, refetch } = useQuestProgress(user);
   const [celebrating, setCelebrating] = useState<QuestDefinition | null>(null);
+  const connected = Boolean(isConnected && user);
 
   const onClaimed = useCallback(
     (quest: QuestWithProgress) => {
@@ -28,78 +34,114 @@ export default function QuestsPage() {
   );
   const closeCelebration = useCallback(() => setCelebrating(null), []);
 
+  const journey = useMemo(() => sortByJourney(quests), [quests]);
+  // Chưa kết nối ví: gợi ý bước đầu tiên của hành trình.
+  const next = connected ? pickNextQuest(journey) : journey[0];
+
   const ecoAvailable = quests.reduce((sum, q) => sum + q.ecoReward, 0);
-  const ecoEarned = quests
-    .filter((q) => q.progress.state === "completed")
-    .reduce((sum, q) => sum + q.ecoReward, 0);
+  const ecoEarned = quests.filter((q) => q.progress.state === "completed").reduce((sum, q) => sum + q.ecoReward, 0);
 
   return (
     <>
-      <section className="relative overflow-hidden rounded-3xl border border-amber-900/50 bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 p-6 sm:p-8">
-        <span className="inline-flex rounded-full border border-amber-800/80 bg-amber-950/80 px-3 py-1 text-xs font-semibold text-amber-300">
-          🎯 Eco Quests · {getChainName(chainId)}
-        </span>
-        <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-          {t("Du lịch tử tế, nhận thưởng xứng đáng", "Travel kindly, earn what you deserve")}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
-          {t(
-            "Hoàn thành nhiệm vụ để nhận thêm EcoToken và mở khoá ImpactBadge hiếm. Điều kiện được smart contract kiểm tra on-chain khi bạn nhận thưởng, và mỗi quest chỉ nhận được một lần.",
-            "Complete quests to earn extra EcoToken and unlock rare ImpactBadges. The smart contract checks the requirements on-chain when you claim, and each quest can be claimed only once.",
-          )}
-        </p>
-      </section>
+      <PageHeader
+        eyebrow={t("Nhiệm vụ bảo tồn", "Conservation Quests")}
+        icon={Target}
+        title={t("Mỗi chuyến đi biển, một việc tốt cho đại dương", "Every sea trip, one good deed for the ocean")}
+        description={
+          <>
+            {t(
+              "Hoàn thành nhiệm vụ để nhận ECO và Huy hiệu Người giữ biển. ECO là lá phiếu của bạn khi cộng đồng chọn dự án phục hồi san hô và làm sạch đại dương trong",
+              "Complete quests to earn ECO and Ocean Keeper badges. ECO is your vote when the community picks coral restoration and ocean clean-up projects in the",
+            )}{" "}
+            <Link href="/governance" className="font-semibold text-primary underline hover:text-primary-hover">
+              {t("Quỹ bảo tồn biển", "Ocean Conservation Fund")}
+            </Link>
+            .
+          </>
+        }
+      />
 
-      {!address ? (
-        <p className="rounded-2xl border border-amber-800/60 bg-amber-950/40 p-4 text-sm text-amber-200">
+      {!contract ? (
+        <Alert tone="warning">
           {t(
-            `Contract QuestRewards chưa được deploy trên ${getChainName(chainId)}, nên chưa thể nhận thưởng quest.`,
-            `The QuestRewards contract is not deployed on ${getChainName(chainId)}, so quest rewards cannot be claimed yet.`,
+            `Hợp đồng nhiệm vụ chưa có trên ${getChainName(chainId)}, nên chưa thể nhận thưởng nhiệm vụ.`,
+            `The quest contract is not deployed on ${getChainName(chainId)}, so quest rewards cannot be claimed yet.`,
           )}
-        </p>
-      ) : !isConnected ? (
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-slate-800 bg-slate-900/60 p-8 text-center">
-          <p className="text-slate-300">{t("Kết nối ví để xem tiến độ và nhận thưởng quest của bạn.", "Connect your wallet to see your progress and claim quest rewards.")}</p>
-          <ConnectWalletButton />
+        </Alert>
+      ) : !connected ? (
+        <div className="flex flex-col gap-3 rounded-md border border-border bg-surface px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-center gap-2 text-sm text-text-muted">
+            <Wallet aria-hidden className="h-4 w-4 shrink-0 text-primary" />
+            {t("Kết nối ví để xem tiến độ và nhận thưởng.", "Connect your wallet to see your progress and claim rewards.")}
+          </p>
+          <Button variant="ghost" onClick={openWalletModal} onPointerEnter={prefetch} onFocus={prefetch} className="self-start sm:self-auto">
+            {t("Kết nối ví", "Connect wallet")}
+          </Button>
         </div>
       ) : (
         <>
-          <QuestSummary
-            completed={completedCount}
-            total={quests.length}
-            ecoEarned={ecoEarned}
-            ecoAvailable={ecoAvailable}
-          />
+          <QuestSummary completed={completedCount} total={quests.length} ecoEarned={ecoEarned} ecoAvailable={ecoAvailable} />
           {isError && (
-            <p className="rounded-xl border border-red-900/60 bg-red-950/30 p-3 text-sm text-red-200">
+            <Alert
+              tone="danger"
+              action={
+                <Button variant="secondary" onClick={refetch}>
+                  {t("Thử lại", "Try again")}
+                </Button>
+              }
+            >
               {t(
-                "Không tải đủ dữ liệu on-chain (RPC có thể đang quá tải); một số tiến độ có thể chưa chính xác.",
+                "Không tải đủ dữ liệu từ mạng (máy chủ có thể đang quá tải); một số tiến độ có thể chưa chính xác.",
                 "Could not load all on-chain data (the RPC may be overloaded); some progress may be inaccurate.",
-              )}{" "}
-              <button type="button" onClick={refetch} className="font-semibold underline">
-                {t("Thử lại", "Try again")}
-              </button>
-            </p>
+              )}
+            </Alert>
           )}
         </>
       )}
 
-      <h2 id="quest-list-title" className="sr-only">
-        {t("Danh sách quest", "Quest list")}
-      </h2>
-      <section aria-labelledby="quest-list-title" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        {quests.map((quest) =>
-          address && isConnected ? (
-            <QuestCard key={quest.id} quest={quest} contract={address} onClaimed={onClaimed} />
-          ) : (
-            <QuestCard
-              key={quest.id}
-              quest={{ ...quest, progress: { ...quest.progress, state: "in-progress", current: 0, ratio: 0 } }}
-              contract={address ?? "0x0000000000000000000000000000000000000000"}
-              onClaimed={onClaimed}
-            />
-          ),
-        )}
+      {next && (
+        <section aria-labelledby="next-quest-title" className="space-y-3">
+          <h2 id="next-quest-title" className="text-2xl font-semibold text-text">
+            {t("Nhiệm vụ tiếp theo", "Your next quest")}
+          </h2>
+          <div className="max-w-2xl">
+            <QuestCard quest={next} contract={contract} connected={connected} onClaimed={onClaimed} featured />
+          </div>
+        </section>
+      )}
+      {connected && !next && quests.length > 0 && (
+        <Alert tone="success" title={t("Bạn đã hoàn thành mọi nhiệm vụ!", "You have completed every quest!")}>
+          {t("Cảm ơn bạn đã chung tay giữ biển xanh.", "Thank you for helping keep the ocean blue.")}
+        </Alert>
+      )}
+
+      <section aria-labelledby="quest-journey-title" className="space-y-8">
+        <h2 id="quest-journey-title" className="text-2xl font-semibold text-text">
+          {t("Hành trình của du khách biển", "The sea traveller's journey")}
+        </h2>
+        <ol className="space-y-8">
+          {JOURNEY_STAGES.map((stage, index) => {
+            const stageQuests = journey.filter((q) => (stage.questKeys as readonly string[]).includes(q.key));
+            if (stageQuests.length === 0) return null;
+            return (
+              <li key={stage.key} className="space-y-4">
+                <h3 className="flex items-center gap-3 text-lg font-semibold text-text">
+                  <span aria-hidden className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-sm tabular-nums text-primary">
+                    {index + 1}
+                  </span>
+                  {t(stage.label, stage.labelEn)}
+                </h3>
+                <ul className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                  {stageQuests.map((quest) => (
+                    <li key={quest.id}>
+                      <QuestCard quest={quest} contract={contract} connected={connected} onClaimed={onClaimed} />
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            );
+          })}
+        </ol>
       </section>
 
       {celebrating && <QuestCelebration quest={celebrating} onClose={closeCelebration} />}

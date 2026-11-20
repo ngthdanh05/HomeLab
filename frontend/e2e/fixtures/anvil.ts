@@ -79,7 +79,11 @@ export const SEED = {
   /** ETH deposited into CommunityTreasury so proposals can be paid. */
   treasuryEth: parseEther("1"),
   listingPrice: parseEther("0.01"),
-  listingName: "Đèn lồng lụa Hội An E2E",
+  listingName: "Đèn ngủ vỏ sò Nhơn Lý E2E",
+  /** Tên hiển thị thay cho địa chỉ ví người bán (metadata, không phải on-chain). */
+  listingArtisan: "Cô Lan",
+  listingVillage: "Làng chài Nhơn Lý",
+  listingContact: "0905 123 456",
 } as const;
 
 const CONTRACTS_DIR = path.resolve(__dirname, "../../../contracts");
@@ -220,7 +224,7 @@ export async function seedChain() {
     }),
   );
 
-  // One handicraft listing (ProductType 0 → buyer gets an ECO_CHECKIN badge).
+  // One sea-craft listing (ProductType 0 → buyer gets an ECO_CHECKIN badge).
   const seller = walletFor("seller");
   await wait(
     await seller.writeContract({
@@ -230,7 +234,13 @@ export async function seedChain() {
       args: [
         SEED.listingPrice,
         0,
-        dataJsonUri({ name: SEED.listingName, description: "Đèn lồng lụa làm thủ công bởi nghệ nhân phố cổ." }),
+        dataJsonUri({
+          name: SEED.listingName,
+          description: "Đèn ngủ ghép từ vỏ sò nhặt trên bãi biển, làm thủ công bởi phụ nữ làng chài.",
+          artisan: SEED.listingArtisan,
+          village: SEED.listingVillage,
+          contact: SEED.listingContact,
+        }),
       ],
     }),
   );

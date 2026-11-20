@@ -4,9 +4,30 @@ import { intlLocale, pick, type Locale } from "./i18n.ts";
 
 /** Mirrors `enum ProductType` in contracts/src/interfaces/IMarketPlaceDeps.sol. */
 export const PRODUCT_TYPES = [
-  { value: 0, label: "Đồ thủ công", labelEn: "Handicrafts", icon: "🧺" },
-  { value: 1, label: "Đặc sản địa phương", labelEn: "Local specialties", icon: "🍯" },
-  { value: 2, label: "Tour trải nghiệm", labelEn: "Experience tours", icon: "🧭" },
+  {
+    value: 0,
+    label: "Thủ công vỏ ốc & gốm biển",
+    labelEn: "Shell crafts & sea pottery",
+    shortLabel: "Thủ công biển",
+    shortLabelEn: "Sea crafts",
+    icon: "handicraft",
+  },
+  {
+    value: 1,
+    label: "Đặc sản làng chài",
+    labelEn: "Fishing village specialties",
+    shortLabel: "Đặc sản",
+    shortLabelEn: "Specialties",
+    icon: "food",
+  },
+  {
+    value: 2,
+    label: "Tour lặn & Trải nghiệm sinh thái",
+    labelEn: "Dive & eco-experience tours",
+    shortLabel: "Tour & trải nghiệm",
+    shortLabelEn: "Tours",
+    icon: "experience",
+  },
 ] as const;
 
 export type ProductTypeValue = (typeof PRODUCT_TYPES)[number]["value"];
@@ -65,8 +86,8 @@ export function buildUploadMessage(address: string, timestampMs: number, locale:
   const wallet = address.toLowerCase();
   return pick(
     locale,
-    `MyHomeLab: tải dữ liệu sản phẩm lên IPFS\nVí: ${wallet}\nThời điểm: ${timestampMs}`,
-    `MyHomeLab: upload listing data to IPFS\nWallet: ${wallet}\nTimestamp: ${timestampMs}`,
+    `San Hô Xanh: tải dữ liệu sản phẩm lên IPFS\nVí: ${wallet}\nThời điểm: ${timestampMs}`,
+    `BlueReef Travel: upload listing data to IPFS\nWallet: ${wallet}\nTimestamp: ${timestampMs}`,
   );
 }
 
@@ -80,7 +101,18 @@ export interface ListingMetadata {
   name: string;
   description: string;
   image?: string;
+  /** Tên nghệ nhân / ngư dân hiển thị thay cho địa chỉ ví. */
+  artisan?: string;
+  /** Làng chài / địa phương. */
+  village?: string;
+  /** Kênh liên hệ công khai của người bán (Zalo, điện thoại, email…) để hẹn giao hàng off-chain. */
+  contact?: string;
+  /** Lịch khởi hành / giờ đón khách của tour. */
+  schedule?: string;
 }
+
+/** ProductType.Experience: đơn của loại này là lịch đặt tour. */
+export const EXPERIENCE_TYPE = 2;
 
 export interface SplitShares {
   artisanBPS: number;
@@ -145,7 +177,27 @@ export function resolveImageUri(uri: unknown, gateway = IPFS_GATEWAY): string | 
   return resolveUri(uri, gateway);
 }
 
-const MAX_TEXT = { name: 120, description: 2000 } as const;
+const MAX_TEXT = { name: 120, description: 2000, detail: 120 } as const;
+
+export const LISTING_DETAIL_FIELDS = ["artisan", "village", "contact", "schedule"] as const;
+export type ListingDetailField = (typeof LISTING_DETAIL_FIELDS)[number];
+
+/** Trường phụ ngắn của metadata: gộp khoảng trắng, cắt độ dài, rỗng ⇒ undefined. */
+function detailText(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.replace(/\s+/g, " ").trim().slice(0, MAX_TEXT.detail);
+  return trimmed || undefined;
+}
+
+/** Làm sạch các trường phụ của form đăng bán (cùng quy tắc khi đọc metadata). */
+export function normalizeListingDetails(raw: Partial<Record<ListingDetailField, unknown>>) {
+  const out: Partial<Record<ListingDetailField, string>> = {};
+  for (const field of LISTING_DETAIL_FIELDS) {
+    const value = detailText(raw[field]);
+    if (value) out[field] = value;
+  }
+  return out;
+}
 
 export function normalizeMetadata(raw: unknown, gateway = IPFS_GATEWAY): ListingMetadata | null {
   if (typeof raw !== "object" || raw === null) return null;
@@ -159,7 +211,90 @@ export function normalizeMetadata(raw: unknown, gateway = IPFS_GATEWAY): Listing
         ? data.description.trim().slice(0, MAX_TEXT.description)
         : "",
     image: resolveImageUri(data.image, gateway) ?? undefined,
+    ...normalizeListingDetails(data),
   };
+}
+
+/** "Tên nghệ nhân · Làng chài", hoặc null khi metadata không có cả hai. */
+export function formatArtisanLine(metadata: Pick<ListingMetadata, "artisan" | "village"> | null | undefined): string | null {
+  const parts = [metadata?.artisan, metadata?.village].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+/**
+ * Biến thông tin liên hệ của người bán thành link an toàn: email → mailto:,
+ * số điện thoại → tel:, URL https (Zalo, Facebook…) → chính nó. Còn lại hiển thị dạng chữ.
+ */
+export function contactHref(contact: string | undefined): string | null {
+  const value = contact?.trim();
+  if (!value) return null;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return `mailto:${value}`;
+  const digits = value.replace(/[\s.()-]/g, "");
+  if (/^\+?\d{8,15}$/.test(digits)) return `tel:${digits}`;
+  if (/^https:\/\/\S+$/i.test(value)) {
+    try {
+      return new URL(value).protocol === "https:" ? value : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+// ─────────────────────────────── Đơn hàng ───────────────────────────────
+
+export type OrderRole = "buyer" | "seller";
+export type OrderStepKey = "paid" | "received" | "released";
+export type OrderStepState = "done" | "current" | "upcoming" | "warning";
+
+export interface OrderStage {
+  /** Đã thanh toán → Đã nhận hàng / hoàn thành tour → Đã giải ngân cho người bán. */
+  steps: { key: OrderStepKey; state: OrderStepState }[];
+  outcome: "escrow" | "disputed" | "completed" | "refunded";
+  /** Unix giây: từ thời điểm này ai cũng giải ngân được (chỉ đơn đang giữ tiền). */
+  releasableAt?: number;
+}
+
+/** Dòng tiến trình của một đơn, suy ra từ trạng thái on-chain. */
+export function getOrderStage(order: Pick<Order, "status" | "paidAt">, escrowPeriod: bigint | undefined): OrderStage {
+  const steps = (received: OrderStepState, released: OrderStepState) => [
+    { key: "paid" as const, state: "done" as const },
+    { key: "received" as const, state: received },
+    { key: "released" as const, state: released },
+  ];
+  switch (order.status) {
+    case ORDER_STATUS.released:
+      return { outcome: "completed", steps: steps("done", "done") };
+    case ORDER_STATUS.refunded:
+      return { outcome: "refunded", steps: steps("warning", "upcoming") };
+    case ORDER_STATUS.disputed:
+      return { outcome: "disputed", steps: steps("warning", "upcoming") };
+    default:
+      return {
+        outcome: "escrow",
+        steps: steps("current", "upcoming"),
+        releasableAt: escrowPeriod !== undefined ? Number(order.paidAt + escrowPeriod) : undefined,
+      };
+  }
+}
+
+/** Ví đang kết nối có việc phải làm với đơn này (hiện ở "Việc cần làm"). */
+export function orderNeedsAction(actions: ReturnType<typeof getOrderActions>): boolean {
+  return actions.canConfirm || actions.canRelease || actions.canResolve;
+}
+
+/** Tin nhắn người mua gửi cho người bán qua kênh off-chain (không ghi dữ liệu cá nhân lên chain). */
+export function buildSellerMessage(
+  input: { listingId: bigint; listingName: string; note: string; isTour: boolean },
+  locale: Locale = "vi",
+): string {
+  const note = input.note.trim().slice(0, 500);
+  const head = pick(
+    locale,
+    `Xin chào, tôi vừa ${input.isTour ? "đặt tour" : "đặt mua"} "${input.listingName}" (đơn #${input.listingId}) trên San Hô Xanh.`,
+    `Hello, I just ${input.isTour ? "booked" : "ordered"} "${input.listingName}" (order #${input.listingId}) on BlueReef Travel.`,
+  );
+  return note ? `${head}\n${note}` : head;
 }
 
 /** Decodes metadata stored inline as `data:application/json;base64,...`. */
@@ -238,30 +373,30 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   InsufficientPayment: "Số ETH gửi không đủ để thanh toán.",
   NotSellerOrOwner: "Chỉ người bán mới có thể huỷ sản phẩm này.",
   ZeroPrice: "Giá phải lớn hơn 0.",
-  PriceBelowMinimum: "Giá thấp hơn mức tối thiểu của Marketplace.",
+  PriceBelowMinimum: "Giá thấp hơn mức tối thiểu của Chợ làng chài.",
   ArtisanNotVerified: "Ví của bạn chưa được xác thực là nghệ nhân nên chưa thể đăng bán.",
   SelfPurchase: "Bạn không thể mua sản phẩm của chính mình.",
   InvalidOrderStatus: "Đơn hàng không ở trạng thái cho phép thao tác này.",
   NotBuyer: "Chỉ người mua mới thực hiện được thao tác này.",
   NotSeller: "Chỉ người bán mới hoàn tiền được đơn hàng này.",
   NotArbiter: "Chỉ trọng tài mới xử lý được tranh chấp.",
-  EscrowNotExpired: "Chưa hết thời hạn escrow của đơn hàng.",
+  EscrowNotExpired: "Chưa hết thời hạn giữ tiền của đơn hàng.",
   DisputeNotStale: "Tranh chấp chưa quá hạn xử lý.",
   EnforcedPause: "Nền tảng đang tạm dừng tính năng này để bảo trì an toàn.",
   EmptyMetadataURI: "Thiếu thông tin sản phẩm (metadata).",
   RefundFailed: "Không hoàn lại được tiền thừa cho ví của bạn.",
   // CarbonOffset
   InvalidCarbonAmount: "Lượng CO₂ bù đắp không hợp lệ (từ 1 kg đến 100 tấn mỗi lần).",
-  MetadataTooLong: "Thông tin badge quá dài.",
-  AlreadyCompleted: "Bạn đã nhận thưởng quest này rồi.",
-  RequirementNotMet: "Chưa đạt điều kiện của quest (dữ liệu on-chain có thể chưa cập nhật, hãy thử lại sau ít giây).",
-  QuestInactive: "Quest này đang tạm dừng.",
-  QuestNotFound: "Không tìm thấy quest.",
-  TooManyProofIds: "Quá nhiều badge bằng chứng trong một lần claim.",
+  MetadataTooLong: "Thông tin huy hiệu quá dài.",
+  AlreadyCompleted: "Bạn đã nhận thưởng nhiệm vụ này rồi.",
+  RequirementNotMet: "Chưa đạt điều kiện của nhiệm vụ (dữ liệu có thể chưa cập nhật, hãy thử lại sau ít giây).",
+  QuestInactive: "Nhiệm vụ này đang tạm dừng.",
+  QuestNotFound: "Không tìm thấy nhiệm vụ.",
+  TooManyProofIds: "Quá nhiều huy hiệu bằng chứng trong một lần nhận thưởng.",
   // Governance / CommunityTreasury
-  AlreadyVoted: "Bạn đã vote rồi. Mỗi ví chỉ được bỏ phiếu một lần cho mỗi đề xuất.",
+  AlreadyVoted: "Bạn đã bỏ phiếu rồi. Mỗi ví chỉ được bỏ phiếu một lần cho mỗi đề xuất.",
   NoVotingPower:
-    "Ví không có quyền biểu quyết tại thời điểm tạo đề xuất (cần nắm ECO và kích hoạt quyền vote trước khi đề xuất được tạo).",
+    "Ví không có quyền biểu quyết tại thời điểm tạo đề xuất (cần nắm ECO và kích hoạt quyền bỏ phiếu trước khi đề xuất được tạo).",
   VotingClosed: "Đề xuất đã hết hạn bỏ phiếu.",
   VotingNotStarted: "Đề xuất chưa mở bỏ phiếu, vui lòng quay lại sau.",
   TimelockNotElapsed: "Đề xuất đang trong thời gian chờ an toàn, chưa thể giải ngân.",
@@ -269,11 +404,11 @@ const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   ExceedsDisbursementCap: "Số ETH yêu cầu vượt trần giải ngân cho mỗi đề xuất so với số dư Quỹ hiện tại.",
   NotGuardian: "Chỉ guardian mới được huỷ đề xuất.",
   VotingNotEnded: "Chưa hết thời gian bỏ phiếu, chưa thể thực thi đề xuất.",
-  QuorumNotReached: "Đề xuất không đạt quorum (không đủ số phiếu tối thiểu) nên không thể thực thi.",
+  QuorumNotReached: "Đề xuất không đạt số phiếu tối thiểu nên không thể giải ngân.",
   AlreadyFinalized: "Đề xuất đã được thực thi hoặc chốt kết quả rồi.",
   BelowProposalThreshold: "Số dư ECO chưa đạt ngưỡng tối thiểu để tạo đề xuất.",
   ProposalNotFound: "Không tìm thấy đề xuất.",
-  InsufficientBalance: "Quỹ Cộng đồng không đủ ETH để giải ngân đề xuất này.",
+  InsufficientBalance: "Quỹ bảo tồn biển không đủ ETH để giải ngân đề xuất này.",
   TransferFailed: "Không chuyển được ETH tới ví nhận.",
   NotGovernance: "Chỉ hợp đồng Governance mới được giải ngân từ Quỹ.",
   ZeroAmount: "Số tiền phải lớn hơn 0.",
@@ -321,7 +456,7 @@ const CONTRACT_ERROR_MESSAGES_EN: Record<string, string> = {
   AlreadyFinalized: "This proposal has already been executed or finalized.",
   BelowProposalThreshold: "Your ECO balance is below the minimum required to create a proposal.",
   ProposalNotFound: "Proposal not found.",
-  InsufficientBalance: "The Community Treasury does not have enough ETH to disburse this proposal.",
+  InsufficientBalance: "The Ocean Conservation Fund does not have enough ETH to disburse this proposal.",
   TransferFailed: "The ETH could not be transferred to the recipient wallet.",
   NotGovernance: "Only the Governance contract can disburse from the Treasury.",
   ZeroAmount: "The amount must be greater than 0.",

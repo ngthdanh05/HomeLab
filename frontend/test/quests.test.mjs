@@ -133,3 +133,24 @@ describe("parseViewedHeritage", () => {
     assert.deepEqual(parseViewedHeritage(null), []);
   });
 });
+
+describe("hành trình du khách biển", async () => {
+  const { JOURNEY_STAGES, sortByJourney } = await import("../src/data/quests.ts");
+  const { pickNextQuest } = await import("../src/lib/quests.ts");
+
+  test("mọi nhiệm vụ thuộc đúng một chặng", () => {
+    const keys = JOURNEY_STAGES.flatMap((s) => [...s.questKeys]);
+    assert.deepEqual([...keys].sort(), QUESTS.map((q) => q.key).sort());
+  });
+
+  test("sắp xếp theo hành trình: di sản → bù carbon → mua thủ công → bỏ phiếu", () => {
+    assert.deepEqual(sortByJourney(QUESTS).map((q) => q.id), [5, 2, 3, 0, 1, 4]);
+  });
+
+  test("nhiệm vụ tiếp theo: ưu tiên nhận thưởng, rồi nhiệm vụ đang làm đầu tiên", () => {
+    const q = (key, state) => ({ key, progress: { state } });
+    assert.equal(pickNextQuest([q("a", "completed"), q("b", "in-progress"), q("c", "ready")]).key, "c");
+    assert.equal(pickNextQuest([q("a", "completed"), q("b", "in-progress"), q("c", "in-progress")]).key, "b");
+    assert.equal(pickNextQuest([q("a", "completed"), q("b", "loading")]), undefined);
+  });
+});

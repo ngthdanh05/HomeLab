@@ -2,7 +2,24 @@
 
 import React from "react";
 import Link from "next/link";
+import {
+  Award,
+  Banknote,
+  CircleX,
+  Earth,
+  ExternalLink,
+  Leaf,
+  Package,
+  RefreshCw,
+  ScrollText,
+  ShoppingBag,
+  Target,
+  Undo2,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { formatEther, type Address } from "viem";
+import { Alert, AppIcon } from "@/components/ui";
 import { ECO_DECIMALS } from "@/hooks/useEcoTokenBalance";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useActivityFeed } from "@/hooks/useActivityFeed";
@@ -19,17 +36,18 @@ import { getQuest, localizeQuest } from "@/data/quests";
 import { intlLocale } from "@/lib/i18n";
 import { useI18n } from "@/providers/LocaleProvider";
 
-const KIND_INFO: Record<ActivityKind, { icon: string; title: string; titleEn: string; tone: string }> = {
-  purchase: { icon: "🛍️", title: "Mua sản phẩm", titleEn: "Bought a product", tone: "bg-emerald-500/15 text-emerald-300" },
-  sale: { icon: "💰", title: "Bán được sản phẩm", titleEn: "Sold a product", tone: "bg-amber-500/15 text-amber-300" },
-  listing: { icon: "📦", title: "Đăng bán sản phẩm", titleEn: "Listed a product", tone: "bg-sky-500/15 text-sky-300" },
-  cancel: { icon: "✖️", title: "Huỷ đăng bán", titleEn: "Cancelled a listing", tone: "bg-slate-500/15 text-slate-300" },
-  income: { icon: "💸", title: "Nhận thanh toán D2C", titleEn: "Received a D2C payment", tone: "bg-amber-500/15 text-amber-300" },
-  refund: { icon: "↩️", title: "Được hoàn tiền", titleEn: "Refunded", tone: "bg-sky-500/15 text-sky-300" },
-  reward: { icon: "🌱", title: "Nhận thưởng ECO", titleEn: "Earned ECO", tone: "bg-emerald-500/15 text-emerald-300" },
-  offset: { icon: "🌍", title: "Bù đắp carbon", titleEn: "Carbon offset", tone: "bg-sky-500/15 text-sky-300" },
-  quest: { icon: "🎯", title: "Hoàn thành quest", titleEn: "Completed a quest", tone: "bg-amber-500/15 text-amber-300" },
-  badge: { icon: "🏅", title: "Nhận ImpactBadge", titleEn: "Received an ImpactBadge", tone: "bg-violet-500/15 text-violet-300" },
+// Thưởng (ECO, nhiệm vụ, huy hiệu) dùng màu accent; giao dịch tiền dùng primary.
+const KIND_INFO: Record<ActivityKind, { icon: LucideIcon; title: string; titleEn: string; tone: string }> = {
+  purchase: { icon: ShoppingBag, title: "Mua sản phẩm", titleEn: "Bought a product", tone: "bg-primary-soft text-primary" },
+  sale: { icon: Banknote, title: "Bán được sản phẩm", titleEn: "Sold a product", tone: "bg-primary-soft text-primary" },
+  listing: { icon: Package, title: "Đăng bán sản phẩm", titleEn: "Listed a product", tone: "bg-info-soft text-info" },
+  cancel: { icon: CircleX, title: "Huỷ đăng bán", titleEn: "Cancelled a listing", tone: "bg-bg text-text-muted" },
+  income: { icon: Wallet, title: "Nhận thanh toán từ người mua", titleEn: "Received a D2C payment", tone: "bg-primary-soft text-primary" },
+  refund: { icon: Undo2, title: "Được hoàn tiền", titleEn: "Refunded", tone: "bg-info-soft text-info" },
+  reward: { icon: Leaf, title: "Nhận thưởng ECO", titleEn: "Earned ECO", tone: "bg-accent-soft text-accent-strong" },
+  offset: { icon: Earth, title: "Bù đắp carbon", titleEn: "Carbon offset", tone: "bg-info-soft text-info" },
+  quest: { icon: Target, title: "Hoàn thành nhiệm vụ", titleEn: "Completed a quest", tone: "bg-accent-soft text-accent-strong" },
+  badge: { icon: Award, title: "Nhận Huy hiệu tác động", titleEn: "Received an ImpactBadge", tone: "bg-accent-soft text-accent-strong" },
 };
 
 /** Listing name from its metadata (cached, shared with the marketplace pages). */
@@ -38,7 +56,7 @@ function ListingName({ listingId }: { listingId: bigint }) {
   const { listing } = useListing(listingId);
   const metadata = useListingMetadata(listing?.metadataURI);
   return (
-    <Link href={`/marketplace/${listingId}`} className="font-medium text-white hover:text-emerald-400">
+    <Link href={`/marketplace/${listingId}`} className="font-medium text-text hover:text-primary">
       {metadata.data?.name ?? `${t("Sản phẩm", "Product")} #${listingId}`}
     </Link>
   );
@@ -47,20 +65,21 @@ function ListingName({ listingId }: { listingId: bigint }) {
 function ActivityRow({ item, explorerUrl }: { item: ActivityItem; explorerUrl?: string }) {
   const { locale, t } = useI18n();
   const info = KIND_INFO[item.kind];
+  const KindIcon = info.icon;
   const quest = item.questId !== undefined ? getQuest(item.questId) : undefined;
   const sign = item.kind === "purchase" || item.kind === "offset" ? "−" : item.kind === "sale" || item.kind === "income" || item.kind === "refund" ? "+" : "";
 
   return (
     <li className="flex gap-3 py-4">
-      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg ${info.tone}`} aria-hidden>
-        {info.icon}
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${info.tone}`} aria-hidden>
+        <KindIcon className="h-5 w-5" />
       </span>
-      <div className="min-w-0 flex-1 space-y-1.5">
+      <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-          <p className="text-sm text-slate-300">
+          <p className="text-sm text-text-muted">
             {t(info.title, info.titleEn)}
             {item.carbonGrams !== undefined && (
-              <span className="font-medium text-white">
+              <span className="font-medium text-text">
                 {" "}
                 {(Number(item.carbonGrams) / 1000).toLocaleString(intlLocale(locale), { maximumFractionDigits: 2 })} kg CO₂
               </span>
@@ -68,7 +87,7 @@ function ActivityRow({ item, explorerUrl }: { item: ActivityItem; explorerUrl?: 
             {item.questId !== undefined && (
               <>
                 {": "}
-                <Link href="/quests" className="font-medium text-white hover:text-emerald-400">
+                <Link href="/quests" className="font-medium text-text hover:text-primary">
                   {quest ? localizeQuest(quest, locale).title : `Quest #${item.questId}`}
                 </Link>
               </>
@@ -81,45 +100,50 @@ function ActivityRow({ item, explorerUrl }: { item: ActivityItem; explorerUrl?: 
             )}
           </p>
           {item.amountWei !== undefined && (
-            <span className="font-mono text-sm font-semibold text-slate-100">
+            <span className="text-sm font-semibold tabular-nums text-text">
               {sign}
               {formatEther(item.amountWei)} ETH
             </span>
           )}
         </div>
 
-        <div className="flex flex-wrap gap-1.5 text-[11px]">
+        <div className="flex flex-wrap gap-2 text-xs">
           {item.ecoReward !== undefined && item.ecoReward > 0n && (
-            <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 font-medium text-emerald-300">
+            <span className="rounded-sm bg-accent-soft px-2 py-1 font-medium tabular-nums text-accent-strong">
               +{formatTokenAmount(item.ecoReward, ECO_DECIMALS, 4, locale)} ECO
             </span>
           )}
           {item.badges.map((b) => {
             const type = getBadgeType(b.badgeType);
             return (
-              <span key={b.tokenId.toString()} className="rounded-md bg-violet-500/15 px-2 py-0.5 font-medium text-violet-300">
-                {type.icon} {type.label} #{b.tokenId.toString()}
+              <span
+                key={b.tokenId.toString()}
+                className="inline-flex items-center gap-1 rounded-sm bg-accent-soft px-2 py-1 font-medium text-accent-strong"
+              >
+                <AppIcon name={type.icon} className="h-4 w-4" />
+                {t<string>(type.label, type.labelEn)} #{b.tokenId.toString()}
               </span>
             );
           })}
           {item.split && item.kind === "purchase" && (
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">
+            <span className="rounded-sm bg-bg px-2 py-1 tabular-nums text-text-muted">
               {t("Nghệ nhân", "Artisan")} {formatEther(item.split.artisan)} · {t("Quỹ", "Treasury")} {formatEther(item.split.treasury)} ·{" "}
               {t("Nền tảng", "Platform")} {formatEther(item.split.platform)} ETH
             </span>
           )}
         </div>
 
-        <p className="flex flex-wrap gap-x-3 text-[11px] text-slate-400">
+        <p className="flex flex-wrap gap-x-3 text-xs text-text-muted">
           <span>{item.timestamp ? formatDateTime(item.timestamp, locale) : `Block #${item.blockNumber}`}</span>
           {explorerUrl ? (
             <a
               href={`${explorerUrl}/tx/${item.txHash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono hover:text-emerald-400"
+              className="inline-flex items-center gap-1 font-mono hover:text-primary"
             >
-              {shortenAddress(item.txHash, 6)} ↗
+              {shortenAddress(item.txHash, 6)}
+              <ExternalLink aria-hidden className="h-4 w-4" />
             </a>
           ) : (
             <span className="font-mono">{shortenAddress(item.txHash, 6)}</span>
@@ -136,50 +160,52 @@ export function ActivityFeed({ user }: { user: Address }) {
   const { data: items, isLoading, error, refetch, isFetching } = useActivityFeed(user);
 
   return (
-    <section aria-labelledby="activity-title" className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6">
+    <section id="activity" aria-labelledby="activity-title" className="scroll-mt-24 rounded-lg border border-border bg-surface p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <h2 id="activity-title" className="text-xl font-bold text-white">
-          📜 {t("Lịch sử hoạt động", "Activity history")}
+        <h2 id="activity-title" className="flex items-center gap-2 text-xl font-semibold text-text">
+          <ScrollText aria-hidden className="h-5 w-5 text-primary" />
+          {t("Lịch sử giao dịch", "Transaction history")}
         </h2>
         <button
           type="button"
           onClick={() => void refetch()}
           disabled={isFetching}
-          className="rounded-lg px-2.5 py-1 text-xs text-slate-400 hover:bg-slate-800 hover:text-slate-200 disabled:opacity-50"
+          className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium text-text-muted transition-colors hover:bg-primary-soft hover:text-text disabled:opacity-50"
         >
-          {isFetching ? t("Đang tải…", "Loading…") : t("↻ Làm mới", "↻ Refresh")}
+          <RefreshCw aria-hidden className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          {isFetching ? t("Đang tải…", "Loading…") : t("Làm mới", "Refresh")}
         </button>
       </div>
 
       {isLoading ? (
-        <ul className="mt-2 divide-y divide-slate-800" aria-label={t("Đang tải lịch sử", "Loading history")}>
+        <ul className="mt-2 divide-y divide-border" aria-label={t("Đang tải lịch sử", "Loading history")}>
           {Array.from({ length: 3 }, (_, i) => (
             <li key={i} className="flex gap-3 py-4" aria-hidden>
-              <div className="h-10 w-10 animate-pulse rounded-xl bg-slate-800" />
+              <div className="h-10 w-10 animate-pulse rounded-md bg-bg" />
               <div className="flex-1 space-y-2">
-                <div className="h-4 w-2/3 animate-pulse rounded bg-slate-800" />
-                <div className="h-3 w-1/3 animate-pulse rounded bg-slate-800" />
+                <div className="h-4 w-2/3 animate-pulse rounded-sm bg-bg" />
+                <div className="h-3 w-1/3 animate-pulse rounded-sm bg-bg" />
               </div>
             </li>
           ))}
         </ul>
       ) : error && !items ? (
-        <p className="mt-4 rounded-xl border border-red-900/60 bg-red-950/30 p-4 text-sm text-red-200">
+        <Alert tone="danger" className="mt-4">
           {t("Không tải được lịch sử giao dịch từ blockchain (RPC có thể đang quá tải).", "Could not load transaction history from the blockchain (the RPC may be overloaded).")}{" "}
-          <button type="button" onClick={() => void refetch()} className="font-semibold underline">
+          <button type="button" onClick={() => void refetch()} className="min-h-11 font-semibold underline hover:text-danger">
             {t("Thử lại", "Try again")}
           </button>
-        </p>
+        </Alert>
       ) : !items || items.length === 0 ? (
-        <p className="mt-4 text-sm text-slate-400">
+        <p className="mt-4 text-sm text-text-muted">
           {t("Chưa có hoạt động nào. Giao dịch mua/bán trên", "No activity yet. Purchases and sales on the")}{" "}
-          <Link href="/marketplace" className="text-emerald-400 hover:underline">
-            Marketplace
+          <Link href="/marketplace" className="font-semibold text-primary underline">
+            {t("Chợ làng chài", "Village Market")}
           </Link>{" "}
           {t("sẽ xuất hiện ở đây.", "will appear here.")}
         </p>
       ) : (
-        <ul className="mt-2 divide-y divide-slate-800">
+        <ul className="mt-2 divide-y divide-border">
           {items.map((item) => (
             <ActivityRow key={item.txHash} item={item} explorerUrl={explorerUrl} />
           ))}

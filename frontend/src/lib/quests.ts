@@ -155,3 +155,14 @@ export function markHeritageViewed(id: string): void {
     // Storage blocked (private mode): the quest simply can't track views.
   }
 }
+
+/**
+ * "Nhiệm vụ tiếp theo" trong danh sách đã xếp theo hành trình: ưu tiên nhiệm vụ đã đủ
+ * điều kiện nhận thưởng, sau đó là nhiệm vụ đầu tiên còn đang làm dở.
+ */
+export function pickNextQuest<T extends { progress: Pick<QuestProgress, "state"> }>(journeyOrdered: readonly T[]): T | undefined {
+  return (
+    journeyOrdered.find((q) => q.progress.state === "ready") ??
+    journeyOrdered.find((q) => q.progress.state === "in-progress")
+  );
+}

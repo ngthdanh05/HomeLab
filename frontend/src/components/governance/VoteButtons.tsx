@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { useAccount } from "wagmi";
-import { Spinner } from "@/components/marketplace/PurchaseButton";
+import { ThumbsDown, ThumbsUp } from "lucide-react";
+import { Alert, Spinner } from "@/components/ui";
 import { GovernanceABI } from "@/config/contracts";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useContractTx } from "@/hooks/useContractTx";
@@ -21,7 +22,7 @@ interface VoteButtonsProps {
   onVoted?: () => void;
 }
 
-/** "Vote For 👍" / "Vote Against 👎" → Governance.vote(); disabled once the wallet has voted. */
+/** "Vote For" / "Vote Against" → Governance.vote(); disabled once the wallet has voted. */
 export function VoteButtons({ proposalId, isOpen, hasVoted, mySupport, votingPower, onVoted }: VoteButtonsProps) {
   const { locale, t } = useI18n();
   const { isConnected } = useAccount();
@@ -29,7 +30,7 @@ export function VoteButtons({ proposalId, isOpen, hasVoted, mySupport, votingPow
   const [choice, setChoice] = useState<boolean | null>(null);
   const { send, status, isBusy } = useContractTx({
     pending: t("Đang gửi phiếu bầu", "Sending your vote"),
-    success: t("Bỏ phiếu thành công! 🗳️", "Vote recorded! 🗳️"),
+    success: t("Bỏ phiếu thành công!", "Vote recorded!"),
   });
 
   const vote = async (support: boolean) => {
@@ -49,20 +50,26 @@ export function VoteButtons({ proposalId, isOpen, hasVoted, mySupport, votingPow
   const button = (support: boolean) => {
     const busyHere = isBusy && choice === support;
     const base =
-      "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition-colors disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-400";
+      "flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md px-4 py-3 font-semibold transition-colors disabled:cursor-not-allowed disabled:bg-border disabled:text-text-muted";
     const tone = support
-      ? "bg-emerald-700 text-white hover:bg-emerald-600"
-      : "bg-red-600/90 text-white hover:bg-red-500";
+      ? "bg-primary text-white hover:bg-primary-hover"
+      : "bg-danger text-white hover:bg-danger/90";
     return (
       <button type="button" onClick={() => vote(support)} disabled={disabled} className={`${base} ${tone}`}>
-        {busyHere && <Spinner />}
+        {busyHere ? (
+          <Spinner />
+        ) : support ? (
+          <ThumbsUp aria-hidden className="h-5 w-5" />
+        ) : (
+          <ThumbsDown aria-hidden className="h-5 w-5" />
+        )}
         {busyHere
           ? status === "awaiting-wallet"
             ? t("Xác nhận trong ví…", "Confirm in wallet…")
             : t("Đang chờ xác nhận…", "Waiting for confirmation…")
           : support
-            ? t("Đồng ý 👍", "Vote For 👍")
-            : t("Phản đối 👎", "Vote Against 👎")}
+            ? t("Đồng ý", "Vote For")
+            : t("Phản đối", "Vote Against")}
       </button>
     );
   };
@@ -77,32 +84,32 @@ export function VoteButtons({ proposalId, isOpen, hasVoted, mySupport, votingPow
       )}
 
       {hasVoted ? (
-        <p role="status" className="rounded-xl border border-emerald-800/60 bg-emerald-950/40 p-3 text-sm text-emerald-200">
-          ✅ {t("Bạn đã vote rồi", "You have already voted")}
-          {mySupport !== undefined && (mySupport ? t(" — Đồng ý 👍", ": For 👍") : t(" — Phản đối 👎", ": Against 👎"))}.{" "}
+        <Alert tone="success">
+          {t("Bạn đã bỏ phiếu rồi", "You have already voted")}
+          {mySupport !== undefined && (mySupport ? t(" — Đồng ý", ": For") : t(" — Phản đối", ": Against"))}.{" "}
           {t("Mỗi ví chỉ bỏ phiếu một lần cho mỗi đề xuất.", "Each wallet can vote once per proposal.")}
-        </p>
+        </Alert>
       ) : !isOpen ? (
-        <p className="text-sm text-slate-400">{t("Đề xuất đã hết hạn bỏ phiếu.", "Voting on this proposal has ended.")}</p>
+        <p className="text-sm text-text-muted">{t("Đề xuất đã hết hạn bỏ phiếu.", "Voting on this proposal has ended.")}</p>
       ) : !isConnected ? (
-        <p className="text-sm text-slate-400">{t("Kết nối ví để bỏ phiếu.", "Connect your wallet to vote.")}</p>
+        <p className="text-sm text-text-muted">{t("Kết nối ví để bỏ phiếu.", "Connect your wallet to vote.")}</p>
       ) : noPower ? (
-        <p className="rounded-xl border border-amber-800/60 bg-amber-950/40 p-3 text-sm text-amber-200">
+        <Alert tone="warning" role={null}>
           {t(
             <>
-              Ví của bạn không có quyền biểu quyết cho đề xuất này: phiếu được tính theo số ECO đã kích hoạt quyền vote
-              (delegate) <strong>trước khi</strong> đề xuất được tạo. Hãy kích hoạt quyền vote để tham gia các đề xuất sau.
+              Ví của bạn không có quyền bỏ phiếu cho đề xuất này: phiếu được tính theo số ECO đã kích hoạt quyền bỏ phiếu{" "}
+              <strong>trước khi</strong> đề xuất được tạo. Hãy kích hoạt quyền bỏ phiếu để tham gia các đề xuất sau.
             </>,
             <>
               Your wallet has no voting power on this proposal: votes are counted from ECO with voting power activated
               (delegated) <strong>before</strong> the proposal was created. Activate voting power to join later proposals.
             </>,
           )}
-        </p>
+        </Alert>
       ) : votingPower !== undefined ? (
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-text-muted">
           {t("Trọng số phiếu của bạn:", "Your voting weight:")}{" "}
-          <span className="font-semibold text-slate-200">{formatTokenAmount(votingPower, 18, 2, locale)} ECO</span>
+          <span className="font-semibold tabular-nums text-text">{formatTokenAmount(votingPower, 18, 2, locale)} ECO</span>
         </p>
       ) : null}
     </div>

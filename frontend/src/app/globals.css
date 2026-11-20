@@ -2,22 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens — "biển & làng chài" (light). Values are RGB channels so Tailwind
+ * opacity modifiers work (bg-primary/10). Map by role in tailwind.config.js; never
+ * use raw palette classes (slate-*, emerald-*…) in components.
+ * Contrast (WCAG AA): text/bg 14.1 · text-muted/surface 6.3 · white/primary 6.9 ·
+ * primary/primary-soft 6.0 · white/accent 4.6 · accent-strong/accent-soft 4.6 ·
+ * border-strong/surface 3.6 (non-text ≥ 3) · status pairs ≥ 6.3.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg: 247 249 249; /* #F7F9F9 cát trắng bọt sóng */
+  --color-surface: 255 255 255; /* #FFFFFF thẻ, modal */
+  --color-border: 220 229 230; /* #DCE5E6 viền trang trí */
+  --color-border-strong: 120 139 142; /* #788B8E viền ô nhập */
+  --color-text: 19 42 51; /* #132A33 xanh đen đáy biển */
+  --color-text-muted: 77 100 109; /* #4D646D */
+  --color-primary: 14 99 117; /* #0E6375 xanh đại dương sâu */
+  --color-primary-hover: 10 77 92; /* #0A4D5C */
+  --color-primary-soft: 227 242 245; /* #E3F2F5 */
+  --color-accent: 194 81 58; /* #C2513A cam san hô */
+  --color-accent-strong: 178 75 53; /* #B24B35 chữ trên accent-soft (accent chỉ đạt 4.0) */
+  --color-accent-soft: 252 236 232; /* #FCECE8 */
+  --color-warning: 122 79 0; /* #7A4F00 */
+  --color-warning-soft: 251 240 217; /* #FBF0D9 */
+  --color-danger: 163 34 27; /* #A3221B */
+  --color-danger-soft: 251 231 229; /* #FBE7E5 */
+  --color-info: 27 90 133; /* #1B5A85 */
+  --color-info-soft: 227 239 247; /* #E3EFF7 */
+
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: rgb(var(--color-bg));
+  /* Link neo (#section) không bị header dính 64px che mất tiêu đề. */
+  scroll-padding-top: 5rem;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: rgb(var(--color-bg));
+  color: rgb(var(--color-text));
+  font-family: var(--font-be-vietnam-pro), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: rgb(var(--color-primary-soft));
+  color: rgb(var(--color-text));
+}
+
+/* Focus ring dùng chung cho mọi phần tử tương tác (bàn phím). */
+:focus-visible {
+  outline: 2px solid rgb(var(--color-primary));
+  outline-offset: 2px;
 }
 
 /* 3D flip for dashboard badge cards (BadgeCard). */
@@ -58,8 +94,8 @@ body {
   100% { opacity: 0; transform: translate3d(var(--dx), var(--dy), 0) rotate(var(--rot)); }
 }
 @keyframes quest-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
-  50% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--color-accent) / 0.4); }
+  50% { box-shadow: 0 0 0 14px rgb(var(--color-accent) / 0); }
 }
 .quest-pop {
   animation: quest-pop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;

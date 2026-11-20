@@ -54,7 +54,10 @@ describe("English text is complete", () => {
   test("labels have an English version", () => {
     for (const mode of TRANSPORT_MODES) assert.ok(mode.labelEn && !hasVietnameseMarks(mode.labelEn), mode.id);
     for (const type of PRODUCT_TYPES) assert.ok(type.labelEn);
-    for (const badge of BADGE_TYPES) assert.ok(badge.descriptionEn && !hasVietnameseMarks(badge.descriptionEn), badge.key);
+    for (const badge of BADGE_TYPES) {
+      assert.ok(badge.descriptionEn && !hasVietnameseMarks(badge.descriptionEn), badge.key);
+      assert.ok(badge.labelEn && !hasVietnameseMarks(badge.labelEn), badge.key);
+    }
     for (const info of Object.values(LEVEL_INFO)) assert.ok(info.labelEn && info.hintEn);
     for (const info of Object.values(PROPOSAL_STATUS_INFO)) assert.ok(info.labelEn && !hasVietnameseMarks(info.labelEn));
   });
@@ -95,7 +98,7 @@ describe("English text is complete", () => {
 describe("messages follow the language", () => {
   test("contract errors", () => {
     const error = { data: { errorName: "AlreadyVoted" } };
-    assert.match(getTxErrorMessage(error), /Bạn đã vote/);
+    assert.match(getTxErrorMessage(error), /Bạn đã bỏ phiếu/);
     assert.match(getTxErrorMessage(error, "en"), /already voted/);
     assert.match(getTxErrorMessage({ code: 4001 }, "en"), /cancelled/);
     assert.match(getTxErrorMessage({}, "en"), /Transaction failed/);

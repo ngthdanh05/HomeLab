@@ -33,7 +33,13 @@ export function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
-/** The header's ConnectKit button once connected, labelled with the shortened address. */
+/** Opens the header wallet menu and follows its "Của tôi" link (My Page is no longer a top-level nav item). */
+export async function openMyPage(page: Page, address: string) {
+  await connectedButton(page, address).click();
+  await page.getByRole("banner").getByRole("link", { name: /^Của tôi/ }).click();
+}
+
+/** The header's wallet menu button once connected, labelled with the shortened address. */
 export function connectedButton(page: Page, address: string) {
   const [start, end] = connectKitAddress(address).split("••••");
   return page.getByRole("banner").getByRole("button", { name: new RegExp(`${start}.*${end}`, "i") });

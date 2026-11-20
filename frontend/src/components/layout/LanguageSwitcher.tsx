@@ -7,7 +7,7 @@ import { useI18n } from "@/providers/LocaleProvider";
 // Drawn as SVG because Windows browsers render flag emoji as plain letters.
 function VietnamFlag() {
   return (
-    <svg viewBox="0 0 30 20" className="h-3.5 w-5 rounded-[2px]" aria-hidden>
+    <svg viewBox="0 0 30 20" className="h-4 w-5 rounded-[2px]" aria-hidden>
       <rect width="30" height="20" fill="#da251d" />
       <polygon
         fill="#ffff00"
@@ -19,7 +19,7 @@ function VietnamFlag() {
 
 function BritishFlag() {
   return (
-    <svg viewBox="0 0 30 20" className="h-3.5 w-5 rounded-[2px]" aria-hidden>
+    <svg viewBox="0 0 30 20" className="h-4 w-5 rounded-[2px]" aria-hidden>
       <rect width="30" height="20" fill="#012169" />
       <path d="M0 0 30 20M30 0 0 20" stroke="#fff" strokeWidth="4" />
       <path d="M0 0 30 20M30 0 0 20" stroke="#c8102e" strokeWidth="1.6" />
@@ -42,7 +42,7 @@ export function LanguageSwitcher() {
     <div
       role="group"
       aria-label={t("Chọn ngôn ngữ", "Choose language")}
-      className="flex h-10 items-center gap-0.5 rounded-xl bg-slate-800 p-1"
+      className="flex items-center gap-1 rounded-md bg-bg"
     >
       {OPTIONS.map(({ locale: option, code, name, Flag }) => (
         <button
@@ -55,8 +55,9 @@ export function LanguageSwitcher() {
           onClick={() => {
             if (locale !== option) setLocale(option);
           }}
-          className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-            locale === option ? "bg-emerald-700 text-white" : "text-slate-400 hover:text-slate-200"
+          className={`flex h-11 min-w-11 items-center justify-center gap-2 rounded-md px-2 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+            // Dưới sm chỉ hiện nút của ngôn ngữ còn lại để header 375px vẫn nằm trên một hàng.
+            locale === option ? "hidden bg-primary text-white sm:flex" : "text-text-muted hover:text-text"
           }`}
         >
           <Flag />

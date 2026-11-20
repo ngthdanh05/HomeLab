@@ -135,7 +135,7 @@ describe("buildOffsetMetadataUri", () => {
     assert.equal(meta.location, "Hội An");
     assert.equal(meta.description, "Bay HN - ĐN");
     assert.equal(meta.timestamp, 1);
-    assert.match(meta.name, /Zero Carbon/);
+    assert.match(meta.name, /Bù đắp carbon/);
   });
 
   test("stays under the contract's 2 KB limit", () => {

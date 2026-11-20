@@ -1,33 +1,30 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { CircleAlert, Leaf, Map as MapIcon, MessageCircle, SendHorizontal, Square } from "lucide-react";
 import { useAIChat, ChatContext } from "@/hooks/useAIChat";
 import { ChatBubble } from "./ChatBubble";
 import { ItineraryCard } from "./ItineraryCard";
 import { useI18n } from "@/providers/LocaleProvider";
 import type { Itinerary } from "@/types/ai";
+import { getOceanQuestions } from "@/data/oceanQuestions";
 
 const CHAT_CONTEXT: ChatContext = { carbonPreference: "low" };
 
-const SUGGESTED_QUESTIONS = {
-  vi: [
-    "Gợi ý 5 hoạt động eco-friendly tại Hội An",
-    "Carbon footprint khi đi từ HCM đến Sa Pa là bao nhiêu?",
-    "Cách mua sắm có trách nhiệm tại chợ thủ công?",
-    "Homestay bền vững ở Sapa là gì?",
-  ],
-  en: [
-    "Suggest 5 eco-friendly activities in Hoi An",
-    "What is the carbon footprint of travelling from Ho Chi Minh City to Sa Pa?",
-    "How can I shop responsibly at a handicraft market?",
-    "What makes a homestay in Sa Pa sustainable?",
-  ],
-};
 
-export function TravelAssistant() {
+interface TravelAssistantProps {
+  /** Câu hỏi gửi ngay khi mở (từ ô hỏi nhanh trên trang chủ, qua `/assistant?q=`). */
+  initialQuestion?: string;
+  /** Gọi sau khi đã gửi `initialQuestion` (trang dùng để xoá `?q=` khỏi URL). */
+  onInitialQuestionSent?: () => void;
+}
+
+export function TravelAssistant({ initialQuestion, onInitialQuestionSent }: TravelAssistantProps = {}) {
   const { locale, t } = useI18n();
   const { messages, isLoading, error, sendMessage, clearChat, stopGenerating } =
     useAIChat();
+  // Ref giữ nguyên qua lần chạy effect kép của StrictMode ⇒ câu hỏi chỉ gửi một lần.
+  const initialSentRef = useRef(false);
   const [input, setInput] = useState("");
   const [showItinerary, setShowItinerary] = useState(false);
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
@@ -45,6 +42,14 @@ export function TravelAssistant() {
     // "auto" while streaming avoids the jumpy repeated smooth-scroll animation.
     panel.scrollTo({ top: panel.scrollHeight, behavior: isLoading ? "auto" : "smooth" });
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    const question = initialQuestion?.trim();
+    if (!question || initialSentRef.current) return;
+    initialSentRef.current = true;
+    void sendMessage(question, CHAT_CONTEXT);
+    onInitialQuestionSent?.();
+  }, [initialQuestion, onInitialQuestionSent, sendMessage]);
 
   const submitMessage = () => {
     if (!input.trim() || isLoading) return;
@@ -76,7 +81,7 @@ export function TravelAssistant() {
         body: JSON.stringify({
           destination,
           days,
-          interests: t(["văn hóa", "thiên nhiên", "ẩm thực địa phương"], ["culture", "nature", "local food"]),
+          interests: t(["biển đảo", "lặn ngắm san hô", "làng chài", "hải sản địa phương"], ["islands", "snorkelling", "fishing villages", "local seafood"]),
         }),
       });
 
@@ -96,27 +101,38 @@ export function TravelAssistant() {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-[600px] bg-slate-900 rounded-2xl overflow-hidden border border-slate-700">
+    <div className="flex flex-col h-full min-h-[600px] bg-surface rounded-lg overflow-hidden border border-border">
       {/* Header */}
-      <div className="bg-slate-800 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+      <div className="bg-bg px-6 py-4 border-b border-border flex justify-between items-center">
         <div>
-          <h2 className="text-white font-bold text-lg">
-            🌿 {t("Trợ lý du lịch AI", "AI Travel Assistant")}
+          <h2 className="flex items-center gap-2 text-text font-bold text-lg">
+            <Leaf aria-hidden className="h-5 w-5 shrink-0 text-primary" />
+            {t("Trợ lý biển", "Ocean assistant")}
           </h2>
-          <p className="text-slate-400 text-sm">
-            {t("Hỗ trợ du lịch sinh thái bền vững tại Việt Nam", "Your guide to sustainable eco-tourism in Vietnam")}
+          <p className="text-text-muted text-sm">
+            {t("Lặn ngắm san hô và du lịch biển đảo có trách nhiệm", "Responsible reef diving and island travel")}
           </p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setShowItinerary(!showItinerary)}
-            className="px-3 py-1.5 text-sm bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg transition-colors"
+            className="inline-flex min-h-11 items-center gap-2 px-3 py-2 text-sm font-medium bg-primary hover:bg-primary-hover text-white rounded-md transition-colors"
           >
-            {showItinerary ? t("💬 Trò chuyện", "💬 Chat") : t("🗺️ Lịch trình", "🗺️ Itinerary")}
+            {showItinerary ? (
+              <>
+                <MessageCircle aria-hidden className="h-4 w-4" />
+                {t("Trò chuyện", "Chat")}
+              </>
+            ) : (
+              <>
+                <MapIcon aria-hidden className="h-4 w-4" />
+                {t("Lịch trình", "Itinerary")}
+              </>
+            )}
           </button>
           <button
             onClick={clearChat}
-            className="px-3 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors"
+            className="min-h-11 px-3 py-2 text-sm font-medium bg-surface border border-border hover:bg-primary-soft text-text rounded-md transition-colors"
           >
             {t("Xóa", "Clear")}
           </button>
@@ -134,13 +150,13 @@ export function TravelAssistant() {
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
               placeholder={t("Nhập điểm đến (VD: Hội An, Sa Pa...)", "Enter a destination (e.g. Hoi An, Sa Pa...)")}
-              className="flex-1 bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"
+              className="min-h-11 flex-1 bg-surface border border-border-strong text-text rounded-sm px-4 py-2 focus:outline-none focus:border-primary"
             />
             <select
               aria-label={t("Số ngày", "Number of days")}
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
-              className="bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500"
+              className="min-h-11 bg-surface border border-border-strong text-text rounded-sm px-3 py-2 focus:outline-none focus:border-primary"
             >
               {[2, 3, 4, 5, 7].map((d) => (
                 <option key={d} value={d}>
@@ -151,7 +167,7 @@ export function TravelAssistant() {
             <button
               onClick={handleGenerateItinerary}
               disabled={!destination.trim() || itineraryLoading}
-              className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400 text-white rounded-lg transition-colors font-medium"
+              className="min-h-11 px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-border disabled:text-text-muted text-white rounded-md transition-colors font-medium"
             >
               {itineraryLoading ? t("Đang tạo...", "Creating...") : t("Tạo lịch trình", "Create itinerary")}
             </button>
@@ -160,9 +176,10 @@ export function TravelAssistant() {
           {itineraryError && (
             <div
               role="alert"
-              className="bg-red-900/30 border border-red-700/50 rounded-xl p-3 text-red-400 text-sm"
+              className="flex items-start gap-2 bg-danger-soft border border-danger/30 rounded-md p-3 text-danger text-sm"
             >
-              ⚠️ {itineraryError}
+              <CircleAlert aria-hidden className="h-4 w-4 shrink-0 mt-px" />
+              <span>{itineraryError}</span>
             </div>
           )}
 
@@ -174,24 +191,26 @@ export function TravelAssistant() {
           <div ref={messagesRef} className="flex-1 overflow-y-auto p-6 space-y-2">
             {messages.length === 0 && (
               <div className="text-center space-y-6 py-8">
-                <div className="text-4xl">🌿</div>
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft text-primary">
+                  <Leaf aria-hidden className="h-8 w-8" />
+                </div>
                 <div>
-                  <p className="text-slate-300 font-medium mb-1">
-                    {t("Xin chào! Tôi là Trợ lý du lịch AI", "Hello! I'm your AI Travel Assistant")}
+                  <p className="text-text-muted font-medium mb-1">
+                    {t("Xin chào! Tôi là Trợ lý biển", "Hello! I'm your ocean travel assistant")}
                   </p>
-                  <p className="text-slate-400 text-sm">
+                  <p className="text-text-muted text-sm">
                     {t(
-                      "Hỏi tôi về du lịch sinh thái, văn hóa địa phương, và cách giảm carbon footprint",
-                      "Ask me about eco-tourism, local culture and how to reduce your carbon footprint",
+                      "Hỏi tôi về mùa lặn, điểm ngắm san hô, văn hoá làng chài và cách đi biển không rác nhựa",
+                      "Ask me about dive seasons, reef spots, fishing village culture and plastic-free beach trips",
                     )}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-lg mx-auto">
-                  {SUGGESTED_QUESTIONS[locale].map((q, idx) => (
+                  {getOceanQuestions(locale).map((q, idx) => (
                     <button
                       key={idx}
                       onClick={() => sendMessage(q, CHAT_CONTEXT)}
-                      className="text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-300 text-sm transition-colors"
+                      className="min-h-11 text-left px-4 py-3 bg-bg hover:bg-primary-soft border border-border rounded-md text-text-muted hover:text-text text-sm transition-colors"
                     >
                       {q}
                     </button>
@@ -205,25 +224,26 @@ export function TravelAssistant() {
             ))}
 
             {error && (
-              <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-3 text-red-400 text-sm">
-                ⚠️ {error}
+              <div className="flex items-start gap-2 bg-danger-soft border border-danger/30 rounded-md p-3 text-danger text-sm">
+                <CircleAlert aria-hidden className="h-4 w-4 shrink-0 mt-px" />
+                <span>{error}</span>
               </div>
             )}
 
           </div>
 
           {/* Input */}
-          <div className="p-4 border-t border-slate-700">
+          <div className="p-4 border-t border-border">
             <form onSubmit={handleSubmit} className="flex gap-3 items-end">
               <textarea
-                aria-label={t("Câu hỏi cho Trợ lý du lịch AI", "Question for the AI Travel Assistant")}
+                aria-label={t("Câu hỏi cho Trợ lý biển", "Question for the ocean assistant")}
                 maxLength={2000}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={t("Hỏi về du lịch sinh thái, văn hóa địa phương... (Enter để gửi)", "Ask about eco-tourism, local culture... (Enter to send)")}
                 rows={1}
-                className="flex-1 bg-slate-800 border border-slate-600 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 resize-none text-sm"
+                className="flex-1 bg-surface border border-border-strong text-text rounded-sm px-4 py-3 focus:outline-none focus:border-primary resize-none text-sm"
                 style={{ maxHeight: "120px" }}
               />
               {isLoading ? (
@@ -231,18 +251,18 @@ export function TravelAssistant() {
                   type="button"
                   onClick={stopGenerating}
                   aria-label={t("Dừng tạo câu trả lời", "Stop generating")}
-                  className="px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-colors"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center bg-danger hover:bg-danger/90 text-white rounded-md transition-colors"
                 >
-                  ⏹️
+                  <Square aria-hidden className="h-4 w-4 fill-current" />
                 </button>
               ) : (
                 <button
                   type="submit"
                   disabled={!input.trim()}
                   aria-label={t("Gửi câu hỏi", "Send question")}
-                  className="px-4 py-3 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400 text-white rounded-xl transition-colors"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center bg-primary hover:bg-primary-hover disabled:bg-border disabled:text-text-muted text-white rounded-md transition-colors"
                 >
-                  ➤
+                  <SendHorizontal aria-hidden className="h-5 w-5" />
                 </button>
               )}
             </form>

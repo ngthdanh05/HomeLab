@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Spinner } from "@/components/marketplace/PurchaseButton";
+import { HandCoins } from "lucide-react";
+import { Alert, Spinner } from "@/components/ui";
 import { GovernanceABI } from "@/config/contracts";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useContractTx } from "@/hooks/useContractTx";
@@ -33,7 +34,7 @@ export function ExecuteProposalButton({
   const passed = status === "passed";
   const { send, status: txStatus, isBusy } = useContractTx({
     pending: passed ? t("Đang thực thi giải ngân", "Executing disbursement") : t("Đang chốt kết quả đề xuất", "Finalizing the proposal result"),
-    success: passed ? t("Đã giải ngân từ Quỹ Cộng đồng! 💸", "Disbursed from the Community Treasury! 💸") : t("Đã chốt: đề xuất bị từ chối", "Finalized: the proposal was rejected"),
+    success: passed ? t("Đã giải ngân từ Quỹ bảo tồn biển!", "Disbursed from the Ocean Conservation Fund!") : t("Đã chốt: đề xuất bị từ chối", "Finalized: the proposal was rejected"),
   });
 
   if (status !== "passed" && status !== "defeated") return null;
@@ -52,41 +53,42 @@ export function ExecuteProposalButton({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm text-slate-300">
+      <p className="text-sm text-text-muted">
         {passed
           ? t(
               `Đề xuất đã được thông qua. Bất kỳ ai cũng có thể thực thi để Quỹ chuyển ${formatEth(amount, locale)} tới ví nhận.`,
               `The proposal passed. Anyone can execute it so the Treasury sends ${formatEth(amount, locale)} to the recipient wallet.`,
             )
           : t(
-              "Đề xuất không được thông qua. Thực thi để ghi nhận kết quả từ chối on-chain (không giải ngân).",
+              "Đề xuất không được thông qua. Bấm để ghi công khai kết quả từ chối (không giải ngân).",
               "The proposal did not pass. Execute it to record the rejection on-chain (no disbursement).",
             )}
       </p>
       {underfunded && (
-        <p role="alert" className="rounded-xl border border-amber-800/60 bg-amber-950/40 p-3 text-sm text-amber-200">
-          ⚠️{" "}
+        <Alert tone="warning" role="alert">
           {t(
             `Quỹ hiện chỉ có ${formatEth(treasuryBalance, locale)}, chưa đủ để giải ngân. Giao dịch sẽ bị từ chối cho tới khi Quỹ nhận thêm ETH.`,
             `The Treasury only holds ${formatEth(treasuryBalance, locale)}, which is not enough to disburse. The transaction will be rejected until the Treasury receives more ETH.`,
           )}
-        </p>
+        </Alert>
       )}
       <button
         type="button"
         onClick={execute}
         disabled={isBusy || underfunded}
-        className={`flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 ${
-          passed ? "bg-amber-600 hover:bg-amber-500" : "bg-slate-700 hover:bg-slate-600"
+        className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-5 py-3 font-semibold transition-colors disabled:cursor-not-allowed disabled:border-transparent disabled:bg-border disabled:text-text-muted ${
+          passed
+            ? "bg-primary text-white hover:bg-primary-hover"
+            : "border border-border-strong bg-surface text-text hover:border-primary hover:bg-primary-soft"
         }`}
       >
-        {isBusy && <Spinner />}
+        {isBusy ? <Spinner /> : passed && <HandCoins aria-hidden className="h-5 w-5" />}
         {txStatus === "awaiting-wallet"
           ? t("Xác nhận trong ví…", "Confirm in wallet…")
           : txStatus === "pending"
-            ? t("Đang chờ xác nhận on-chain…", "Waiting for on-chain confirmation…")
+            ? t("Đang chờ mạng xác nhận…", "Waiting for on-chain confirmation…")
             : passed
-              ? t("💸 Thực thi giải ngân", "💸 Execute disbursement")
+              ? t("Thực thi giải ngân", "Execute disbursement")
               : t("Chốt kết quả: từ chối", "Finalize result: rejected")}
       </button>
     </div>

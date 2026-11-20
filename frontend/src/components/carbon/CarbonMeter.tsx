@@ -71,19 +71,21 @@ export function CarbonMeter({ kg }: { kg: number }) {
           stroke="currentColor"
           strokeWidth={4}
           strokeLinecap="round"
-          className="text-white transition-all duration-700 ease-out motion-reduce:transition-none"
+          className="text-text transition-all duration-700 ease-out motion-reduce:transition-none"
         />
-        <circle cx={CX} cy={CY} r={7} className="fill-white" />
-        <text x={22} y={138} className="fill-slate-500 text-[10px]">0</text>
-        <text x={218} y={138} textAnchor="end" className="fill-slate-500 text-[10px]">
+        <circle cx={CX} cy={CY} r={7} className="fill-text" />
+        <text x={22} y={138} className="fill-text-muted text-xs">0</text>
+        <text x={218} y={138} textAnchor="end" className="fill-text-muted text-xs">
           {METER_MAX_KG}+
         </text>
       </svg>
-      <p className="-mt-1 font-mono text-3xl font-extrabold text-white">{formatKg(kg, locale)}</p>
-      <p className="mt-1 text-sm font-semibold" style={{ color: info.color }}>
+      <p className="-mt-1 text-3xl font-extrabold tabular-nums text-text">{formatKg(kg, locale)}</p>
+      <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-text">
+        {/* Màu mức chỉ dùng cho chấm: màu vàng/xanh nhạt không đủ tương phản làm chữ trên nền trắng. */}
+        <span aria-hidden className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: info.color }} />
         {t("Mức phát thải", "Emission level")}: {levelLabel}
       </p>
-      <p className="mt-1 max-w-xs text-center text-xs text-slate-400">{t(info.hint, info.hintEn)}</p>
+      <p className="mt-1 max-w-xs text-center text-xs text-text-muted">{t(info.hint, info.hintEn)}</p>
     </div>
   );
 }

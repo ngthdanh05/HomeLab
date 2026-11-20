@@ -2,9 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
+import { ArrowRight, Award, Earth } from "lucide-react";
 import { formatEther } from "viem";
 import { useAccount } from "wagmi";
-import { Spinner } from "@/components/marketplace/PurchaseButton";
+import { Spinner } from "@/components/ui";
 import { CarbonOffsetABI, getChainName } from "@/config/contracts";
 import { useActiveChain } from "@/hooks/useActiveChain";
 import { useCarbonOffset } from "@/hooks/useCarbonOffset";
@@ -26,7 +27,7 @@ interface CarbonOffsetButtonProps {
 }
 
 /**
- * Pays the offset fee (to the Community Treasury) through CarbonOffset.offset()
+ * Pays the offset fee (to the Ocean Conservation Fund) through CarbonOffset.offset()
  * and mints a ZERO_CARBON ImpactBadge to the connected wallet.
  */
 export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButtonProps) {
@@ -36,7 +37,7 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
   const { address, pricePerKgWei, isLoading } = useCarbonOffset(undefined);
   const { send, status, isBusy } = useContractTx({
     pending: t("Đang bù đắp carbon", "Offsetting carbon"),
-    success: t("Đã bù đắp carbon! 🌍 Badge ZERO_CARBON đã được mint", "Carbon offset! 🌍 Your ZERO_CARBON badge has been minted"),
+    success: t("Đã bù đắp carbon! Bạn đã nhận Huy hiệu Bù đắp carbon", "Carbon offset! You received a Carbon Offset badge"),
   });
 
   const offsetKg = Math.min(kg, CARBON_LIMITS.maxOffsetKg);
@@ -47,9 +48,9 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
 
   if (!address) {
     return (
-      <p className="rounded-xl border border-amber-800/60 bg-amber-950/40 p-3 text-sm text-amber-200">
+      <p className="rounded-md border border-warning/30 bg-warning-soft p-3 text-sm text-warning">
         {t(
-          `Contract CarbonOffset chưa được deploy trên ${getChainName(chainId)}, nên chưa thể bù đắp on-chain.`,
+          `Hợp đồng bù đắp carbon chưa có trên ${getChainName(chainId)}, nên chưa thể bù đắp.`,
           `The CarbonOffset contract is not deployed on ${getChainName(chainId)}, so on-chain offsetting is not available yet.`,
         )}
       </p>
@@ -64,12 +65,14 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
       : isBusy
         ? status === "awaiting-wallet"
           ? t("Xác nhận trong ví…", "Confirm in wallet…")
-          : t("Đang chờ xác nhận on-chain…", "Waiting for on-chain confirmation…")
+          : t("Đang chờ mạng xác nhận…", "Waiting for on-chain confirmation…")
         : !isConnected
           ? t("Kết nối ví để bù đắp", "Connect wallet to offset")
           : fee === undefined
             ? t("Đang tải phí bù đắp…", "Loading offset fee…")
-            : t(`🌍 Bù đắp ${formatKg(offsetKg, locale)} · ${formatEther(fee)} ETH`, `🌍 Offset ${formatKg(offsetKg, locale)} · ${formatEther(fee)} ETH`);
+            : t(`Bù đắp ${formatKg(offsetKg, locale)} · ${formatEther(fee)} ETH`, `Offset ${formatKg(offsetKg, locale)} · ${formatEther(fee)} ETH`);
+
+  const canOffset = grams > 0n && !belowMinimum && isConnected && fee !== undefined;
 
   return (
     <div className="space-y-2">
@@ -86,22 +89,27 @@ export function CarbonOffsetButton({ kg, summary, location }: CarbonOffsetButton
             value: fee,
           })
         }
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 font-semibold tabular-nums text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-text-muted"
       >
-        {isBusy && <Spinner />}
+        {isBusy ? <Spinner /> : canOffset && <Earth aria-hidden className="h-5 w-5 shrink-0" />}
         {label}
       </button>
-      <p className="text-[11px] leading-relaxed text-slate-400">
+      <p className="text-sm leading-relaxed text-text-muted">
+        <strong className="font-semibold text-warning">
+          {t("Khoản này chưa phải tín chỉ carbon đã được kiểm định.", "This is not a verified carbon credit.")}
+        </strong>{" "}
         {t(
-          "Toàn bộ phí được chuyển vào Quỹ Cộng đồng (DAO) để tài trợ dự án bảo tồn; bạn nhận NFT ImpactBadge loại ZERO_CARBON ghi nhận đóng góp. Khoản này chưa phải tín chỉ carbon đã được kiểm định.",
-          "The whole fee goes to the Community Treasury (DAO) to fund conservation projects, and you receive a ZERO_CARBON ImpactBadge NFT recording your contribution. This is not a verified carbon credit.",
+          "Toàn bộ phí được chuyển vào Quỹ bảo tồn biển để tài trợ dự án bảo tồn; bạn nhận Huy hiệu Bù đắp carbon ghi nhận đóng góp.",
+          "The whole fee goes to the Ocean Conservation Fund to fund conservation projects, and you receive a Carbon Offset badge recording your contribution.",
         )}
         {kg > CARBON_LIMITS.maxOffsetKg &&
           t(` Mỗi lần bù đắp tối đa ${formatKg(CARBON_LIMITS.maxOffsetKg, locale)}.`, ` Each offset is limited to ${formatKg(CARBON_LIMITS.maxOffsetKg, locale)}.`)}
       </p>
       {done && (
-        <Link href="/dashboard" className="block text-center text-sm font-medium text-emerald-400 hover:underline">
-          🏅 {t("Xem badge ZERO_CARBON trong Dashboard →", "View your ZERO_CARBON badge in the Dashboard →")}
+        <Link href="/dashboard" className="flex min-h-11 items-center justify-center gap-2 text-center text-sm font-medium text-primary hover:underline">
+          <Award aria-hidden className="h-4 w-4 shrink-0" />
+          {t("Xem Huy hiệu Bù đắp carbon trong Của tôi", "View your Carbon Offset badge in My page")}
+          <ArrowRight aria-hidden className="h-4 w-4 shrink-0" />
         </Link>
       )}
     </div>

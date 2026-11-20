@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { Leaf } from "lucide-react";
 import { formatUnits, type Address } from "viem";
 import { ECO_DECIMALS, useEcoTokenBalance } from "@/hooks/useEcoTokenBalance";
 import { easeOutCubic, formatTokenAmount } from "@/lib/dashboard";
@@ -48,37 +49,37 @@ export function TokenBalance({ owner }: { owner: Address }) {
   return (
     <section
       aria-labelledby="eco-balance-title"
-      className="relative overflow-hidden rounded-3xl border border-emerald-800/60 bg-gradient-to-br from-emerald-900/70 via-slate-900 to-slate-950 p-6"
+      className="rounded-lg border border-accent/30 bg-accent-soft p-6"
     >
-      <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-500/10 blur-2xl" />
-      <p id="eco-balance-title" className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-        🌱 {t("Số dư EcoToken", "EcoToken balance")}
+      <p id="eco-balance-title" className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent-strong">
+        <Leaf aria-hidden className="h-4 w-4" />
+        {t("Số dư EcoToken", "EcoToken balance")}
       </p>
 
       {isLoading ? (
-        <div className="mt-3 h-10 w-48 animate-pulse rounded-lg bg-slate-800" aria-label={t("Đang tải số dư", "Loading balance")} />
+        <div className="mt-3 h-10 w-48 animate-pulse rounded-sm bg-surface" aria-label={t("Đang tải số dư", "Loading balance")} />
       ) : error ? (
-        <p className="mt-3 text-sm text-red-300">{t("Không đọc được số dư ECO. Vui lòng thử lại sau.", "Could not read your ECO balance. Please try again later.")}</p>
+        <p className="mt-3 text-sm text-danger">{t("Không đọc được số dư ECO. Vui lòng thử lại sau.", "Could not read your ECO balance. Please try again later.")}</p>
       ) : (
         <p className="mt-2 flex items-baseline gap-2" aria-live="polite">
-          <span className="font-mono text-4xl font-extrabold tracking-tight text-white tabular-nums">
+          <span className="text-4xl font-bold tracking-tight text-text tabular-nums">
             {/* Exact bigint formatting once the animation ends; floats only while counting. */}
             {done && balance !== undefined
               ? formatTokenAmount(balance, ECO_DECIMALS, 4, locale)
               : animated.toLocaleString(intlLocale(locale), { maximumFractionDigits: 4 })}
           </span>
-          <span className="text-lg font-semibold text-emerald-300">ECO</span>
+          <span className="text-lg font-semibold text-accent-strong">ECO</span>
         </p>
       )}
 
-      <p className="mt-3 text-xs leading-relaxed text-slate-400">
+      <p className="mt-3 text-xs leading-relaxed text-text-muted">
         {rewardRate !== undefined && rewardRate > 0n
           ? t(
-              `Mỗi 1 ETH chi tiêu trên Marketplace thưởng ${formatTokenAmount(rewardRate, ECO_DECIMALS, 4, locale)} ECO.`,
-              `Every 1 ETH spent on the Marketplace earns ${formatTokenAmount(rewardRate, ECO_DECIMALS, 4, locale)} ECO.`,
+              `Mỗi 1 ETH chi tiêu ở Chợ làng chài thưởng ${formatTokenAmount(rewardRate, ECO_DECIMALS, 4, locale)} ECO.`,
+              `Every 1 ETH spent on the Village Market earns ${formatTokenAmount(rewardRate, ECO_DECIMALS, 4, locale)} ECO.`,
             )
-          : t("Nhận ECO mỗi khi mua sản phẩm hoặc tour trên Marketplace.", "Earn ECO every time you buy a product or tour on the Marketplace.")}{" "}
-        {t("Dùng ECO để biểu quyết trong DAO Quỹ Cộng đồng.", "Use ECO to vote in the Community Treasury DAO.")}
+          : t("Nhận ECO mỗi khi mua sản phẩm hoặc tour ở Chợ làng chài.", "Earn ECO every time you buy a product or tour on the Village Market.")}{" "}
+        {t("Dùng ECO để bỏ phiếu về cách dùng Quỹ bảo tồn biển.", "Use ECO to vote on how the Ocean Conservation Fund is used.")}
       </p>
     </section>
   );

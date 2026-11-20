@@ -33,7 +33,7 @@ export const culturalDestinations: CulturalDestination[] = [
     donts: [
       "Không chụp ảnh bên trong các nhà cổ khi không được phép",
       "Không mặc shorts ngắn hoặc áo không tay vào đền thờ",
-      "Không mặc cả khi đèn lồng trong phố cổ - gây ô nhiễm nước",
+      "Không bỏ đèn lồng lại trên sông ở phố cổ - gây ô nhiễm nước",
       "Không trả giá quá thấp với các nghệ nhân - tôn trọng lao động của họ",
       "Không sử dụng túi nhựa - ủng hộ phong trào không rác thải",
     ],

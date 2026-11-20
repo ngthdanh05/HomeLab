@@ -14,6 +14,56 @@ export interface HeritageItem {
 
 export const sampleHeritageItems: HeritageItem[] = [
   {
+    id: "ran-san-ho-hon-mun",
+    title: "Rạn San Hô Hòn Mun",
+    location: "Vịnh Nha Trang, Khánh Hòa",
+    category: "Thiên nhiên",
+    description:
+      "Khu bảo tồn biển đầu tiên của Việt Nam, nơi các rạn san hô cứng và mềm được khoanh vùng bảo vệ, phục hồi cùng ngư dân địa phương.",
+    panoramaUrl: "/360/sample-equirectangular-2.svg",
+    hotspots: [
+      {
+        id: "vuon-san-ho",
+        position: { phi: 1.7, theta: 0.4 },
+        title: "Vườn ươm san hô",
+        description:
+          "Các nhánh san hô gãy được gắn lên giá thể và chăm sóc dưới nước cho tới khi đủ lớn để trồng lại lên rạn.",
+      },
+      {
+        id: "phao-neo",
+        position: { phi: 1.4, theta: 2.6 },
+        title: "Phao neo cố định",
+        description:
+          "Tàu lặn buộc vào phao thay vì thả neo, tránh làm vỡ những rạn san hô mất hàng chục năm mới hình thành.",
+      },
+    ],
+  },
+  {
+    id: "lang-chai-cu-lao-cham",
+    title: "Làng Chài Bãi Hương, Cù Lao Chàm",
+    location: "Cù Lao Chàm, ngoài khơi Hội An",
+    category: "Làng nghề",
+    description:
+      "Làng chài trên đảo thuộc Khu dự trữ sinh quyển thế giới Cù Lao Chàm, tiên phong nói không với túi nhựa từ năm 2009.",
+    panoramaUrl: "/360/sample-equirectangular-1.svg",
+    hotspots: [
+      {
+        id: "thuyen-thung",
+        position: { phi: 1.6, theta: 1 },
+        title: "Thuyền thúng đan tre",
+        description:
+          "Thuyền thúng đan từ tre, trét dầu rái, dùng để đánh bắt gần bờ và đưa khách ngắm rạn mà không dùng động cơ.",
+      },
+      {
+        id: "nghe-phoi-muc",
+        position: { phi: 1.5, theta: 3.6 },
+        title: "Nghề phơi mực một nắng",
+        description:
+          "Hộ ngư dân chế biến mực, cá theo mùa vụ và chỉ đánh bắt ngoài vùng lõi bảo tồn để nguồn lợi kịp tái tạo.",
+      },
+    ],
+  },
+  {
     id: "chua-cau-hoi-an",
     title: "Chùa Cầu & Phố Cổ Hội An",
     location: "Hội An, Quảng Nam",
@@ -101,6 +151,42 @@ const HERITAGE_EN: Record<
   string,
   { title: string; location: string; description: string; hotspots: Record<string, { title: string; description: string }> }
 > = {
+  "ran-san-ho-hon-mun": {
+    title: "Hon Mun Coral Reef",
+    location: "Nha Trang Bay, Khanh Hoa",
+    description:
+      "Vietnam's first marine protected area, where hard and soft corals are zoned for protection and restored together with local fishers.",
+    hotspots: {
+      "vuon-san-ho": {
+        title: "Coral nursery",
+        description:
+          "Broken coral fragments are fixed to frames and tended underwater until they are large enough to be replanted on the reef.",
+      },
+      "phao-neo": {
+        title: "Fixed mooring buoys",
+        description:
+          "Dive boats tie up to buoys instead of dropping anchor, so reefs that took decades to grow are not smashed.",
+      },
+    },
+  },
+  "lang-chai-cu-lao-cham": {
+    title: "Bai Huong Fishing Village, Cu Lao Cham",
+    location: "Cu Lao Cham, off Hoi An",
+    description:
+      "An island fishing village in the Cu Lao Cham World Biosphere Reserve that has said no to plastic bags since 2009.",
+    hotspots: {
+      "thuyen-thung": {
+        title: "Woven bamboo basket boats",
+        description:
+          "Round boats woven from bamboo and sealed with resin, used for near-shore fishing and engine-free reef tours.",
+      },
+      "nghe-phoi-muc": {
+        title: "Sun-dried squid",
+        description:
+          "Fishing households process squid and fish by season and only fish outside the core protected zone so stocks can recover.",
+      },
+    },
+  },
   "chua-cau-hoi-an": {
     title: "Japanese Covered Bridge & Hoi An Ancient Town",
     location: "Hoi An, Quang Nam",

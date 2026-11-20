@@ -60,7 +60,10 @@ describe("seo", () => {
     const m = pageMetadata({ title: "Community DAO", description: "Mô tả", path: "/governance" });
     assert.equal(m.title, "Community DAO");
     assert.deepEqual(m.alternates, { canonical: "/governance" });
-    assert.equal(m.openGraph.title, "Community DAO — MyHomeLab");
+    assert.equal(m.openGraph.title, "Community DAO — San Hô Xanh");
+    assert.equal(m.openGraph.siteName, "San Hô Xanh");
+    const en = pageMetadata({ title: "Community DAO", description: "Description", path: "/governance", locale: "en" });
+    assert.equal(en.openGraph.title, "Community DAO — BlueReef Travel");
     assert.equal(m.openGraph.url, "/governance");
     assert.equal(m.openGraph.locale, "vi_VN");
     assert.equal(m.twitter.card, "summary_large_image");

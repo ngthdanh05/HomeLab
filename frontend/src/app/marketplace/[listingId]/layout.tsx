@@ -16,8 +16,8 @@ export async function generateMetadata(props: Params): Promise<Metadata> {
     title: id ? `${noun} #${id}` : noun,
     description: pick(
       locale,
-      "Sản phẩm thủ công, đặc sản hoặc tour trải nghiệm bán trực tiếp bởi nghệ nhân; tiền thanh toán tự chia 70% nghệ nhân / 20% Quỹ Cộng đồng / 10% nền tảng.",
-      "A handicraft, local specialty or experience tour sold directly by an artisan; payment is split automatically: 70% artisan, 20% Community Treasury, 10% platform.",
+      "Sản phẩm thủ công, đặc sản hoặc tour trải nghiệm bán trực tiếp bởi nghệ nhân; tiền thanh toán tự chia 70% nghệ nhân / 20% Quỹ bảo tồn biển / 10% nền tảng.",
+      "A handicraft, local specialty or experience tour sold directly by an artisan; payment is split automatically: 70% artisan, 20% Ocean Conservation Fund, 10% platform.",
     ),
     path: `/marketplace/${id || params.listingId}`,
     locale,

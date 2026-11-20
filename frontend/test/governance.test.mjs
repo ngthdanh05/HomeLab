@@ -164,8 +164,8 @@ describe("display helpers", () => {
 
 describe("governance errors", () => {
   const revert = (errorName) => ({ name: "ContractFunctionExecutionError", cause: { data: { errorName } } });
-  test("double vote shows 'Bạn đã vote rồi'", () => {
-    assert.match(getTxErrorMessage(revert("AlreadyVoted")), /^Bạn đã vote rồi/);
+  test("double vote shows 'Bạn đã bỏ phiếu rồi'", () => {
+    assert.match(getTxErrorMessage(revert("AlreadyVoted")), /^Bạn đã bỏ phiếu rồi/);
   });
   test("other DAO errors are friendly", () => {
     const names = [

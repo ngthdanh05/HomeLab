@@ -2,11 +2,20 @@
 
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
+import { AppIcon } from "@/components/ui";
 import { localizeQuest, type QuestDefinition } from "@/data/quests";
 import { getBadgeType } from "@/lib/dashboard";
 import { useI18n } from "@/providers/LocaleProvider";
 
-const COLORS = ["#10b981", "#f59e0b", "#38bdf8", "#a78bfa", "#f472b6", "#facc15"];
+// Màu pháo giấy theo bảng màu: primary, accent, info + vàng nắng và xanh biển nhạt.
+const COLORS = [
+  "rgb(var(--color-primary))",
+  "rgb(var(--color-accent))",
+  "rgb(var(--color-info))",
+  "#E0A526",
+  "#5FB3C2",
+  "#F08A6E",
+];
 
 // Fixed pseudo-random confetti layout (deterministic, so no hydration or render churn).
 const CONFETTI = Array.from({ length: 28 }, (_, i) => {
@@ -48,7 +57,7 @@ export function QuestCelebration({ quest: rawQuest, onClose }: QuestCelebrationP
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-text/50 p-4"
       onClick={onClose}
     >
       <div
@@ -56,7 +65,7 @@ export function QuestCelebration({ quest: rawQuest, onClose }: QuestCelebrationP
         aria-modal="true"
         aria-labelledby="quest-celebration-title"
         onClick={(e) => e.stopPropagation()}
-        className="quest-pop relative w-full max-w-sm overflow-hidden rounded-3xl border border-emerald-700/60 bg-slate-900 p-6 text-center shadow-2xl shadow-emerald-950"
+        className="quest-pop relative w-full max-w-sm overflow-hidden rounded-lg border border-border bg-surface p-6 text-center shadow-overlay"
       >
         <div aria-hidden className="pointer-events-none absolute inset-0">
           {CONFETTI.map((c, i) => (
@@ -77,23 +86,27 @@ export function QuestCelebration({ quest: rawQuest, onClose }: QuestCelebrationP
         </div>
 
         <div className="relative">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 text-4xl shadow-lg shadow-emerald-900">
-            {quest.icon}
+          <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-accent-soft text-accent-strong">
+            <AppIcon name={quest.icon} className="h-10 w-10" />
+            <span aria-hidden className="absolute -right-1 -top-1 text-2xl">
+              🎉
+            </span>
           </div>
-          <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-emerald-300">{t("Quest hoàn thành!", "Quest complete!")}</p>
-          <h2 id="quest-celebration-title" className="mt-1 text-xl font-extrabold text-white">
+          <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-accent-strong">{t("Hoàn thành nhiệm vụ!", "Quest complete!")}</p>
+          <h2 id="quest-celebration-title" className="mt-1 text-xl font-bold text-text">
             {quest.title}
           </h2>
 
           <ul className="mt-4 space-y-2 text-sm">
             {quest.ecoReward > 0 && (
-              <li className="rounded-xl bg-emerald-500/15 px-3 py-2 font-semibold text-emerald-300">
+              <li className="rounded-md bg-accent-soft px-3 py-2 font-semibold tabular-nums text-accent-strong">
                 🌱 +{quest.ecoReward} ECO {t("đã vào ví của bạn", "added to your wallet")}
               </li>
             )}
             {badge && (
-              <li className="rounded-xl bg-violet-500/15 px-3 py-2 font-semibold text-violet-300">
-                {badge.icon} Badge {badge.label} {t("đã được mint", "has been minted")}
+              <li className="flex items-center justify-center gap-2 rounded-md bg-accent-soft px-3 py-2 font-semibold text-accent-strong">
+                <AppIcon name={badge.icon} className="h-4 w-4 shrink-0" />
+                {t(`Huy hiệu ${badge.label} đã về ví của bạn`, `${badge.labelEn} badge has been minted`)}
               </li>
             )}
           </ul>
@@ -101,7 +114,7 @@ export function QuestCelebration({ quest: rawQuest, onClose }: QuestCelebrationP
           <div className="mt-5 flex gap-2">
             <Link
               href="/dashboard"
-              className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm font-medium text-slate-200 hover:border-emerald-600"
+              className="flex min-h-11 flex-1 items-center justify-center rounded-md border border-border-strong py-3 text-sm font-medium text-text transition-colors hover:border-primary hover:bg-primary-soft"
             >
               {t("Xem Dashboard", "View Dashboard")}
             </Link>
@@ -109,7 +122,7 @@ export function QuestCelebration({ quest: rawQuest, onClose }: QuestCelebrationP
               ref={closeRef}
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl bg-emerald-700 py-2.5 text-sm font-bold text-white hover:bg-emerald-600"
+              className="min-h-11 flex-1 rounded-md bg-primary py-3 text-sm font-bold text-white transition-colors hover:bg-primary-hover"
             >
               {t("Tuyệt vời!", "Great!")}
             </button>

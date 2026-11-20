@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Target } from "lucide-react";
 import { intlLocale } from "@/lib/i18n";
 import { useI18n } from "@/providers/LocaleProvider";
 
@@ -8,17 +9,17 @@ interface ProgressBarProps {
   /** 0–1 */
   ratio: number;
   label: string;
-  tone?: "emerald" | "amber" | "slate";
+  tone?: "primary" | "accent" | "neutral";
 }
 
 const TONES = {
-  emerald: "from-emerald-500 to-teal-400",
-  amber: "from-amber-500 to-yellow-300",
-  slate: "from-slate-600 to-slate-500",
+  primary: "bg-primary",
+  accent: "bg-accent",
+  neutral: "bg-border-strong",
 } as const;
 
 /** Accessible progress bar used by quest cards and the overall summary. */
-export function QuestProgressBar({ ratio, label, tone = "emerald" }: ProgressBarProps) {
+export function QuestProgressBar({ ratio, label, tone = "primary" }: ProgressBarProps) {
   const percent = Math.round(Math.min(1, Math.max(0, ratio)) * 100);
   return (
     <div
@@ -27,10 +28,10 @@ export function QuestProgressBar({ ratio, label, tone = "emerald" }: ProgressBar
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={percent}
-      className="h-2 w-full overflow-hidden rounded-full bg-slate-800"
+      className="h-2 w-full overflow-hidden rounded-full bg-border"
     >
       <div
-        className={`h-full rounded-full bg-gradient-to-r ${TONES[tone]} transition-[width] duration-700 ease-out`}
+        className={`h-full rounded-full ${TONES[tone]} transition-[width] duration-700 ease-out`}
         style={{ width: `${percent}%` }}
       />
     </div>
@@ -50,25 +51,26 @@ export function QuestSummary({ completed, total, ecoEarned, ecoAvailable }: Ques
   return (
     <section
       aria-labelledby="quest-summary-title"
-      className="grid gap-4 rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:grid-cols-3 sm:p-6"
+      className="grid gap-4 rounded-lg border border-border bg-surface p-5 sm:grid-cols-3 sm:p-6"
     >
       <div className="sm:col-span-2">
-        <h2 id="quest-summary-title" className="text-sm font-semibold text-slate-300">
-          🎯 {t("Tiến độ Eco Quest", "Eco Quest progress")}
+        <h2 id="quest-summary-title" className="flex items-center gap-2 text-sm font-semibold text-text-muted">
+          <Target aria-hidden className="h-4 w-4 text-primary" />
+          {t("Tiến độ Nhiệm vụ bảo tồn", "Conservation Quest progress")}
         </h2>
-        <p className="mt-1 text-2xl font-extrabold text-white">
+        <p className="mt-1 text-2xl font-bold tabular-nums text-text">
           {completed}
-          <span className="text-base font-medium text-slate-400"> / {total} {t("quest hoàn thành", "quests completed")}</span>
+          <span className="text-base font-medium text-text-muted"> / {total} {t("nhiệm vụ hoàn thành", "quests completed")}</span>
         </p>
         <div className="mt-3">
-          <QuestProgressBar ratio={total ? completed / total : 0} label={t("Tỉ lệ quest đã hoàn thành", "Share of quests completed")} />
+          <QuestProgressBar ratio={total ? completed / total : 0} label={t("Tỉ lệ nhiệm vụ đã hoàn thành", "Share of quests completed")} />
         </div>
       </div>
-      <div className="rounded-2xl border border-emerald-900/60 bg-emerald-950/30 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">{t("ECO từ quest", "ECO from quests")}</p>
-        <p className="mt-1 font-mono text-2xl font-bold text-white">
+      <div className="rounded-lg border border-accent/30 bg-accent-soft p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-accent-strong">{t("ECO từ nhiệm vụ", "ECO from quests")}</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums text-text">
           {ecoEarned.toLocaleString(intlLocale(locale))}
-          <span className="text-sm font-medium text-slate-400"> / {ecoAvailable.toLocaleString(intlLocale(locale))} ECO</span>
+          <span className="text-sm font-medium text-text-muted"> / {ecoAvailable.toLocaleString(intlLocale(locale))} ECO</span>
         </p>
       </div>
     </section>

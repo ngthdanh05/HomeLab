@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { SiteHeader } from "@/components/layout/SiteHeader";
 import { pick } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n-server";
 import { pageMetadata } from "@/lib/seo";
@@ -7,11 +6,11 @@ import { pageMetadata } from "@/lib/seo";
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   return pageMetadata({
-    title: "Community DAO",
+    title: pick(locale, "Quỹ bảo tồn biển", "Ocean Conservation Fund"),
     description: pick(
       locale,
-      "Cộng đồng đề xuất và bỏ phiếu bằng EcoToken để giải ngân Quỹ Cộng đồng cho các dự án bảo tồn, minh bạch on-chain.",
-      "The community proposes and votes with EcoToken to disburse the Community Treasury to conservation projects, transparently on-chain.",
+      "Cộng đồng đề xuất và bỏ phiếu bằng ECO để giải ngân Quỹ bảo tồn biển cho các dự án bảo tồn, ghi công khai và minh bạch.",
+      "The community proposes and votes with EcoToken to disburse the Ocean Conservation Fund to conservation projects, transparently on-chain.",
     ),
     path: "/governance",
     locale,
@@ -20,11 +19,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function GovernanceLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
-      <SiteHeader />
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-        {children}
-      </main>
-    </div>
+    <main id="main" className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      {children}
+    </main>
   );
 }

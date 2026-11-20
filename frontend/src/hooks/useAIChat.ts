@@ -12,6 +12,8 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  /** Thông báo lỗi khi câu trả lời bị ngắt; `content` chỉ giữ phần AI đã trả lời được. */
+  error?: string;
 }
 
 async function readErrorMessage(response: Response, fallback: string): Promise<string> {
@@ -42,11 +44,9 @@ export function useAIChat() {
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 
   const updateMessage = useCallback(
-    (id: string, update: (content: string) => string) => {
+    (id: string, update: (msg: ChatMessage) => Partial<ChatMessage>) => {
       setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === id ? { ...msg, content: update(msg.content) } : msg,
-        ),
+        prev.map((msg) => (msg.id === id ? { ...msg, ...update(msg) } : msg)),
       );
     },
     [],
@@ -60,7 +60,8 @@ export function useAIChat() {
       const assistantMessageId = crypto.randomUUID();
       // Earlier turns, so follow-up questions keep their context on the (stateless) API.
       const history = messagesRef.current
-        .filter((m) => m.content && !m.content.startsWith("⚠️"))
+        // Lỗi nằm ở trường `error` riêng nên không bị gửi lại cho AI như một lượt hội thoại.
+        .filter((m) => m.content)
         .slice(-HISTORY_MESSAGES)
         .map((m) => ({ role: m.role === "user" ? "user" : "model", text: m.content.slice(0, HISTORY_CHARS) }));
       setMessages((prev) => [
@@ -98,7 +99,7 @@ export function useAIChat() {
 
           for (const event of events) {
             if (event.type === "text") {
-              updateMessage(assistantMessageId, (c) => c + event.text);
+              updateMessage(assistantMessageId, (m) => ({ content: m.content + event.text }));
             } else if (event.type === "error") {
               throw new Error(event.error);
             } else {
@@ -113,10 +114,9 @@ export function useAIChat() {
 
         const errorMsg = err instanceof Error ? err.message : t("Đã xảy ra lỗi", "Something went wrong");
         setError(errorMsg);
-        updateMessage(
-          assistantMessageId,
-          (c) => `${c ? `${c}\n\n` : ""}⚠️ ${t("Xin lỗi, đã xảy ra lỗi", "Sorry, an error occurred")}: ${errorMsg}`,
-        );
+        updateMessage(assistantMessageId, () => ({
+          error: `${t("Xin lỗi, đã xảy ra lỗi", "Sorry, an error occurred")}: ${errorMsg}`,
+        }));
       } finally {
         if (abortControllerRef.current === controller) {
           abortControllerRef.current = null;

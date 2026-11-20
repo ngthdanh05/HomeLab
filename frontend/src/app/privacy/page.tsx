@@ -10,8 +10,8 @@ export async function generateMetadata(): Promise<Metadata> {
     title: pick(locale, "Chính sách riêng tư", "Privacy Policy"),
     description: pick(
       locale,
-      "Cách bản thử nghiệm MyHomeLab xử lý dữ liệu của bạn.",
-      "How the MyHomeLab testnet preview handles your data.",
+      "Cách bản thử nghiệm San Hô Xanh xử lý dữ liệu của bạn.",
+      "How the BlueReef Travel testnet preview handles your data.",
     ),
     path: "/privacy",
     locale,
@@ -46,7 +46,7 @@ export default async function PrivacyPage() {
     <LegalPage title="Chính sách riêng tư">
       <h2>1. Dữ liệu công khai trên blockchain</h2>
       <p>
-        Địa chỉ ví, giao dịch, đề xuất, phiếu bầu và metadata badge được ghi công khai và không thể xoá. Đừng nhập thông tin
+        Địa chỉ ví, giao dịch, đề xuất, phiếu bầu và thông tin huy hiệu được ghi công khai và không thể xoá. Đừng nhập thông tin
         cá nhân vào mô tả sản phẩm, đề xuất hay chuyến đi.
       </p>
       <h2>2. Nội dung gửi cho AI</h2>

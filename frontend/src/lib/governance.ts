@@ -2,6 +2,7 @@
 // Mirrors contracts/src/Governance.sol and CommunityTreasury.sol.
 
 import { intlLocale, pick, type Locale } from "./i18n.ts";
+import type { IconName } from "./icon-names.ts";
 
 /** Governance.Proposal as returned by `getProposal()` (viem decodes the struct to an object). */
 export interface OnChainProposal {
@@ -50,18 +51,18 @@ export type ProposalStatus =
 
 export const PROPOSAL_STATUS_INFO: Record<
   ProposalStatus,
-  { label: string; labelEn: string; icon: string; tone: "sky" | "emerald" | "amber" | "slate" | "red" }
+  { label: string; labelEn: string; icon: IconName; tone: "info" | "success" | "warning" | "neutral" | "danger" }
 > = {
-  pending: { label: "Sắp mở bỏ phiếu", labelEn: "Voting opens soon", icon: "⏳", tone: "slate" },
-  active: { label: "Đang bỏ phiếu", labelEn: "Voting open", icon: "🗳️", tone: "sky" },
-  queued: { label: "Đã thông qua · đang chờ timelock", labelEn: "Passed · in timelock", icon: "🔒", tone: "amber" },
-  expired: { label: "Quá hạn giải ngân", labelEn: "Disbursement expired", icon: "⌛", tone: "slate" },
-  cancelled: { label: "Đã bị huỷ", labelEn: "Cancelled", icon: "🚫", tone: "red" },
-  passed: { label: "Đã thông qua · chờ giải ngân", labelEn: "Passed · awaiting disbursement", icon: "✅", tone: "amber" },
-  defeated: { label: "Không thông qua · chờ chốt", labelEn: "Not passed · awaiting finalization", icon: "👎", tone: "red" },
-  "no-quorum": { label: "Không đủ quorum", labelEn: "Quorum not reached", icon: "⏸️", tone: "slate" },
-  executed: { label: "Đã giải ngân", labelEn: "Disbursed", icon: "💸", tone: "emerald" },
-  rejected: { label: "Đã bị từ chối", labelEn: "Rejected", icon: "❌", tone: "red" },
+  pending: { label: "Sắp mở bỏ phiếu", labelEn: "Voting opens soon", icon: "status-pending", tone: "neutral" },
+  active: { label: "Đang bỏ phiếu", labelEn: "Voting open", icon: "status-active", tone: "info" },
+  queued: { label: "Đã thông qua · đang chờ timelock", labelEn: "Passed · in timelock", icon: "status-queued", tone: "warning" },
+  expired: { label: "Quá hạn giải ngân", labelEn: "Disbursement expired", icon: "status-expired", tone: "neutral" },
+  cancelled: { label: "Đã bị huỷ", labelEn: "Cancelled", icon: "status-cancelled", tone: "danger" },
+  passed: { label: "Đã thông qua · chờ giải ngân", labelEn: "Passed · awaiting disbursement", icon: "status-passed", tone: "warning" },
+  defeated: { label: "Không thông qua · chờ chốt", labelEn: "Not passed · awaiting finalization", icon: "status-defeated", tone: "danger" },
+  "no-quorum": { label: "Không đủ số phiếu tối thiểu", labelEn: "Quorum not reached", icon: "status-no-quorum", tone: "neutral" },
+  executed: { label: "Đã giải ngân", labelEn: "Disbursed", icon: "status-executed", tone: "success" },
+  rejected: { label: "Đã bị từ chối", labelEn: "Rejected", icon: "status-rejected", tone: "danger" },
 };
 
 /** `blockNumber` detects the voting delay; without it a delayed proposal reads as active. */
