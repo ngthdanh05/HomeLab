@@ -404,6 +404,8 @@ The contracts are deployed on a **testnet only** and have **not** had a third-pa
 
 ## Contributing
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide: setup, coding conventions and what CI checks.
+
 1. Fork the repository and create a feature branch (`git checkout -b feat/my-feature`).
 2. Make your changes with tests (`contracts/test/` for Solidity, `frontend/test/` or `frontend/e2e/` for the app).
 3. Make sure `forge test`, `npm run typecheck`, `npx eslint src test e2e` and `npm test` pass.
